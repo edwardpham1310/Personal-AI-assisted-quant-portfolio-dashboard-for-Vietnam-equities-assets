@@ -1,0 +1,34 @@
+name: VN30
+description: VN30 Index constituent universe
+exchange: HOSE
+symbols:
+  - ACB
+  - BCM
+  - BID
+  - BVH
+  - CTG
+  - FPT
+  - GAS
+  - GVR
+  - HDB
+  - HPG
+  - MBB
+  - MSN
+  - MWG
+  - PLX
+  - POW
+  - SAB
+  - SHB
+  - SSB
+  - SSI
+  - STB
+  - TCB
+  - TPB
+  - VCB
+  - VHM
+  - VIB
+  - VIC
+  - VJC
+  - VNM
+  - VPB
+  - VRE

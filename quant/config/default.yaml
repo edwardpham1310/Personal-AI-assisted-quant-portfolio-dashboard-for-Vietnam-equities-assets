@@ -1,0 +1,43 @@
+# quant-vn default configuration
+# Override any value via environment variables or .env file
+
+database:
+  url: "sqlite:///data/database/quant_vn.db"
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+logging:
+  level: "INFO"
+
+# Vietnam trading cost defaults
+costs:
+  commission_rate: 0.001       # 0.1% both sides
+  sell_tax_rate: 0.001         # 0.1% on sell side (securities transfer tax)
+  slippage_bps: 10             # 10 basis points
+  min_fee: 0.0                 # minimum fee per trade (set to e.g. 10000 VND if needed)
+
+# Backtest defaults
+backtest:
+  initial_capital: 100_000_000   # 100 million VND
+  execution: "next_open"         # next_open | next_close | same_close
+  allow_short: false
+  max_position_pct: 1.0          # max 100% in one position
+  annual_trading_days: 252
+
+# Market defaults
+market:
+  hose_price_limit_pct: 7.0
+  hnx_price_limit_pct: 10.0
+  upcom_price_limit_pct: 15.0
+  trading_sessions:
+    morning_open: "09:15"
+    morning_close: "11:30"
+    afternoon_open: "13:00"
+    afternoon_close: "14:45"
+
+# Report defaults
+reports:
+  output_dir: "reports"
+  benchmark_symbol: "VNINDEX"

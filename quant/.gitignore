@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.env
+*.env
+
+# Data files (never commit raw or processed data or the database)
+data/raw/
+data/processed/
+data/database/
+*.db
+*.sqlite
+*.sqlite3
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Reports and outputs
+reports/
+*.html
+*.csv.gz
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Distribution
+*.tar.gz
+*.whl

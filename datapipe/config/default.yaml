@@ -1,0 +1,25 @@
+app:
+  name: quant-vn-data
+  version: "0.1.0"
+  log_level: INFO
+
+data:
+  data_dir: ./data
+  raw_dir: ./data/raw
+  processed_dir: ./data/processed
+  database_dir: ./data/database
+
+database:
+  sqlite_url: "sqlite:///data/database/quant_vn_data.sqlite"
+  duckdb_path: "./data/database/quant_vn_data.duckdb"
+
+ingestion:
+  default_provider: ssi
+  fallback_provider: vnstock
+  raw_storage: true
+  skip_if_hash_unchanged: true
+
+exchanges:
+  - HOSE
+  - HNX
+  - UPCoM

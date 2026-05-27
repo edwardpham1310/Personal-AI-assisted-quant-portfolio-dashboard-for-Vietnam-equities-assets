@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+.env.local
+
+# Database files
+data/database/
+*.sqlite
+*.duckdb
+*.db
+
+# Raw provider data
+data/raw/
+data/processed/
+
+# Reports (can be regenerated)
+reports/*.csv
+reports/*.html
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# macOS
+.DS_Store

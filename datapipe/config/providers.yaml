@@ -1,0 +1,22 @@
+ssi:
+  name: SSI FastConnect
+  base_url: "https://fc-data.ssi.com.vn"
+  token_endpoint: "/api/v2/Market/AccessToken"
+  timeout_seconds: 30
+  max_retries: 3
+  priority: 1
+
+vsdc:
+  name: VSDC
+  base_url: "https://www.vsdc.com.vn"
+  timeout_seconds: 30
+  max_retries: 2
+  priority: 2
+
+vnstock:
+  name: Vnstock
+  priority: 3
+
+csv:
+  name: CSV Local
+  priority: 4

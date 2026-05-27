@@ -1,0 +1,15 @@
+ohlcv:
+  max_price_jump_pct: 15.0         # flag daily move > 15% vs prior close
+  min_close_price_vnd: 100         # below 100 VND is suspicious
+  max_zero_volume_streak: 5        # consecutive zero-volume days triggers flag
+  adjusted_close_drift_pct: 1.0   # flag if adj_close differs from close by > 1% without CA
+
+reconciliation:
+  close_tolerance_pct: 0.1
+  volume_tolerance_pct: 1.0
+  adjusted_close_tolerance_pct: 0.2
+
+corporate_actions:
+  max_days_record_before_announcement: 0   # record_date must not precede announcement
+  suspicious_cash_dividend_rate_vnd: 100_000  # per share — unusually high
+  suspicious_stock_ratio: 2.0              # stock dividend > 2:1 is suspicious

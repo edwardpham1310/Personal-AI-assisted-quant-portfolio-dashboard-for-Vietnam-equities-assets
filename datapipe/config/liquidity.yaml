@@ -1,0 +1,20 @@
+tradable_filter:
+  min_avg_value_20d_vnd: 5_000_000_000      # 5 billion VND
+  max_zero_volume_days_20d: 2
+  min_close_price_vnd: 5000
+  no_critical_quality_issues: true
+
+liquidity_buckets:
+  HIGH:
+    min_avg_value_20d_vnd: 100_000_000_000   # 100 billion VND
+  MEDIUM:
+    min_avg_value_20d_vnd: 20_000_000_000    # 20 billion VND
+    max_avg_value_20d_vnd: 100_000_000_000
+  LOW:
+    min_avg_value_20d_vnd: 5_000_000_000     # 5 billion VND
+    max_avg_value_20d_vnd: 20_000_000_000
+  UNTRADABLE:
+    max_avg_value_20d_vnd: 5_000_000_000
+
+position_sizing:
+  max_order_adv_pct: 0.05   # max 5% of 20-day ADV per order
