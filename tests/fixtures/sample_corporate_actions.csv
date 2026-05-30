@@ -1,0 +1,5 @@
+symbol,action_type,announcement_date,effective_date,ratio,cash_amount,source
+FPT,cash_dividend,2026-04-10,2026-05-15,,2000,sample
+VNM,stock_dividend,2026-03-20,2026-04-25,0.15,,sample
+SSI,right_issue,2026-02-12,2026-03-05,0.10,,sample
+HPG,split,2026-01-08,2026-02-01,2.0,,sample

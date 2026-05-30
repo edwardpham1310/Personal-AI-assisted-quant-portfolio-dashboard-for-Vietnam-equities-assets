@@ -17,39 +17,105 @@ _FIXED_HOLIDAYS = [
     (9, 2),   # National Day
 ]
 
-# Vietnamese Tet (Lunar New Year) approx dates — 5-day block starting the day before lunar NY
-# These are business-day closures; exact dates vary. Add more years as needed.
+# Hung Kings Day (Giỗ Tổ Hùng Vương) — 10th day of the 3rd lunar month.
+# This is a lunar holiday and changes each year. Listed as observed Gregorian dates.
+# IMPORTANT: Must be updated annually. Source: Vietnamese government decrees.
+_HUNG_KINGS_DAY: dict[int, datetime.date] = {
+    2018: datetime.date(2018, 4, 25),
+    2019: datetime.date(2019, 4, 14),
+    2020: datetime.date(2020, 4, 2),
+    2021: datetime.date(2021, 4, 21),
+    2022: datetime.date(2022, 4, 10),
+    2023: datetime.date(2023, 4, 29),
+    2024: datetime.date(2024, 4, 18),
+    2025: datetime.date(2025, 4, 7),
+    2026: datetime.date(2026, 3, 27),
+    2027: datetime.date(2027, 4, 16),
+    2028: datetime.date(2028, 4, 5),
+    2029: datetime.date(2029, 4, 23),
+    2030: datetime.date(2030, 4, 12),
+}
+
+# Vietnamese Tet (Lunar New Year) trading closure blocks.
+# These are the actual HOSE/HNX closure dates (Gregorian) per official exchange announcements.
+# IMPORTANT: Must be updated annually. Source: HOSE/HNX official circulars.
 _TET_HOLIDAYS: dict[int, list[datetime.date]] = {
-    2018: [datetime.date(2018, 2, 14), datetime.date(2018, 2, 15), datetime.date(2018, 2, 16)],
-    2019: [datetime.date(2019, 2, 4), datetime.date(2019, 2, 5), datetime.date(2019, 2, 6)],
-    2020: [datetime.date(2020, 1, 23), datetime.date(2020, 1, 24), datetime.date(2020, 1, 27)],
-    2021: [datetime.date(2021, 2, 10), datetime.date(2021, 2, 11), datetime.date(2021, 2, 12)],
-    2022: [datetime.date(2022, 1, 31), datetime.date(2022, 2, 1), datetime.date(2022, 2, 2)],
-    2023: [datetime.date(2023, 1, 20), datetime.date(2023, 1, 23), datetime.date(2023, 1, 24)],
-    2024: [datetime.date(2024, 2, 8), datetime.date(2024, 2, 9), datetime.date(2024, 2, 12)],
-    2025: [datetime.date(2025, 1, 28), datetime.date(2025, 1, 29), datetime.date(2025, 1, 30)],
+    2018: [
+        datetime.date(2018, 2, 14), datetime.date(2018, 2, 15), datetime.date(2018, 2, 16),
+        datetime.date(2018, 2, 19), datetime.date(2018, 2, 20),
+    ],
+    2019: [
+        datetime.date(2019, 2, 4), datetime.date(2019, 2, 5), datetime.date(2019, 2, 6),
+        datetime.date(2019, 2, 7), datetime.date(2019, 2, 8),
+    ],
+    2020: [
+        datetime.date(2020, 1, 23), datetime.date(2020, 1, 24), datetime.date(2020, 1, 27),
+        datetime.date(2020, 1, 28), datetime.date(2020, 1, 29),
+    ],
+    2021: [
+        datetime.date(2021, 2, 10), datetime.date(2021, 2, 11), datetime.date(2021, 2, 12),
+        datetime.date(2021, 2, 15), datetime.date(2021, 2, 16),
+    ],
+    2022: [
+        datetime.date(2022, 1, 31), datetime.date(2022, 2, 1), datetime.date(2022, 2, 2),
+        datetime.date(2022, 2, 3), datetime.date(2022, 2, 4),
+    ],
+    2023: [
+        datetime.date(2023, 1, 20), datetime.date(2023, 1, 23), datetime.date(2023, 1, 24),
+        datetime.date(2023, 1, 25), datetime.date(2023, 1, 26),
+    ],
+    2024: [
+        datetime.date(2024, 2, 8), datetime.date(2024, 2, 9), datetime.date(2024, 2, 12),
+        datetime.date(2024, 2, 13), datetime.date(2024, 2, 14),
+    ],
+    2025: [
+        datetime.date(2025, 1, 27), datetime.date(2025, 1, 28), datetime.date(2025, 1, 29),
+        datetime.date(2025, 1, 30), datetime.date(2025, 1, 31),
+    ],
+    2026: [
+        datetime.date(2026, 2, 16), datetime.date(2026, 2, 17), datetime.date(2026, 2, 18),
+        datetime.date(2026, 2, 19), datetime.date(2026, 2, 20),
+    ],
+    2027: [
+        datetime.date(2027, 2, 5), datetime.date(2027, 2, 6), datetime.date(2027, 2, 7),
+        datetime.date(2027, 2, 8), datetime.date(2027, 2, 9),
+    ],
+    2028: [
+        datetime.date(2028, 1, 25), datetime.date(2028, 1, 26), datetime.date(2028, 1, 27),
+        datetime.date(2028, 1, 28), datetime.date(2028, 1, 29),
+    ],
+    2029: [
+        datetime.date(2029, 2, 12), datetime.date(2029, 2, 13), datetime.date(2029, 2, 14),
+        datetime.date(2029, 2, 15), datetime.date(2029, 2, 16),
+    ],
+    2030: [
+        datetime.date(2030, 2, 2), datetime.date(2030, 2, 3), datetime.date(2030, 2, 4),
+        datetime.date(2030, 2, 5), datetime.date(2030, 2, 6),
+    ],
 }
 
 
 def get_holidays(year: int) -> set[datetime.date]:
-    """Return a set of Vietnam exchange holidays for the given year."""
+    """Return a set of Vietnam exchange holidays for the given year.
+
+    Coverage: 2018–2030. Years outside this range will be missing Tet and Hung
+    Kings Day — a warning is not raised here; callers that care about accuracy
+    should check ``year in _TET_HOLIDAYS`` themselves.
+    """
     holidays: set[datetime.date] = set()
 
-    # Fixed holidays
+    # Fixed-date statutory holidays
     for month, day in _FIXED_HOLIDAYS:
         try:
             holidays.add(datetime.date(year, month, day))
         except ValueError:
             pass
 
-    # Hung Kings Day (3rd day of 3rd lunar month) — approx April 18 most years
-    # We use April 18 as placeholder; precise date needs a lunar calendar library
-    try:
-        holidays.add(datetime.date(year, 4, 18))
-    except ValueError:
-        pass
+    # Hung Kings Day — lunar-based, changes every year
+    if year in _HUNG_KINGS_DAY:
+        holidays.add(_HUNG_KINGS_DAY[year])
 
-    # Tet
+    # Tet closure block
     if year in _TET_HOLIDAYS:
         holidays.update(_TET_HOLIDAYS[year])
 

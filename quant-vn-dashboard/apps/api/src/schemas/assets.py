@@ -1,0 +1,102 @@
+"""Assets/PnL DTOs — Phase 1 (recommend-only, manual portfolio)."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+Exchange = Literal["HOSE", "HNX", "UPCOM"]
+TradeSide = Literal["BUY", "SELL"]
+CostPeriod = Literal["MTD", "YTD", "ALL"]
+
+
+class CashBalance(BaseModel):
+    """Vietnam-broker style cash buckets for a single account."""
+
+    account_id: str
+    settled_cash: float = 0.0
+    pending_cash: float = 0.0
+    advanced_cash: float = 0.0
+    cash_advance_liability: float = 0.0
+    withdrawable_cash: float = 0.0
+    currency: str = "VND"
+    as_of: str | None = None
+
+
+class AssetsSummary(BaseModel):
+    """Cash + equity rollup for the dashboard assets card."""
+
+    account_id: str | None = None
+    cash: CashBalance
+    stock_market_value: float = 0.0
+    total_equity: float = 0.0
+    available_buying_power: float = 0.0
+    currency: str = "VND"
+    warnings: list[str] = Field(default_factory=list)
+    disclaimer: str = "Research only — not financial advice. No orders placed."
+
+
+class PnlBreakdown(BaseModel):
+    """Top-level realized / unrealized rollup."""
+
+    amount: float = 0.0
+    cost_basis: float = 0.0
+    return_pct: float | None = None
+
+
+class PnlBySymbol(BaseModel):
+    symbol: str
+    realized: float = 0.0
+    unrealized: float = 0.0
+    cost_basis: float = 0.0
+
+
+class CostBreakdown(BaseModel):
+    """Aggregated cost ledger for a period (MTD / YTD / ALL)."""
+
+    period: CostPeriod = "ALL"
+    brokerage_fee: float = 0.0
+    vat: float = 0.0
+    sell_tax: float = 0.0
+    cash_advance_fee: float = 0.0
+    slippage_estimate: float = 0.0
+    total: float = 0.0
+    trade_count: int = 0
+
+
+class TradeTransactionCreate(BaseModel):
+    """Body for recording a single manual trade — Phase 1 does not place orders."""
+
+    symbol: str = Field(min_length=1, max_length=20)
+    exchange: Exchange = "HOSE"
+    side: TradeSide
+    quantity: int = Field(gt=0)
+    price: float = Field(ge=0)
+    trade_date: str  # ISO date (YYYY-MM-DD)
+    settlement_date: str | None = None
+    brokerage_fee: float = 0.0
+    vat: float = 0.0
+    sell_tax: float = 0.0
+    cash_advance_fee: float = 0.0
+    slippage_estimate: float = 0.0
+    note: str | None = Field(default=None, max_length=400)
+
+
+class TradeTransaction(BaseModel):
+    id: str
+    account_id: str
+    symbol: str
+    exchange: Exchange
+    side: TradeSide
+    quantity: int
+    price: float
+    trade_date: str
+    settlement_date: str | None = None
+    brokerage_fee: float = 0.0
+    vat: float = 0.0
+    sell_tax: float = 0.0
+    cash_advance_fee: float = 0.0
+    slippage_estimate: float = 0.0
+    note: str | None = None
+    created_at: str | None = None

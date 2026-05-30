@@ -32,7 +32,7 @@ class ExecutionConfig:
     fixed_cash_amount: float = 10_000_000  # 10M VND (used with FIXED_CASH)
     pct_equity: float = 1.0               # used with PCT_EQUITY
     max_position_pct: float = 1.0         # max fraction of equity in one position
-    allow_fractional_shares: bool = True   # True = fractional qty (for VND-based sizing)
+    allow_fractional_shares: bool = False  # False = Vietnam market requires whole lots
     allow_short: bool = False
 
     def compute_quantity(
@@ -74,6 +74,9 @@ class ExecutionConfig:
         qty = notional / price
 
         if not self.allow_fractional_shares:
-            qty = float(int(qty))
+            # Vietnam HOSE/HNX standard board lot = 100 shares.
+            # Round down to the nearest 100-share lot.
+            lot_size = 100
+            qty = float(int(qty / lot_size) * lot_size)
 
         return max(qty, 0.0)

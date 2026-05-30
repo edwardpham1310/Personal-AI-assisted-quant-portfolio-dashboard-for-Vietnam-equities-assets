@@ -1,0 +1,45 @@
+# Local-dev docker-compose.
+#
+# Default profile starts only Redis. Bring up the API container with
+# `--profile api` if you want to run it in Docker too.
+#
+# Real secrets must live in .env (gitignored). This file references env vars
+# but does not embed any secret values.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: quant-vn-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: quant-vn-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      API_HOST: 0.0.0.0
+      API_PORT: ${API_PORT:-8000}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles: ["api"]
+
+volumes:
+  redis-data:

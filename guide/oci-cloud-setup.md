@@ -1,50 +1,29 @@
-# OCI Cloud Setup Guide
+# Huong Dan Set Up OCI Cho Quant Finance
 
-This guide sets up Oracle Cloud Infrastructure for the personal AI-assisted
-quant portfolio dashboard.
+Tai lieu nay huong dan tung buoc tao moi moi truong Oracle Cloud
+Infrastructure (OCI) cho du an personal AI-assisted quant portfolio dashboard.
+Muc tieu la giup nguoi moi co the di tu tai khoan OCI trang den mot VM chay
+duoc code, co luu tru du lieu, backup, va cac guardrail bao mat/co phi co ban.
 
-## Recommendation
+Du an giai doan dau la **recommend-only**: he thong chi thu thap du lieu, tinh
+toan signal, tao dashboard/bao cao va canh bao rui ro. Khong tu dong dat lenh.
 
-Use OCI for this project, but start conservatively:
-
-- Run `datapipe`, `quant`, dashboard jobs, and future MCP services on an OCI
-  Compute VM.
-- Keep raw market snapshots, backup files, and exported datasets in OCI Object
-  Storage.
-- Keep the first production database simple: SQLite/DuckDB on a persistent block
-  volume, backed up to Object Storage.
-- Add Autonomous Database later for portfolio metadata, recommendation records,
-  AI narrative records, and account-sync history if the local DB becomes hard to
-  manage.
-
-Do not expose databases directly to the internet. Phase 1 is recommend-only.
-
-## Why This Fits
-
-OCI Always Free resources are enough for a personal research deployment:
-
-- Compute VM for scheduled jobs and dashboard services.
-- Block Volume for local databases and reports.
-- Object Storage for raw data and backups.
-- Autonomous Database for a small managed metadata store if needed later.
-
-Important limits to remember:
-
-- Always Free Ampere A1 Compute is capacity-limited by region and can be
-  reclaimed if idle.
-- Always Free Object Storage has a small free quota, so keep raw snapshots
-  compressed and rotate old intermediate files.
-- Always Free Autonomous Database has limited storage and sessions, and is not a
-  replacement for unlimited intraday raw data storage.
-
-Oracle references:
+## Tai Lieu Tham Khao Chinh Thuc
 
 - OCI Always Free resources:
-  <https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm>
-- Always Free Autonomous Database:
-  <https://docs.oracle.com/en/cloud/paas/autonomous-database/serverless/adbsb/autonomous-always-free.html>
+  <https://docs.oracle.com/iaas/Content/FreeTier/resourceref.htm>
+- OCI Free Tier FAQ:
+  <https://www.oracle.com/cloud/free/faq/>
+- Networking overview:
+  <https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/overview.htm>
+- Public subnet scenario:
+  <https://docs.oracle.com/iaas/Content/Network/Tasks/scenarioa.htm>
+- Internet Gateway:
+  <https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingIGs.htm>
+- Route tables:
+  <https://docs.oracle.com/iaas/Content/Network/Tasks/managingroutetables.htm>
 
-## Target Architecture
+## Kien Truc Muc Tieu
 
 ```text
 SSI FastConnect / vnstock / CSV
@@ -56,7 +35,7 @@ OCI Compute VM
   - dashboard service/static reports
   - future MCP service
         |
-        +--> Block Volume
+        +--> Block/Boot Volume
         |     - SQLite
         |     - DuckDB
         |     - reports
@@ -73,70 +52,273 @@ OCI Compute VM
               - audit/event tables
 ```
 
-## Step 1: Create OCI Resources
+Khuyen nghi cho giai doan dau:
 
-Create these in your OCI home region:
+- Chay `datapipe`, `quant`, dashboard jobs, va MCP services tren mot OCI
+  Compute VM.
+- Luu raw market snapshots, export files, va backup len OCI Object Storage.
+- Database production dau tien nen giu don gian: SQLite/DuckDB tren volume cua
+  VM, backup len Object Storage.
+- Chua dung Autonomous Database neu chua can multi-user metadata store.
+- Khong expose database ra internet.
 
-1. Compartment: `quant-finance`.
-2. VCN: `quant-vcn`.
-3. Public subnet for the VM.
-4. Compute instance:
-   - Shape: Always Free eligible Ampere A1 Flex if available.
-   - OS: Ubuntu LTS.
-   - Start small: 1 OCPU / 6 GB RAM or 2 OCPU / 12 GB RAM.
-   - Boot volume: 50 GB minimum; increase only if you understand Always Free
-     block volume limits.
-5. Object Storage buckets:
-   - `quant-raw`
-   - `quant-backups`
-   - `quant-reports`
+## Ten Tai Nguyen Se Tao
 
-Security list or network security group:
+De de theo doi, dung cung mot naming convention:
 
-- Allow SSH `22` only from your IP.
-- Do not open database ports.
-- Later, open dashboard HTTPS `443` only if you deploy a web UI.
+| Loai | Ten |
+|------|-----|
+| Compartment | `quant-finance` |
+| VCN | `quant-vcn` |
+| Public subnet | `quant-public-subnet` |
+| Compute instance | `quant-vm-01` |
+| Network Security Group | `quant-vm-nsg` |
+| Object Storage bucket raw | `quant-raw` |
+| Object Storage bucket backup | `quant-backups` |
+| Object Storage bucket report | `quant-reports` |
+| Secrets folder tren VM | `/opt/quant-finance-secrets` |
+| Repo folder tren VM | `/opt/quant-finance` |
+| Data folder tren VM | `/opt/quant-finance-data` |
 
-## Step 2: SSH Into The VM
+## Truoc Khi Bat Dau
+
+Ban can co:
+
+1. Tai khoan OCI.
+2. May local co terminal: macOS/Linux/Windows WSL deu duoc.
+3. Git SSH key hoac HTTPS token de clone repo private.
+4. IP public hien tai cua ban de gioi han SSH.
+5. Neu dung SSI FastConnect: `SSI_CONSUMER_ID` va `SSI_CONSUMER_SECRET`.
+
+Lay IP public cua ban:
 
 ```bash
-ssh ubuntu@<vm-public-ip>
+curl ifconfig.me
 ```
 
-Install base packages:
+Ghi lai ket qua, vi phan security rule se chi cho phep SSH tu IP nay.
+
+## Buoc 1: Dang Nhap OCI Va Chon Region
+
+1. Dang nhap OCI Console.
+2. O goc tren, xem region dang chon.
+3. Neu chi dung Always Free, nen tao tai nguyen trong **home region** cua
+   tenancy de tranh nham vung va de quan ly free-tier de hon.
+4. Vao menu profile/account de kiem tra ban dang dung dung tenancy.
+
+Luu y:
+
+- Ampere A1 Always Free co the het capacity o mot so region.
+- Neu khong tao duoc A1 Flex, thu lai sau hoac dung shape khac tam thoi nhung
+  phai kiem tra billing label rat ky.
+
+## Buoc 2: Tao Compartment
+
+Compartment giup tach tai nguyen cua du an khoi cac thu khac trong tenancy.
+
+Tren OCI Console:
+
+1. Mo menu **Identity & Security**.
+2. Chon **Compartments**.
+3. Bam **Create Compartment**.
+4. Dien:
+   - Name: `quant-finance`
+   - Description: `Resources for Quant Finance project`
+   - Parent compartment: tenancy root hoac compartment cha ban muon dung.
+5. Bam **Create Compartment**.
+
+Tu buoc nay tro di, khi Console hoi compartment, chon `quant-finance`.
+
+## Buoc 3: Tao SSH Key
+
+Neu ban da co SSH key rieng cho Git/Cloud, co the dung key do. Neu chua co, tao
+key moi tren may local:
+
+```bash
+ssh-keygen -t ed25519 -C "quant-finance-oci" -f ~/.ssh/quant_finance_oci
+```
+
+Lenh nay tao 2 file:
+
+```text
+~/.ssh/quant_finance_oci      # private key, giu bi mat
+~/.ssh/quant_finance_oci.pub  # public key, dua len OCI
+```
+
+In public key de copy vao OCI Console:
+
+```bash
+cat ~/.ssh/quant_finance_oci.pub
+```
+
+Khong dua file private key vao chat, git, email, hoac OCI Console.
+
+## Buoc 4: Tao VCN `quant-vcn`
+
+VCN la mang rieng ao cho VM. Ban co the dung wizard de tao nhanh public subnet.
+
+Tren OCI Console:
+
+1. Mo **Networking** -> **Virtual Cloud Networks**.
+2. Chon compartment `quant-finance`.
+3. Bam **Start VCN Wizard**.
+4. Chon **Create VCN with Internet Connectivity**.
+5. Dien:
+   - VCN name: `quant-vcn`
+   - Compartment: `quant-finance`
+   - VCN CIDR block: `10.0.0.0/16`
+   - Public subnet CIDR: `10.0.1.0/24`
+   - Private subnet CIDR: `10.0.2.0/24`
+6. Bam **Next**, review, roi **Create**.
+
+Wizard se tao:
+
+- VCN `quant-vcn`
+- Public subnet
+- Private subnet
+- Internet Gateway
+- NAT Gateway neu wizard ho tro
+- Route table can thiet
+- Security list mac dinh
+
+Neu wizard dat ten subnet khac, ban co the rename public subnet thanh
+`quant-public-subnet`.
+
+Kiem tra public subnet:
+
+- Public subnet can co route rule:
+  - Destination: `0.0.0.0/0`
+  - Target: Internet Gateway cua `quant-vcn`
+- Subnet phai cho phep public IPv4 address de SSH tu internet.
+
+## Buoc 5: Tao Network Security Group
+
+Dung Network Security Group (NSG) de gan firewall rule rieng cho VM.
+
+Tren OCI Console:
+
+1. Vao **Networking** -> **Virtual Cloud Networks**.
+2. Mo `quant-vcn`.
+3. Chon **Network Security Groups**.
+4. Bam **Create Network Security Group**.
+5. Dien:
+   - Name: `quant-vm-nsg`
+   - Compartment: `quant-finance`
+6. Tao NSG.
+
+Them ingress rule cho SSH:
+
+| Field | Gia tri |
+|-------|---------|
+| Direction | Ingress |
+| Source type | CIDR |
+| Source CIDR | `<your-public-ip>/32` |
+| IP protocol | TCP |
+| Destination port range | `22` |
+| Description | `SSH from my IP only` |
+
+Vi du neu IP cua ban la `203.0.113.10`, source CIDR la:
+
+```text
+203.0.113.10/32
+```
+
+Khong mo `0.0.0.0/0` cho SSH neu khong bat buoc.
+
+Chua mo cac port database. Sau nay neu deploy dashboard public, chi can mo
+`443` qua Nginx va HTTPS.
+
+## Buoc 6: Tao Compute VM
+
+Tren OCI Console:
+
+1. Vao **Compute** -> **Instances**.
+2. Chon compartment `quant-finance`.
+3. Bam **Create Instance**.
+4. Dien:
+   - Name: `quant-vm-01`
+   - Placement: giu mac dinh trong region.
+   - Image: Ubuntu LTS.
+   - Shape: `VM.Standard.A1.Flex` neu co Always Free capacity.
+5. Chon size nho de bat dau:
+   - 1 OCPU / 6 GB RAM, hoac
+   - 2 OCPU / 12 GB RAM neu can chay dashboard + jobs song song.
+6. Networking:
+   - VCN: `quant-vcn`
+   - Subnet: `quant-public-subnet`
+   - Public IPv4 address: enabled.
+   - NSG: `quant-vm-nsg`
+7. SSH keys:
+   - Chon **Paste public keys**.
+   - Paste noi dung file `~/.ssh/quant_finance_oci.pub`.
+8. Boot volume:
+   - De mac dinh hoac chon 50 GB.
+   - Dung Always Free label/limit de kiem tra truoc khi tao.
+9. Bam **Create**.
+
+Sau khi instance ve trang thai **Running**, ghi lai **Public IP address**.
+
+## Buoc 7: SSH Vao VM
+
+Tu may local:
+
+```bash
+ssh -i ~/.ssh/quant_finance_oci ubuntu@<vm-public-ip>
+```
+
+Neu bi loi permission tren private key:
+
+```bash
+chmod 600 ~/.ssh/quant_finance_oci
+ssh -i ~/.ssh/quant_finance_oci ubuntu@<vm-public-ip>
+```
+
+Neu SSH timeout:
+
+- Kiem tra VM dang Running.
+- Kiem tra VM co public IP.
+- Kiem tra NSG ingress da cho phep IP hien tai cua ban.
+- Kiem tra route table cua public subnet co route `0.0.0.0/0` den Internet
+  Gateway.
+
+Cap nhat server:
 
 ```bash
 sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip make curl unzip jq
+sudo apt upgrade -y
+sudo apt install -y git python3 python3-venv python3-pip make curl unzip jq htop tmux
 ```
 
-Optional Docker runtime:
+Kiem tra Python:
 
 ```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker ubuntu
+python3 --version
+git --version
 ```
 
-Log out and back in after adding the user to the `docker` group.
+## Buoc 8: Chuan Bi Thu Muc Tren VM
 
-## Step 3: Prepare Directories
+Tao layout co dinh:
 
 ```bash
 sudo mkdir -p /opt/quant-finance
 sudo mkdir -p /opt/quant-finance-data/{raw,sqlite,duckdb,reports,logs,backups}
-sudo chown -R ubuntu:ubuntu /opt/quant-finance /opt/quant-finance-data
+sudo mkdir -p /opt/quant-finance-secrets
+sudo chown -R ubuntu:ubuntu /opt/quant-finance /opt/quant-finance-data /opt/quant-finance-secrets
+chmod 700 /opt/quant-finance-secrets
 ```
 
-Recommended path contract:
+Hop dong path:
 
 ```text
 /opt/quant-finance          # repo checkout
-/opt/quant-finance-data     # persistent data
+/opt/quant-finance-data     # du lieu persistent
+/opt/quant-finance-secrets  # secrets, khong commit
 ```
 
-## Step 4: Deploy The Code
+## Buoc 9: Clone Repo
 
-Clone your private repo or copy the workspace:
+Neu repo private dung HTTPS:
 
 ```bash
 cd /opt
@@ -144,18 +326,32 @@ git clone <your-private-repo-url> quant-finance
 cd /opt/quant-finance
 ```
 
-Install packages:
+Neu repo private dung SSH, ban can them deploy key hoac copy SSH key rieng vao
+VM. Cach an toan hon la tao deploy key chi doc tren Git provider, khong dung
+personal key chinh.
+
+Kiem tra cau truc:
 
 ```bash
-cd datapipe
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -U pip
-pip install -e ".[dev]"
-python3 -m pytest tests/ -q
-deactivate
+ls
+```
 
-cd ../quant
+Ban nen thay cac folder:
+
+```text
+datapipe
+quant
+dashboard
+docs
+guide
+```
+
+## Buoc 10: Cai Dat Python Packages
+
+Cai `datapipe`:
+
+```bash
+cd /opt/quant-finance/datapipe
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -U pip
@@ -164,17 +360,31 @@ python3 -m pytest tests/ -q
 deactivate
 ```
 
-## Step 5: Configure Secrets
-
-Create an environment file outside git:
+Cai `quant`:
 
 ```bash
-mkdir -p /opt/quant-finance-secrets
-chmod 700 /opt/quant-finance-secrets
+cd /opt/quant-finance/quant
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -U pip
+pip install -e ".[dev]"
+python3 -m pytest tests/ -q
+deactivate
+```
+
+Neu `pip install` loi do thieu system package, doc message loi va cai them bang
+`apt`. Neu loi do private package hoac network, kiem tra Git credentials va
+internet cua VM.
+
+## Buoc 11: Tao File Secrets
+
+Tao file env ngoai repo:
+
+```bash
 nano /opt/quant-finance-secrets/quant.env
 ```
 
-Example:
+Noi dung mau:
 
 ```bash
 SSI_CONSUMER_ID=replace_me
@@ -185,150 +395,422 @@ QUANT_RAW_DIR=/opt/quant-finance-data/raw
 QUANT_SQLITE_DIR=/opt/quant-finance-data/sqlite
 QUANT_DUCKDB_DIR=/opt/quant-finance-data/duckdb
 QUANT_REPORTS_DIR=/opt/quant-finance-data/reports
+QUANT_LOGS_DIR=/opt/quant-finance-data/logs
 ```
 
-Permissions:
+Set permission:
 
 ```bash
 chmod 600 /opt/quant-finance-secrets/quant.env
 ```
 
-Later, move secrets to OCI Vault or instance principals. Do not commit `.env`
-files.
+Load env khi chay manual:
 
-## Step 6: Configure OCI CLI For Backups
+```bash
+set -a
+. /opt/quant-finance-secrets/quant.env
+set +a
+```
 
-Install OCI CLI:
+Nguyen tac:
+
+- Khong commit `.env`.
+- Khong log secret.
+- Sau nay co the chuyen sang OCI Vault hoac instance principals.
+
+## Buoc 12: Tao Object Storage Buckets
+
+Tren OCI Console:
+
+1. Vao **Storage** -> **Buckets**.
+2. Chon compartment `quant-finance`.
+3. Bam **Create Bucket**.
+4. Tao 3 bucket:
+   - `quant-raw`
+   - `quant-backups`
+   - `quant-reports`
+5. De visibility la **Private**.
+6. Bat encryption mac dinh cua OCI.
+
+Y nghia:
+
+- `quant-raw`: raw snapshots va source payloads.
+- `quant-backups`: backup SQLite/DuckDB/reports quan trong.
+- `quant-reports`: static dashboard exports, HTML/CSV/parquet can chia se sau
+  nay.
+
+Khong tao public bucket cho du lieu tai chinh ca nhan.
+
+## Buoc 13: Cai OCI CLI Tren VM
+
+OCI CLI giup VM upload backup len Object Storage.
+
+Tren VM:
 
 ```bash
 bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
 ```
 
-For a simple first setup, run:
+Thoat shell va dang nhap lai, hoac source file profile ma installer goi y.
+
+Kiem tra:
+
+```bash
+oci --version
+```
+
+### Cach nhanh cho nguoi moi: `oci setup config`
+
+Chay:
 
 ```bash
 oci setup config
 ```
 
-Better production setup:
+Lam theo prompt:
 
-- Use an instance principal.
-- Create a dynamic group for the VM.
-- Grant that dynamic group permission to manage objects only in the backup/raw
-  buckets.
+- User OCID: lay trong OCI Console -> Profile -> User settings.
+- Tenancy OCID: lay trong Tenancy details.
+- Region: region dang dung.
+- Key location: de mac dinh.
 
-Example policy idea:
+Sau do upload public API key ma CLI tao len user trong OCI Console:
+
+1. Vao **Profile** -> **User settings**.
+2. Chon **API keys**.
+3. Bam **Add API key**.
+4. Paste public key hoac upload file `.pem.pub` ma CLI tao.
+
+Kiem tra CLI doc duoc Object Storage:
+
+```bash
+oci os ns get
+oci os bucket list --compartment-id <compartment-ocid>
+```
+
+### Cach tot hon sau nay: Instance Principal
+
+Khi he thong on dinh, nen dung instance principal thay vi API key user:
+
+1. Tao dynamic group match instance `quant-vm-01`.
+2. Tao policy cho dynamic group duoc manage objects trong compartment
+   `quant-finance`.
+
+Policy ban dau:
 
 ```text
 Allow dynamic-group quant-finance-vms to manage objects in compartment quant-finance
 ```
 
-Tighten this later to bucket-specific permissions.
+Sau khi chay on, nen that chat policy theo bucket va action can thiet.
 
-## Step 7: Backup Script
+## Buoc 14: Tao Backup Script
 
-Create `/opt/quant-finance/scripts/backup_to_oci.sh`:
+Tao file `/opt/quant-finance/scripts/backup_to_oci.sh`:
+
+```bash
+mkdir -p /opt/quant-finance/scripts
+nano /opt/quant-finance/scripts/backup_to_oci.sh
+```
+
+Noi dung:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
-BACKUP_DIR="/opt/quant-finance-data/backups/$STAMP"
+DATA_ROOT="/opt/quant-finance-data"
+BACKUP_ROOT="$DATA_ROOT/backups"
+BACKUP_DIR="$BACKUP_ROOT/$STAMP"
+ARCHIVE="$BACKUP_ROOT/quant-backup-$STAMP.tar.gz"
+
 mkdir -p "$BACKUP_DIR"
 
-cp -a /opt/quant-finance-data/sqlite "$BACKUP_DIR/" 2>/dev/null || true
-cp -a /opt/quant-finance-data/duckdb "$BACKUP_DIR/" 2>/dev/null || true
+cp -a "$DATA_ROOT/sqlite" "$BACKUP_DIR/" 2>/dev/null || true
+cp -a "$DATA_ROOT/duckdb" "$BACKUP_DIR/" 2>/dev/null || true
+cp -a "$DATA_ROOT/reports" "$BACKUP_DIR/" 2>/dev/null || true
 
-tar -czf "/opt/quant-finance-data/backups/quant-backup-$STAMP.tar.gz" -C "$BACKUP_DIR" .
+tar -czf "$ARCHIVE" -C "$BACKUP_DIR" .
 
 oci os object put \
   --bucket-name quant-backups \
-  --file "/opt/quant-finance-data/backups/quant-backup-$STAMP.tar.gz" \
+  --file "$ARCHIVE" \
   --name "quant-backup-$STAMP.tar.gz"
+
+find "$BACKUP_ROOT" -maxdepth 1 -type f -name "quant-backup-*.tar.gz" -mtime +14 -delete
 ```
 
-Make it executable:
+Set executable:
 
 ```bash
 chmod +x /opt/quant-finance/scripts/backup_to_oci.sh
 ```
 
-Cron example:
+Chay thu:
+
+```bash
+/opt/quant-finance/scripts/backup_to_oci.sh
+```
+
+Kiem tra object da len bucket:
+
+```bash
+oci os object list --bucket-name quant-backups --limit 5
+```
+
+## Buoc 15: Len Lich Backup Bang Cron
+
+Mo crontab:
 
 ```bash
 crontab -e
 ```
 
-Add:
+Them dong:
 
 ```text
 30 18 * * 1-5 /opt/quant-finance/scripts/backup_to_oci.sh >> /opt/quant-finance-data/logs/backup.log 2>&1
 ```
 
-## Step 8: Schedule Data Pipeline Jobs
+Y nghia:
 
-Start with end-of-day jobs, then add intraday 5m/15m once the SSI provider and
-schema support it.
+- Chay 18:30 thu Hai den thu Sau theo timezone cua VM.
+- Ghi log vao `/opt/quant-finance-data/logs/backup.log`.
 
-Example cron structure:
+Kiem tra timezone:
 
-```text
-# Daily after market close
-10 15 * * 1-5 cd /opt/quant-finance/datapipe && . .venv/bin/activate && quant-vn-data ingest-daily >> /opt/quant-finance-data/logs/ingest-daily.log 2>&1
-
-# Quant signals after data ingestion
-30 15 * * 1-5 cd /opt/quant-finance/quant && . .venv/bin/activate && quant-vn dashboard >> /opt/quant-finance-data/logs/dashboard.log 2>&1
+```bash
+timedatectl
 ```
 
-Use the exact CLI commands that exist in the repo. If a command does not exist
-yet, create it before enabling cron.
+Neu muon dat timezone Viet Nam:
 
-## Step 9: Add Intraday 5m/15m Later
+```bash
+sudo timedatectl set-timezone Asia/Ho_Chi_Minh
+```
 
-Before enabling intraday jobs, define:
+## Buoc 16: Len Lich Data Pipeline
 
-- Table/schema for intraday bars.
-- `timeframe` column: `5m`, `15m`, `1d`.
-- Provider support from SSI FastConnect.
+Bat dau voi end-of-day jobs truoc. Chi them intraday 5m/15m sau khi schema va
+SSI provider da san sang.
+
+Mo crontab:
+
+```bash
+crontab -e
+```
+
+Khung mau:
+
+```text
+# Load secrets for each command by sourcing env file.
+
+# Daily data ingestion after market close
+10 15 * * 1-5 cd /opt/quant-finance/datapipe && set -a && . /opt/quant-finance-secrets/quant.env && set +a && . .venv/bin/activate && quant-vn-data ingest-daily >> /opt/quant-finance-data/logs/ingest-daily.log 2>&1
+
+# Quant signal/report generation after ingestion
+30 15 * * 1-5 cd /opt/quant-finance/quant && set -a && . /opt/quant-finance-secrets/quant.env && set +a && . .venv/bin/activate && quant-vn dashboard >> /opt/quant-finance-data/logs/dashboard.log 2>&1
+```
+
+Quan trong:
+
+- Chi enable cron sau khi ban da chay manual command thanh cong.
+- Dung dung CLI command dang ton tai trong repo. Neu `quant-vn-data
+  ingest-daily` hoac `quant-vn dashboard` chua ton tai, can implement CLI truoc.
+- Cron khong load interactive shell config nhu terminal, nen moi command can
+  source env va activate venv ro rang.
+
+Kiem tra log:
+
+```bash
+tail -n 100 /opt/quant-finance-data/logs/ingest-daily.log
+tail -n 100 /opt/quant-finance-data/logs/dashboard.log
+```
+
+## Buoc 17: Intraday 5m/15m Sau Nay
+
+Truoc khi bat intraday, can chot cac hop dong du lieu:
+
+- Table/schema cho intraday bars.
+- Cot `timeframe`: `5m`, `15m`, `1d`.
+- Provider support tu SSI FastConnect va entitlement cua tai khoan.
 - Dedup/upsert key: `(symbol, timestamp, timeframe, source)`.
-- Market session calendar.
-- Rate-limit and retry behavior.
+- Trading calendar va session rules cho thi truong Viet Nam.
+- Retry, timeout, backoff, va rate limit.
+- Khong tinh signal tren partial bar chua dong.
 
-Recommended job cadence:
+Cadence goi y:
 
-- Fetch raw data every 1-5 minutes during market hours.
-- Normalize to 5m/15m bars.
-- Write signal snapshots every completed bar.
-- Let Claude/MCP read only completed bars to avoid unstable partial-bar signals.
+- Fetch raw data moi 1-5 phut trong gio giao dich.
+- Normalize thanh 5m/15m completed bars.
+- Ghi signal snapshots sau moi completed bar.
+- Claude/MCP chi doc completed bars va portfolio state da snapshot.
 
-## Step 10: Dashboard Deployment
+## Buoc 18: Dashboard Deployment
 
-For phase 1, generate static reports or run a local dashboard service on the VM.
+Giai doan dau nen dung static reports hoac dashboard chi bind local:
 
-When exposing the dashboard publicly:
+```text
+127.0.0.1:<port>
+```
 
-- Put it behind Nginx.
-- Use HTTPS.
-- Add authentication.
-- Do not expose raw database files.
-- Do not expose SSI credentials.
-- Keep broker trading disabled.
+Neu can xem dashboard tu may ca nhan, dung SSH tunnel truoc:
 
-## Cost Guardrails
+```bash
+ssh -i ~/.ssh/quant_finance_oci -L 8501:127.0.0.1:8501 ubuntu@<vm-public-ip>
+```
 
-- Use Always Free eligible labels in the OCI Console.
-- Keep compute and block volume within Always Free limits.
-- Use budget alerts.
-- Avoid public buckets.
-- Compress raw data.
-- Delete old intermediate files after backups are verified.
+Sau do mo tren may local:
 
-## Recommended Next Implementation Tasks
+```text
+http://127.0.0.1:8501
+```
 
-1. Add intraday schema to `datapipe`.
-2. Add SSI 5m/15m ingestion if the API entitlement supports it.
-3. Add portfolio tables.
-4. Add recommendation and AI narrative tables.
-5. Add MCP read-only tools for Claude.
-6. Add a dashboard service after the data contract is stable.
+Chi expose public dashboard khi da co:
+
+- Nginx reverse proxy.
+- HTTPS certificate.
+- Authentication.
+- Firewall chi mo `443`.
+- Khong expose raw database files.
+- Khong expose SSI credentials.
+- Broker trading van disabled.
+
+## Buoc 19: Bao Mat Co Ban
+
+Checklist:
+
+- SSH chi cho phep IP cua ban qua `/32`.
+- Khong mo database ports.
+- Buckets de private.
+- Secrets nam ngoai repo.
+- File secrets `chmod 600`.
+- Thu muc secrets `chmod 700`.
+- Khong luu SSI token ra disk neu khong can.
+- Logs phai redact API key/secret/token.
+- Backup nen duoc upload len private Object Storage bucket.
+- Neu public dashboard, bat auth truoc khi mo internet.
+
+Cap nhat he dieu hanh dinh ky:
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+## Buoc 20: Guardrail Chi Phi
+
+Luon kiem tra **Always Free-eligible** label trong OCI Console.
+
+Khuyen nghi:
+
+- Bat dau voi 1 VM nho.
+- Giu boot/block volume trong quota free-tier cua account.
+- Dung private Object Storage buckets va nen nen du lieu truoc khi upload.
+- Xoa intermediate files cu sau khi backup verify thanh cong.
+- Tao budget alert trong **Billing & Cost Management**.
+- Khong tao Autonomous Database, Load Balancer, NAT Gateway, hoac public IP
+  phu neu chua can va chua kiem tra chi phi.
+- Kiem tra **Cost Analysis** sau khi tao tai nguyen ngay trong ngay dau.
+
+## Troubleshooting
+
+### Khong tao duoc Ampere A1 Flex
+
+Nguyen nhan thuong gap:
+
+- Region het Always Free A1 capacity.
+- Shape khong available trong availability domain dang chon.
+- Account/tenancy chua co capacity.
+
+Cach xu ly:
+
+- Thu lai sau.
+- Thu availability domain khac neu Console cho phep.
+- Giam OCPU/RAM.
+- Khong chon paid shape neu ban chua muon phat sinh chi phi.
+
+### SSH bi timeout
+
+Kiem tra:
+
+- Instance Running.
+- Public IP da gan vao VNIC.
+- NSG co ingress TCP 22 tu `<your-public-ip>/32`.
+- Security list khong chan SSH.
+- Public subnet co route `0.0.0.0/0` den Internet Gateway.
+- Local network cua ban khong chan outbound SSH.
+
+### SSH bao `Permission denied (publickey)`
+
+Kiem tra:
+
+- Ban dung dung private key:
+  `ssh -i ~/.ssh/quant_finance_oci ubuntu@<vm-public-ip>`
+- User Ubuntu image thuong la `ubuntu`.
+- Public key paste vao OCI luc tao VM co dung voi private key khong.
+- Private key local co permission `chmod 600`.
+
+### Cron khong chay
+
+Kiem tra:
+
+```bash
+crontab -l
+tail -n 200 /opt/quant-finance-data/logs/ingest-daily.log
+tail -n 200 /opt/quant-finance-data/logs/backup.log
+```
+
+Nguyen nhan thuong gap:
+
+- Cron khong load env.
+- Duong dan relative sai.
+- Chua activate venv.
+- CLI command chua ton tai.
+- Permission file script chua executable.
+
+### OCI CLI khong upload duoc Object Storage
+
+Kiem tra:
+
+```bash
+oci os ns get
+oci os bucket list --compartment-id <compartment-ocid>
+```
+
+Nguyen nhan thuong gap:
+
+- API key chua add vao user.
+- User/dynamic group chua co policy.
+- Sai region trong `~/.oci/config`.
+- Bucket nam o compartment khac.
+
+## Checklist Hoan Thanh
+
+- [ ] Tao compartment `quant-finance`.
+- [ ] Tao VCN `quant-vcn`.
+- [ ] Tao public subnet `quant-public-subnet`.
+- [ ] Tao NSG `quant-vm-nsg` chi mo SSH tu IP cua ban.
+- [ ] Tao VM `quant-vm-01` Ubuntu LTS.
+- [ ] SSH vao VM thanh cong.
+- [ ] Cai Python, Git, tool co ban.
+- [ ] Tao `/opt/quant-finance-data`.
+- [ ] Clone repo vao `/opt/quant-finance`.
+- [ ] Cai venv cho `datapipe`.
+- [ ] Cai venv cho `quant`.
+- [ ] Tao `/opt/quant-finance-secrets/quant.env`.
+- [ ] Tao bucket `quant-raw`, `quant-backups`, `quant-reports`.
+- [ ] Cai va test OCI CLI.
+- [ ] Chay backup script thanh cong.
+- [ ] Enable cron sau khi manual command da pass.
+- [ ] Kiem tra billing/cost analysis.
+
+## Viec Nen Lam Tiep Theo Trong Codebase
+
+1. Them intraday schema vao `datapipe`.
+2. Them SSI 5m/15m ingestion neu API entitlement ho tro.
+3. Them portfolio tables.
+4. Them recommendation va AI narrative tables.
+5. Them MCP read-only tools cho Claude.
+6. Them dashboard service sau khi data contract on dinh.

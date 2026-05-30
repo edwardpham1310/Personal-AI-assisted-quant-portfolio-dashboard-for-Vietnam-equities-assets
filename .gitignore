@@ -3,7 +3,10 @@
 .env.*
 !.env.example
 *.env
-.claude/
+.claude/*
+!.claude/
+!.claude/settings.json
+.claude/settings.local.json
 
 # Python
 __pycache__/
@@ -20,15 +23,35 @@ venv/
 env/
 
 # Data and databases
-data/
+data/*
+!data/
+!data/raw/
+data/raw/**
+!data/raw/.gitkeep
+!data/processed/
+data/processed/**
+!data/processed/.gitkeep
+!data/cache/
+data/cache/**
+!data/cache/.gitkeep
+!data/samples/
+!data/samples/.gitkeep
+db/*
+!db/
+!db/.gitkeep
 */data/raw/
 */data/processed/
+*/data/cache/
+*/data/vendor/
 */data/database/
+*.csv
 *.db
 *.sqlite
 *.sqlite3
 *.duckdb
 *.parquet
+!tests/fixtures/*.csv
+!*/tests/fixtures/*.csv
 
 # Reports and generated outputs
 */reports/
@@ -36,12 +59,23 @@ reports/
 *.html
 *.csv.gz
 
+# AI generated context
+ai-context/*
+!ai-context/
+!ai-context/.gitkeep
+repomix-output.*
+.repo-context.*
+
 # Testing and tooling
 .pytest_cache/
 .coverage
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.cache/
+logs/
+tmp/
+*.log
 
 # Notebooks
 .ipynb_checkpoints/

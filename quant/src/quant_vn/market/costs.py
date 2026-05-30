@@ -1,4 +1,18 @@
-"""Transaction cost model for Vietnam stock market."""
+"""
+Transaction cost model for Vietnam stock market.
+
+This module keeps the original TransactionCosts dataclass for backward
+compatibility with existing backtest engine tests.
+
+For new code (recommendation validator, portfolio ledger, detailed cost
+reporting), use the richer TransactionCostModel from quant_vn.costs:
+
+    from quant_vn.costs import TransactionCostModel, BrokerFeeProfile, VATModel
+
+Migration guide:
+    Old: TransactionCosts(commission_rate=0.001, sell_tax_rate=0.001, slippage_bps=10)
+    New: TransactionCostModel.from_legacy(commission_rate=0.001, ...)
+"""
 
 from __future__ import annotations
 
@@ -8,13 +22,16 @@ from dataclasses import dataclass
 @dataclass
 class TransactionCosts:
     """
-    Configurable trading cost model for Vietnam equities.
+    Configurable trading cost model for Vietnam equities (legacy flat model).
 
     Vietnam-specific defaults:
     - Commission: 0.1% per side (both buy and sell)
     - Sell tax: 0.1% on sell proceeds (securities transfer tax)
     - Slippage: 10 basis points (0.10%) market impact
     - Min fee: 0 (some brokers charge minimum; set as needed)
+
+    NOTE: This model does NOT include VAT on brokerage fees. Use
+    TransactionCostModel (from quant_vn.costs) for VAT-aware calculations.
     """
 
     commission_rate: float = 0.001   # 0.1% both sides
@@ -27,13 +44,13 @@ class TransactionCosts:
         return self.slippage_bps / 10_000
 
     def buy_cost(self, notional: float) -> float:
-        """Total cost of a buy order (commission + slippage)."""
+        """Total cost of a buy order (commission + slippage). Returns VND float."""
         commission = max(notional * self.commission_rate, self.min_fee)
         slippage = notional * self.slippage_rate
         return commission + slippage
 
     def sell_cost(self, notional: float) -> float:
-        """Total cost of a sell order (commission + sell tax + slippage)."""
+        """Total cost of a sell order (commission + sell tax + slippage). Returns VND float."""
         commission = max(notional * self.commission_rate, self.min_fee)
         tax = notional * self.sell_tax_rate
         slippage = notional * self.slippage_rate
@@ -48,11 +65,9 @@ class TransactionCosts:
         )
 
     def effective_buy_price(self, price: float) -> float:
-        """Price per share after buying (price + slippage)."""
         return price * (1 + self.slippage_rate)
 
     def effective_sell_price(self, price: float) -> float:
-        """Effective price per share after selling (price - slippage)."""
         return price * (1 - self.slippage_rate)
 
     def describe(self) -> dict:
@@ -65,5 +80,5 @@ class TransactionCosts:
         }
 
 
-# Default instance used by the backtest engine
+# Default instance used by the backtest engine (backward compat)
 DEFAULT_COSTS = TransactionCosts()

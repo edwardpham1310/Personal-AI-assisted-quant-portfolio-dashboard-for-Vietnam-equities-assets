@@ -28,6 +28,44 @@ Hệ thống được chia thành 4 package độc lập, mỗi package có mộ
 
 ---
 
+## MVP App Phase Architecture
+
+Giai đoạn MVP dashboard dùng stack sau:
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js + Plotly.js |
+| Backend | FastAPI |
+| Auth | Supabase Auth |
+| App DB | Supabase Postgres |
+| Realtime cache | Upstash Redis |
+| Market data | SSI FastConnect Data |
+| Historical analytics | DuckDB + Parquet |
+| Streaming | FastAPI Server-Sent Events (SSE) |
+| Deployment target | Cloudflare Pages + GCP e2-micro hoặc cheap VPS |
+
+Luồng MVP:
+
+```text
+Browser
+  |
+  | Next.js + Plotly.js
+  v
+FastAPI backend
+  |-- verifies Supabase Auth JWT
+  |-- reads/writes app state in Supabase Postgres
+  |-- caches latest quotes/signals in Upstash Redis
+  |-- fetches market data via SSI FastConnect Data
+  |-- reads historical analytics from DuckDB + Parquet
+  `-- streams updates to browser via SSE
+```
+
+Secrets như Supabase service role key, database password, SSI credentials, và
+Redis token chỉ được cấu hình trong backend/API host secret manager hoặc file
+`.env` local bị gitignore. Không commit secrets vào docs/config tracked.
+
+---
+
 ## Các package
 
 ### datapipe/ — Data Pipeline

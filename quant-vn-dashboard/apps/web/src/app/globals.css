@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  @apply bg-bg text-ink antialiased;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+a {
+  @apply text-accent hover:underline;
+}
+
+::selection {
+  background: rgba(79, 139, 240, 0.35);
+}

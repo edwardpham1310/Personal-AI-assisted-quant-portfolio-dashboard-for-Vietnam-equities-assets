@@ -1,0 +1,213 @@
+# Vietnam Market Configuration
+# ============================================================
+# DISCLAIMER: This configuration is for research purposes only.
+# It is NOT financial advice, tax advice, or legal advice.
+# All rates, thresholds, and assumptions MUST be verified with
+# your actual broker, relevant Vietnamese authorities, and current
+# regulations before making any investment decisions.
+# Market rules, tax rates, and fee schedules change over time.
+# ============================================================
+#
+# MANUAL VERIFICATION CHECKLIST (complete before trusting any output):
+#   [ ] Verify your exact broker fee rate with your account documentation
+#   [ ] Verify whether broker fee schedule includes or excludes VAT
+#   [ ] Verify current VAT rate applicable to brokerage services
+#   [ ] Verify current sell-side personal income tax rate (0.1% as of 2024)
+#   [ ] Verify current dividend income tax rate (5% as of 2024)
+#   [ ] Verify T+2 settlement cycle with your broker
+#   [ ] Verify cash advance availability, rate, and minimum fee
+#   [ ] Verify lot size and odd-lot trading rules
+#   [ ] Verify price limit percentages per exchange
+#   [ ] Verify liquidity thresholds appropriate for your strategy
+# ============================================================
+
+market:
+  country: VN
+  currency: VND
+  default_asset_type: STOCK
+  default_settlement_cycle: T_PLUS_2
+  settlement_available_session: AFTERNOON_T_PLUS_2
+  allow_short_selling: false
+  allow_margin: false
+  allow_fractional_shares: false
+  allow_sell_unsettled_shares: false
+  allow_use_unsettled_cash: false
+
+lot_size:
+  default: 100                    # HOSE/HNX standard board lot
+  odd_lot_supported: false        # Odd-lot board exists but not modeled in MVP
+  # Policy when order quantity is not a valid lot multiple:
+  #   reject   — reject the order outright
+  #   round_down — round down to nearest valid lot
+  invalid_lot_policy: round_down
+
+# ---------- Taxes ----------
+# VERIFY: These are statutory rates as of 2024. Confirm with Vietnamese tax authority.
+# Source: Law on Personal Income Tax No. 04/2007/QH12, amended by 26/2012/QH13
+taxes:
+  sell_tax_rate: 0.001            # 0.1% of gross sell transaction value (per trade)
+  dividend_tax_rate: 0.05         # 5% of cash dividend gross amount (withheld at source)
+  stock_dividend_tax_enabled: true  # stock dividends are NOT taxed at receipt; cost basis = 0
+  # Tax profile effective date — update when rates change
+  tax_profile_effective_date: "2026-01-01"
+
+# ---------- VAT ----------
+# VERIFY: VAT rate as of 2024 is 10%.
+# CRITICAL: You MUST verify whether your broker's published fee schedule
+#           already includes VAT. Set brokerage_fee_includes_vat accordingly.
+#           Getting this wrong causes double-counting or under-counting of VAT.
+vat:
+  enabled: true
+  default_vat_rate: 0.10          # 10% — statutory as of 2024
+  # null = unknown/unverified (will raise warning at runtime)
+  # true  = broker fee schedule already includes VAT — do NOT add VAT again
+  # false = broker fee schedule excludes VAT — add 10% on top
+  brokerage_fee_includes_vat: null
+  # VAT applies ONLY to brokerage service fees, not to sell tax
+  vat_applies_to: brokerage_fee_only
+
+# ---------- Liquidity filters ----------
+# These are research thresholds, not hard market rules. Adjust to your strategy.
+liquidity:
+  min_avg_value_20d: 5000000000   # 5 billion VND — stocks below this are illiquid
+  min_price: 5000                 # VND — avoid penny stocks
+  max_zero_volume_days_20d: 2     # max days with zero volume in past 20 trading days
+  max_order_adv_pct: 0.05        # max order size as fraction of 20-day ADV (5%)
+
+# ---------- Slippage ----------
+# Model: liquidity_bucket uses ADV-tiered bps. Adjust if you have real tick data.
+slippage:
+  model: liquidity_bucket         # fixed_bps | liquidity_bucket | participation_rate
+  # Fixed bps model (if model = fixed_bps):
+  fixed_bps: 10.0
+  # Liquidity bucket model (if model = liquidity_bucket):
+  high_liquidity_bps: 10.0       # for stocks with ADV >= high_threshold
+  medium_liquidity_bps: 25.0
+  low_liquidity_bps: 50.0
+  high_threshold_vnd: 50000000000  # 50B VND ADV
+  low_threshold_vnd: 5000000000    # 5B VND ADV
+
+# ---------- Price limits ----------
+# These are fixed by HOSE/HNX/UPCoM exchange rules. Do not change without
+# verifying with exchange circular.
+price_limits:
+  enforce_ceiling_floor: true
+  reject_if_missing_price_limit_data: false  # warn and allow if ceiling/floor unavailable
+  hose_limit_pct: 0.07            # ±7%
+  hnx_limit_pct: 0.10             # ±10%
+  upcom_limit_pct: 0.15           # ±15%
+
+# ---------- Cash advance / Ứng trước tiền bán ----------
+# DISABLED by default. Cash advance has a cost — enable only if your broker
+# offers it and you understand the fee structure.
+# VERIFY: Rates must be confirmed with your broker before enabling.
+cash_advance:
+  enabled: false
+  allow_auto_advance_for_buying_power: false
+  allow_auto_advance_for_withdrawal: false
+  # Fee model: daily_interest | annualized_rate | flat_fee
+  advance_fee_model: daily_interest
+  # Set ONE of these rate fields based on your fee_model (others should be null):
+  annualized_rate: null           # e.g. 0.18 for 18% per year
+  daily_rate: null                # e.g. 0.0005 for 0.05% per day
+  flat_fee_rate: null             # e.g. 0.002 for 0.2% flat per advance
+  # Calendar days per year for annualized → daily conversion
+  day_count_basis: 365
+  minimum_fee: 0                  # VND — minimum fee per advance request
+  # VERIFY: Does your broker's advance fee include VAT?
+  fee_includes_vat: null          # null = unknown, must be verified
+  vat_enabled: true
+  max_advance_pct_of_pending_sell_proceeds: 1.0
+  broker_profile_required: true
+
+# ---------- Broker profiles ----------
+# VERIFY: All fee rates must be confirmed against your actual broker contract/
+#         account package documentation. Published rates change over time.
+# CRITICAL: Set brokerage_fee_includes_vat correctly for your broker to avoid
+#           double-counting VAT.
+#
+# brokerage_fee_includes_vat:
+#   null  = unknown/unverified (warning at runtime)
+#   true  = published rate already includes VAT
+#   false = published rate excludes VAT (VAT added separately)
+broker_profiles:
+  VNDIRECT_DTA_ONLINE:
+    broker: VNDIRECT
+    account_type: DTA
+    channel: online
+    fee_model: flat
+    brokerage_fee_rate: 0.001     # 0.1% — VERIFY with your VNDIRECT account
+    min_fee_vnd: 0
+    brokerage_fee_includes_vat: null
+
+  VNDIRECT_DBA_TIERED:
+    broker: VNDIRECT
+    account_type: DBA
+    channel: broker_assisted
+    fee_model: tiered
+    # Tiers sorted descending by min_daily_value (highest first)
+    # Rate applies to FULL order notional once tier threshold is reached
+    # VERIFY: Confirm these tiers with your VNDIRECT DBA documentation
+    tiers:
+      - min_daily_value: 800000000   # 800M VND/day → 0.15%
+        fee_rate: 0.0015
+      - min_daily_value: 400000000   # 400M VND/day → 0.20%
+        fee_rate: 0.0020
+      - min_daily_value: 250000000   # 250M VND/day → 0.25%
+        fee_rate: 0.0025
+      - min_daily_value: 80000000    # 80M VND/day → 0.30%
+        fee_rate: 0.0030
+      - min_daily_value: 0           # < 80M VND/day → 0.35%
+        fee_rate: 0.0035
+    min_fee_vnd: 0
+    brokerage_fee_includes_vat: null
+
+  SSI_ACTIVE_ONLINE:
+    broker: SSI
+    account_type: ACTIVE
+    channel: online
+    fee_model: flat
+    # VERIFY: This is a placeholder. Confirm with your actual SSI fee schedule.
+    brokerage_fee_rate: 0.0015    # 0.15% — approximate SSI ACTIVE online retail
+    min_fee_vnd: 0
+    brokerage_fee_includes_vat: null
+
+  CUSTOM:
+    broker: CUSTOM
+    account_type: CUSTOM
+    channel: online
+    fee_model: flat
+    # Set this to your actual broker rate
+    brokerage_fee_rate: 0.0015
+    min_fee_vnd: 0
+    brokerage_fee_includes_vat: false  # default: assume VAT not included
+
+# ---------- Cash advance broker profiles ----------
+# VERIFY: These rates must be confirmed with your broker.
+broker_cash_advance_profiles:
+  SSI_CUSTOM:
+    broker: SSI
+    enabled: false
+    advance_fee_model: daily_interest
+    annualized_rate: null         # VERIFY with SSI
+    daily_rate: null              # VERIFY with SSI
+    minimum_fee: 0
+    fee_includes_vat: null
+
+  VNDIRECT_CUSTOM:
+    broker: VNDIRECT
+    enabled: false
+    advance_fee_model: daily_interest
+    annualized_rate: null         # VERIFY with VNDIRECT
+    daily_rate: null              # VERIFY with VNDIRECT
+    minimum_fee: 0
+    fee_includes_vat: null
+
+  CUSTOM:
+    broker: CUSTOM
+    enabled: false
+    advance_fee_model: daily_interest
+    annualized_rate: null
+    daily_rate: null
+    minimum_fee: 0
+    fee_includes_vat: false

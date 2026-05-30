@@ -1,0 +1,56 @@
+name: frontend-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "quant-vn-dashboard/apps/web/**"
+      - ".github/workflows/frontend-build.yml"
+  pull_request:
+    paths:
+      - "quant-vn-dashboard/apps/web/**"
+      - ".github/workflows/frontend-build.yml"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+    working-directory: quant-vn-dashboard/apps/web
+
+env:
+  # Next.js needs these at build time. Use safe placeholder values for CI —
+  # the public Supabase anon key is gated by RLS, never a server secret.
+  NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+  NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  build:
+    name: typecheck + build + vitest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node 20 with pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: quant-vn-dashboard/apps/web/package.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Unit tests (vitest)
+        run: pnpm test

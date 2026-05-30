@@ -1,0 +1,40 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/node_modules/**)",
+      "Read(**/.git/**)",
+      "Read(**/dist/**)",
+      "Read(**/build/**)",
+      "Read(**/.next/**)",
+      "Read(**/coverage/**)",
+      "Read(**/.venv/**)",
+      "Read(**/venv/**)",
+      "Read(**/__pycache__/**)",
+      "Read(**/.pytest_cache/**)",
+      "Read(**/.mypy_cache/**)",
+      "Read(**/.ruff_cache/**)",
+      "Read(**/.cache/**)",
+      "Read(**/logs/**)",
+      "Read(**/tmp/**)",
+      "Read(**/ai-context/**)",
+      "Read(**/data/raw/**)",
+      "Read(**/data/processed/**)",
+      "Read(**/data/cache/**)",
+      "Read(**/data/vendor/**)",
+      "Read(**/data/database/**)",
+      "Read(**/repomix-output.*)",
+      "Read(**/.repo-context.*)",
+      "Read(**/reports/**/*.csv)",
+      "Read(**/exports/**/*.csv)",
+      "Read(**/*.parquet)",
+      "Read(**/*.duckdb)",
+      "Read(**/*.sqlite)",
+      "Read(**/*.sqlite3)",
+      "Read(**/*.db)",
+      "Read(**/*.log)"
+    ]
+  }
+}
