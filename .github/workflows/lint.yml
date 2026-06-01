@@ -81,21 +81,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Set up Node 20 with pnpm cache
+      - name: Set up Node 20 with npm cache
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: pnpm
-          cache-dependency-path: quant-vn-dashboard/apps/web/package.json
+          cache: npm
+          cache-dependency-path: quant-vn-dashboard/apps/web/package-lock.json
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile=false
+        run: npm ci
 
       - name: ESLint
-        run: pnpm lint
+        run: npm run lint
 
       - name: Prettier check
-        run: pnpm exec prettier --check "src/**/*.{ts,tsx,css,md}"
+        run: npx prettier --check "src/**/*.{ts,tsx,css,md}"

@@ -7,19 +7,19 @@ models in and returns Pydantic models out so it stays trivially unit-testable.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, timezone
-from typing import Any, Iterable
+from collections.abc import Iterable
+from datetime import UTC, date, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
+
+from schemas.assets import CostBreakdown, CostPeriod, PnlBySymbol
+from schemas.market import Quote
+from schemas.portfolio import EnrichedPosition, PortfolioSummary
 
 # Period anchors (MTD/YTD) follow the operator's wall clock in Vietnam, not
 # UTC — otherwise a trade dated late evening Asia/Ho_Chi_Minh time can be
 # bucketed into the previous month/year.
 _ICT = ZoneInfo("Asia/Ho_Chi_Minh")
-
-from schemas.assets import CostBreakdown, CostPeriod, PnlBreakdown, PnlBySymbol
-from schemas.market import Quote
-from schemas.portfolio import EnrichedPosition, PortfolioSummary
-
 
 # ── Per-position enrichment ──────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ def compute_summary(
 
     # First pass — compute market values to derive weights.
     raw_market_values: list[float | None] = []
-    for pos, quote in zip(positions, quotes):
+    for pos, quote in zip(positions, quotes, strict=False):
         if quote is None:
             raw_market_values.append(None)
         else:
@@ -112,7 +112,7 @@ def compute_summary(
     aggregate_warnings: list[str] = []
     latest_ts: datetime | None = None
 
-    for pos, quote, mv in zip(positions, quotes, raw_market_values):
+    for pos, quote, mv in zip(positions, quotes, raw_market_values, strict=False):
         weight: float | None
         if mv is None or total_market_value <= 0:
             weight = None
@@ -123,7 +123,7 @@ def compute_summary(
         if quote is not None:
             last_marked = quote.ts.isoformat() if isinstance(quote.ts, datetime) else str(quote.ts)
             if isinstance(quote.ts, datetime):
-                ts_aware = quote.ts if quote.ts.tzinfo else quote.ts.replace(tzinfo=timezone.utc)
+                ts_aware = quote.ts if quote.ts.tzinfo else quote.ts.replace(tzinfo=UTC)
                 if latest_ts is None or ts_aware > latest_ts:
                     latest_ts = ts_aware
 

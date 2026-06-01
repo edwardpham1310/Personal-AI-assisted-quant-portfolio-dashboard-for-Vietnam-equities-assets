@@ -9,7 +9,7 @@ written by ``record_snapshot``.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.security import AuthContext
@@ -46,7 +46,7 @@ async def compute_snapshot(
     rather than zero (which would dramatically overstate drawdown).
     """
     mark_prices = mark_prices or {}
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
 
     cash = await get_current_cash(db, user, account_id)
     pending = await get_pending_cash(db, user, account_id)

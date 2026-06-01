@@ -7,9 +7,7 @@ fixtures.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from schemas.market import Quote, Security
 from schemas.trading import (
@@ -19,15 +17,14 @@ from schemas.trading import (
 )
 from services.order_preview import (
     BROKERAGE_RATE,
-    PreviewInputs,
     SELL_TAX_RATE,
     SLIPPAGE_RATE,
     VAT_RATE,
+    PreviewInputs,
     calculate_preview,
 )
 
-
-_NOW = datetime(2026, 5, 31, tzinfo=timezone.utc)
+_NOW = datetime(2026, 5, 31, tzinfo=UTC)
 
 
 def _quote(
@@ -167,7 +164,7 @@ def test_buy_lot_size_violation_rejected() -> None:
 def test_buy_above_ceiling_rejected() -> None:
     req = _buy(price=140_000)  # ceiling=130k
     result = calculate_preview(
-        PreviewInputs(req, _quote(ceiling=130_000), _security(), _cash(billion := 1_000_000_000), None)
+        PreviewInputs(req, _quote(ceiling=130_000), _security(), _cash(1_000_000_000), None)
     )
     assert result.validation_status == "REJECTED"
     assert any("PRICE_ABOVE_CEILING" in r for r in result.rejection_reasons)

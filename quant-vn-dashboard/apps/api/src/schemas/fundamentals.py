@@ -19,7 +19,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # Per-symbol availability flag the response surfaces so the UI can render
 # a "fundamentals missing" badge without scanning rejection codes.
 FundamentalDataStatus = Literal[

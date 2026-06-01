@@ -20,12 +20,10 @@ Per AC checklist:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-
 
 # ── Test fixtures ─────────────────────────────────────────────────────────
 
@@ -34,7 +32,7 @@ from fastapi.testclient import TestClient
 def _mock_cash_for_any_account(monkeypatch: pytest.MonkeyPatch) -> None:
     """Same workaround as Phase 2.8 — MockTradingProvider only returns
     cash for ACC-DEFAULT; tests register UUID accounts."""
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
 
     from providers.trading import MockTradingProvider
     from schemas.trading import CashBalance
@@ -47,7 +45,7 @@ def _mock_cash_for_any_account(monkeypatch: pytest.MonkeyPatch) -> None:
             withdrawable_cash=100_000_000,
             pending_cash=0,
             currency="VND",
-            as_of=_dt.now(_tz.utc),
+            as_of=_dt.now(UTC),
         )
 
     async def fake_positions(self, account_id):
@@ -113,7 +111,7 @@ def _seed_state(fake_db, uid, account_id, *, emergency_stopped: bool = False) ->
         "last_started_at": None,
         "last_stopped_at": None,
         "emergency_stopped_at": (
-            datetime.now(timezone.utc).isoformat() if emergency_stopped else None
+            datetime.now(UTC).isoformat() if emergency_stopped else None
         ),
         "emergency_stop_reason": "test" if emergency_stopped else None,
     }
@@ -245,7 +243,7 @@ def test_worker_secret_required_when_set(
     get_settings.cache_clear()
 
     headers, _ = auth_headers()
-    account_id = _register_account(client, headers)
+    _register_account(client, headers)
     r_no_secret = client.post(
         "/auto-trade/worker/tick",
         headers=headers,
@@ -472,7 +470,7 @@ def test_stale_quote_skips_decision(
         return [
             Quote(
                 symbol="FPT", exchange="HOSE", price=86000,
-                ts=datetime.now(timezone.utc),
+                ts=datetime.now(UTC),
                 stale=True, source="mock",
             )
         ]
@@ -749,7 +747,7 @@ def test_max_runtime_minutes_auto_stops_run(
     _seed_paper_account(client, headers)
     run_id = _start_run(client, headers, account_id)
     # Age started_at by 5 minutes.
-    old = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    old = (datetime.now(UTC) - timedelta(minutes=5)).isoformat()
     for r in fake_db._tables["auto_trade_runs"]:
         if r["id"] == run_id:
             r["started_at"] = old
@@ -858,7 +856,8 @@ def test_validate_engine_decision_action_not_allowed_direct() -> None:
     fast regression net for the rejection-precedence logic."""
     from core.config import Settings
     from services.auto_trade_risk import (
-        EngineRiskContext, validate_engine_decision,
+        EngineRiskContext,
+        validate_engine_decision,
     )
     s = Settings(_env_file=None)  # type: ignore[call-arg]
     ctx = EngineRiskContext(
@@ -899,11 +898,11 @@ def test_vn_market_hours_helper() -> None:
     from services.auto_trade_scheduler import vn_market_is_open
 
     # 02:00 UTC Wednesday = 09:00 ICT — market open.
-    open_ts = datetime(2026, 5, 27, 2, 30, tzinfo=timezone.utc)
+    open_ts = datetime(2026, 5, 27, 2, 30, tzinfo=UTC)
     assert vn_market_is_open(open_ts) is True
     # 16:00 UTC Wednesday = 23:00 ICT — closed.
-    closed_ts = datetime(2026, 5, 27, 16, 0, tzinfo=timezone.utc)
+    closed_ts = datetime(2026, 5, 27, 16, 0, tzinfo=UTC)
     assert vn_market_is_open(closed_ts) is False
     # 05:00 UTC Saturday → weekend.
-    weekend_ts = datetime(2026, 5, 30, 5, 0, tzinfo=timezone.utc)
+    weekend_ts = datetime(2026, 5, 30, 5, 0, tzinfo=UTC)
     assert vn_market_is_open(weekend_ts) is False

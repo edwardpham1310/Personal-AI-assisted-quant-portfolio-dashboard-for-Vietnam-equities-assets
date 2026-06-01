@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
 from schemas.fundamentals import Fundamentals
 from services.guardrails_v2 import (
     CONSECUTIVE_CEILINGS_MAX_NON_VN100,
-    GuardrailEvidenceV2,
     MIN_LIQUIDITY_VND,
     MIN_MARKET_CAP,
     MIN_ROE_PCT,
@@ -26,6 +23,7 @@ from services.guardrails_v2 import (
     R3_POTENTIAL_WASH_TRADING,
     R3_UNBACKED_EXTREME_PUMP,
     VOL_COV_MIN,
+    GuardrailEvidenceV2,
     evaluate,
 )
 
@@ -95,7 +93,7 @@ def test_layer1_warns_missing_avg_value_20d_in_relaxed() -> None:
     report = evaluate(ev)
     # Layer 1 itself should PASS (warning only); other layers may still
     # reject so we don't assert overall status here, just the layer.
-    layer1 = next(l for l in report.layers if l.layer == "size_liquidity")
+    layer1 = next(lr for lr in report.layers if lr.layer == "size_liquidity")
     assert layer1.status == "PASS"
     assert R1_MISSING_AVG_VALUE_20D in layer1.warnings
 
@@ -148,7 +146,7 @@ def test_layer2_relaxed_warns_missing_fundamentals() -> None:
     # relaxed mode is the only one that treats missing data as WARN.
     ev = _clean_evidence(mode="relaxed", fundamentals=None)
     report = evaluate(ev)
-    layer2 = next(l for l in report.layers if l.layer == "fundamentals")
+    layer2 = next(lr for lr in report.layers if lr.layer == "fundamentals")
     assert layer2.status == "PASS"
     assert R2_MISSING_FUNDAMENTAL_DATA in layer2.warnings
 
@@ -187,7 +185,7 @@ def test_layer3_rejects_low_vol_cov_as_potential_wash_trading() -> None:
 def test_layer3_warns_missing_vol_cov() -> None:
     ev = _clean_evidence(vol_cov_20d=None)
     report = evaluate(ev)
-    layer3 = next(l for l in report.layers if l.layer == "anti_manipulation")
+    layer3 = next(lr for lr in report.layers if lr.layer == "anti_manipulation")
     assert R3_MISSING_VOL_COV in layer3.warnings
 
 
@@ -207,7 +205,7 @@ def test_layer3_balanced_warns_instead_of_rejects_unbacked_pump() -> None:
         is_vn100=False,
     )
     report = evaluate(ev)
-    layer3 = next(l for l in report.layers if l.layer == "anti_manipulation")
+    layer3 = next(lr for lr in report.layers if lr.layer == "anti_manipulation")
     assert R3_UNBACKED_EXTREME_PUMP in layer3.warnings
     assert layer3.status == "PASS"
 
@@ -220,7 +218,7 @@ def test_layer3_vn100_immune_to_extreme_pump_reject() -> None:
         is_vn100=True,
     )
     report = evaluate(ev)
-    layer3 = next(l for l in report.layers if l.layer == "anti_manipulation")
+    layer3 = next(lr for lr in report.layers if lr.layer == "anti_manipulation")
     # No unbacked-pump REJECT
     assert R3_UNBACKED_EXTREME_PUMP not in layer3.rejection_reasons
 
@@ -232,7 +230,7 @@ def test_clean_path_passes_all_three_layers() -> None:
     report = evaluate(_clean_evidence())
     assert not report.is_rejected()
     assert report.fundamental_data_status == "FUNDAMENTAL_DATA_AVAILABLE"
-    assert all(l.status == "PASS" for l in report.layers)
+    assert all(lr.status == "PASS" for lr in report.layers)
 
 
 def test_reject_in_layer1_still_runs_layer2_and_layer3() -> None:

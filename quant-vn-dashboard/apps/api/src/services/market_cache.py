@@ -6,12 +6,11 @@ one place. Tick data does NOT round-trip through Postgres.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from schemas.market import Quote
 from services.cache import Cache
-
 
 QUOTE_KEY = "quote:{symbol}"
 INDEX_KEY = "index:{code}"
@@ -111,7 +110,7 @@ async def set_last_poll(
     await cache.set_json(
         LAST_POLL_KEY,
         {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ok": ok,
             "symbol_count": symbol_count,
             "error": error,

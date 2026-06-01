@@ -21,11 +21,13 @@ from api.routes import (
     portfolio,
     recommendations,
     scanner,
-    settings as settings_routes,
     stream,
     system,
     trading,
     watchlist,
+)
+from api.routes import (
+    settings as settings_routes,
 )
 from core.config import get_settings
 from core.deps import get_market_provider, set_cache, set_poller
@@ -33,7 +35,6 @@ from core.logging import configure_logging, get_logger
 from services.cache import build_cache
 from services.supabase_db import PostgrestError
 from workers.market_poller import MarketPoller
-
 
 logger = get_logger(__name__)
 

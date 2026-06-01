@@ -29,7 +29,7 @@ These checks are conservative — when in doubt, REJECT.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.config import Settings
@@ -74,7 +74,7 @@ def validate_engine_decision(ctx: EngineRiskContext) -> RiskValidationResult:
     reasons: list[str] = []
     warnings: list[str] = []
     status: ValidationStatus = "VALID"
-    now = ctx.now or datetime.now(timezone.utc)
+    now = ctx.now or datetime.now(UTC)
 
     # 1. Run must be in a state that accepts new decisions.
     run_status = ctx.run_row.get("status")

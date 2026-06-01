@@ -15,11 +15,11 @@ Coverage:
 from __future__ import annotations
 
 import re
+from datetime import UTC
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-
 
 # ── Auth gating ────────────────────────────────────────────────────────────
 
@@ -93,12 +93,12 @@ def test_buy_price_equal_to_ceiling_does_not_reject(
     not ``>=``). Pinning this prevents a silent regression to ``>=``
     that would block all ceiling-day orders."""
     headers, _ = auth_headers()
-    account_id = _register(client, headers)
+    _register(client, headers)
     # Mock provider's FPT ref = 86000; we don't have ceiling/floor exposed
     # via mock quotes, so the boundary is enforced when quote is None
     # (no rejection on band). We exercise the calculator directly to pin
     # the boundary.
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from schemas.market import Quote, Security
     from schemas.trading import (
@@ -107,7 +107,7 @@ def test_buy_price_equal_to_ceiling_does_not_reject(
     )
     from services.order_preview import PreviewInputs, calculate_preview
 
-    now = datetime(2026, 5, 31, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 31, tzinfo=UTC)
     q = Quote(
         symbol="FPT", exchange="HOSE", price=86000, ceiling_price=92000,
         floor_price=80000, ts=now, stale=False, source="mock",
@@ -132,7 +132,7 @@ def test_sell_quantity_equal_to_sellable_does_not_reject(
     """Boundary: selling exactly sellable_quantity is VALID/WARN, not
     REJECTED. A regression flipping ``>`` to ``>=`` would block all
     full-position liquidations."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from schemas.market import Quote, Security
     from schemas.trading import (
@@ -142,7 +142,7 @@ def test_sell_quantity_equal_to_sellable_does_not_reject(
     )
     from services.order_preview import PreviewInputs, calculate_preview
 
-    now = datetime(2026, 5, 31, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 31, tzinfo=UTC)
     q = Quote(symbol="FPT", exchange="HOSE", price=86000, ts=now, stale=False, source="mock")
     s = Security(symbol="FPT", exchange="HOSE", lot_size=100, status="ACTIVE")
     pos = StockPosition(

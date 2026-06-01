@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 
 from schemas.market import Quote
 from services import market_cache
 from services.data_quality import _redact
-
 
 # ── /system/health ──────────────────────────────────────────────────────────
 
@@ -145,7 +143,7 @@ def test_system_data_quality_flags_stale_quote(
     client: TestClient, auth_headers, fake_cache
 ) -> None:
     # Seed a stale quote on a core symbol.
-    old_ts = datetime.now(timezone.utc) - timedelta(minutes=10)
+    old_ts = datetime.now(UTC) - timedelta(minutes=10)
     asyncio.run(
         market_cache.set_quote(
             fake_cache,

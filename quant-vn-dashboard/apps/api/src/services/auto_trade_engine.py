@@ -30,7 +30,7 @@ the rest of the safety stack runs identically.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.config import Settings
@@ -50,11 +50,9 @@ from services.auto_trade_risk import (
 )
 from services.auto_trade_scheduler import (
     cooldown_remaining_seconds,
-    vn_market_is_open,
 )
 from services.live_orders import compute_gate_status
 from services.supabase_db import SupabaseDB
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -168,7 +166,7 @@ async def _build_context(
     )
 
     # Daily counters (today only).
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     counter_rows = await db.select(
         "auto_trade_risk_counters",
         where={
@@ -295,7 +293,7 @@ async def _bump_counter(
     *,
     gross_value: float,
 ) -> None:
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     rows = await db.select(
         "auto_trade_risk_counters",
         where={
@@ -457,7 +455,7 @@ async def _dispatch_live_auto(
     async def _flip(target_status: str, extra: dict | None = None) -> None:
         patch: dict[str, Any] = {
             "status": target_status,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
         if extra:
             patch.update(extra)
@@ -469,10 +467,10 @@ async def _dispatch_live_auto(
 
     await _flip("PREVIEWED")
     await _flip("CONFIRM_REQUIRED")
-    await _flip("CONFIRMED", {"confirmed_at": datetime.now(timezone.utc).isoformat()})
+    await _flip("CONFIRMED", {"confirmed_at": datetime.now(UTC).isoformat()})
 
     if dry_run:
-        await _flip("SUBMITTED", {"submitted_at": datetime.now(timezone.utc).isoformat()})
+        await _flip("SUBMITTED", {"submitted_at": datetime.now(UTC).isoformat()})
         await db.insert(
             "live_order_submissions",
             {
@@ -539,7 +537,7 @@ async def _dispatch_live_auto(
             quantity=int(candidate.get("quantity") or 0),
             limit_price=candidate.get("limit_price"),
         )
-        await _flip("SUBMITTED", {"submitted_at": datetime.now(timezone.utc).isoformat()})
+        await _flip("SUBMITTED", {"submitted_at": datetime.now(UTC).isoformat()})
         await db.insert(
             "live_order_submissions",
             {
@@ -632,7 +630,7 @@ async def process_tick(
                 )
             else:
                 started_at_dt = started_at_raw
-            age = datetime.now(timezone.utc) - started_at_dt
+            age = datetime.now(UTC) - started_at_dt
             if age > _td(minutes=max_runtime_min):
                 # Auto-stop. Best-effort — if the state-transition trigger
                 # blocks (terminal already), just refuse the tick.
@@ -641,8 +639,8 @@ async def process_tick(
                         "auto_trade_runs",
                         {
                             "status": "STOPPED",
-                            "stopped_at": datetime.now(timezone.utc).isoformat(),
-                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                            "stopped_at": datetime.now(UTC).isoformat(),
+                            "updated_at": datetime.now(UTC).isoformat(),
                         },
                         where={
                             "id": run_row["id"],

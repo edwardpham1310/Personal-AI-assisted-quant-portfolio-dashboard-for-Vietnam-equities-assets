@@ -21,7 +21,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 
@@ -667,13 +666,13 @@ def test_reauth_is_fresh_unit() -> None:
     provided, both provided."""
     from datetime import timedelta
 
-    from services.auto_trade import reauth_is_fresh
     from core.config import get_settings
+    from services.auto_trade import reauth_is_fresh
 
     get_settings.cache_clear()
     s = get_settings()
 
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     fresh_iat = int(now.timestamp())
     stale_iat = int((now - datetime.timedelta(seconds=600)).timestamp())
 

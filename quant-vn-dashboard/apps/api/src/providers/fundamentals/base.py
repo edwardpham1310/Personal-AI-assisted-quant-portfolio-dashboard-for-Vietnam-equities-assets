@@ -13,7 +13,6 @@ from typing import Literal
 
 from schemas.fundamentals import Fundamentals
 
-
 ProviderStatusCode = Literal[
     "CONNECTED",
     "CONFIG_MISSING",

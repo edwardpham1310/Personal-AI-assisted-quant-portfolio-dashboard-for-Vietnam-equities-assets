@@ -30,11 +30,10 @@ and is the ONLY path that runs when any gate is closed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.config import Settings
-from providers.market_data import MarketDataProvider, ProviderError
 from schemas.live_orders import LiveOrderIntentStatus, ValidationStatus
 from schemas.market import Quote, Security
 from schemas.trading import (
@@ -44,7 +43,6 @@ from schemas.trading import (
 )
 from services.auto_trade import reauth_is_fresh
 from services.order_preview import PreviewInputs, calculate_preview
-
 
 # ── State-transition matrix (also enforced at DB layer by trigger) ─────────
 
@@ -148,7 +146,7 @@ def revalidate_for_submit(
     ``status`` is the worst-of (VALID < WARN < REJECTED). Snapshot is a
     JSON-safe dict persisted on the intent row for forensics.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     reasons: list[str] = []
     warnings: list[str] = []
 

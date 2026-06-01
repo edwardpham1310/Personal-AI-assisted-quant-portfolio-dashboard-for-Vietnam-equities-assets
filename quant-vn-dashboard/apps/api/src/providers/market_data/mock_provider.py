@@ -9,11 +9,10 @@ e2e snapshots, and UI development reproducible.
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 
 from providers.market_data.base import Interval, MarketDataProvider, ProviderError
 from schemas.market import IndexInfo, OHLCVBar, ProviderStatus, Quote, Security
-
 
 _REFERENCE_PRICES: dict[str, float] = {
     "FPT": 86000.0,
@@ -125,7 +124,7 @@ class MockMarketDataProvider(MarketDataProvider):
         cur = start_date
         while cur <= end_date:
             if cur.weekday() < 5:  # skip Sat/Sun
-                ts = datetime.combine(cur, time.min, tzinfo=timezone.utc)
+                ts = datetime.combine(cur, time.min, tzinfo=UTC)
                 bars.append(_bar(sym, ts, ref))
             cur += timedelta(days=1)
         return bars
@@ -147,8 +146,8 @@ class MockMarketDataProvider(MarketDataProvider):
         while cur <= end_date:
             if cur.weekday() < 5:
                 # Mock VN session: 02:00 → 08:00 UTC (≈ 09:00–15:00 ICT).
-                start_ts = datetime.combine(cur, time(2, 0), tzinfo=timezone.utc)
-                end_ts = datetime.combine(cur, time(8, 0), tzinfo=timezone.utc)
+                start_ts = datetime.combine(cur, time(2, 0), tzinfo=UTC)
+                end_ts = datetime.combine(cur, time(8, 0), tzinfo=UTC)
                 ts = start_ts
                 while ts <= end_ts:
                     bars.append(_bar(sym, ts, ref, volume_floor=2_000))
@@ -158,7 +157,7 @@ class MockMarketDataProvider(MarketDataProvider):
 
     async def get_daily_stock_price(self, symbols: list[str]) -> list[Quote]:
         out: list[Quote] = []
-        ts = datetime.now(timezone.utc).replace(microsecond=0)
+        ts = datetime.now(UTC).replace(microsecond=0)
         for raw in symbols:
             sym = raw.upper()
             ref = _REFERENCE_PRICES.get(sym)
@@ -191,7 +190,7 @@ class MockMarketDataProvider(MarketDataProvider):
         return await self.get_daily_stock_price(symbols)
 
     async def status(self) -> ProviderStatus:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return ProviderStatus(
             name="mock",
             ready=True,

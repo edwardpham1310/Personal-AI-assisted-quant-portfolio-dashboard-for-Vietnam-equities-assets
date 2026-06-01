@@ -13,7 +13,7 @@ enforces the safety, not just policy.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -28,6 +28,14 @@ from core.logging import get_logger
 from core.security import AuthContext, get_current_user
 from providers.market_data import MarketDataProvider, ProviderError
 from providers.trading import TradingProvider, TradingProviderError
+from schemas.live_orders import (
+    ConfirmRequest,
+    LiveOrderAuditAction,
+    LiveOrderIntent,
+    LiveOrderIntentCreate,
+    LiveOrderIntentResult,
+    LiveOrderIntentStatus,
+)
 from schemas.trading import (
     CashBalance,
     MaxBuyQuantity,
@@ -39,15 +47,6 @@ from schemas.trading import (
     StockPosition,
     TradingAccount,
     TradingAccountCreate,
-)
-from schemas.live_orders import (
-    ConfirmRequest,
-    LiveOrderAuditAction,
-    LiveOrderIntent,
-    LiveOrderIntentCreate,
-    LiveOrderIntentResult,
-    LiveOrderIntentStatus,
-    LiveOrderSubmission,
 )
 from services.auto_trade import reauth_is_fresh
 from services.live_orders import (
@@ -222,7 +221,7 @@ async def get_cash(
     try:
         return await provider.get_cash_balance(account_id)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 @router.get("/positions", response_model=list[StockPosition])
@@ -236,7 +235,7 @@ async def get_positions(
     try:
         return await provider.get_stock_positions(account_id)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 @router.get("/max-buy-qty", response_model=MaxBuyQuantity)
@@ -254,7 +253,7 @@ async def max_buy_qty(
     try:
         return await provider.get_max_buy_qty(account_id, symbol, price)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 @router.get("/max-sell-qty", response_model=MaxSellQuantity)
@@ -269,7 +268,7 @@ async def max_sell_qty(
     try:
         return await provider.get_max_sell_qty(account_id, symbol)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 @router.get("/order-book", response_model=list[OrderBookEntry])
@@ -283,7 +282,7 @@ async def order_book(
     try:
         return await provider.get_order_book(account_id)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 @router.get("/order-history", response_model=list[OrderHistoryEntry])
@@ -301,7 +300,7 @@ async def order_history(
     try:
         return await provider.get_order_history(account_id, start_date, end_date)
     except TradingProviderError as exc:
-        raise _trading_error_to_http(exc)
+        raise _trading_error_to_http(exc) from exc
 
 
 # ── Order preview ──────────────────────────────────────────────────────────
@@ -599,7 +598,7 @@ async def _transition_or_404(
             status_code=409,
             detail=f"Illegal transition {current} → {target}",
         )
-    patch = {"status": target, "updated_at": datetime.now(timezone.utc).isoformat()}
+    patch = {"status": target, "updated_at": datetime.now(UTC).isoformat()}
     if extra:
         patch.update(extra)
     updated = await db.update(
@@ -888,7 +887,7 @@ async def confirm_live_order_intent(
             status_code=401,
             detail="Recent re-authentication required.",
         )
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     updated = await _transition_or_404(
         db, user, intent_id,
         current=intent["status"], target="CONFIRMED",
@@ -983,7 +982,7 @@ async def _orders_today_for(
         where={"user_id": user.user_id, "account_id": account_id},
         user_jwt=user.raw_token,
     )
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     count = 0
     for r in rows:
         ts = r.get("submitted_at") or r.get("created_at")
@@ -1288,7 +1287,7 @@ async def submit_live_order_intent(
         db, user, intent_id,
         current=intent["status"], target="SUBMITTED",
         extra={
-            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "submitted_at": datetime.now(UTC).isoformat(),
             "validation_snapshot": snapshot,
             "warnings": warnings,
         },

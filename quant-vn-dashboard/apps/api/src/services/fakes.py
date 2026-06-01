@@ -18,7 +18,6 @@ from jose import jwt
 
 from core.config import get_settings
 
-
 _USER_OWNED_TABLES = {
     "user_settings",
     "watchlists",
@@ -93,7 +92,7 @@ class FakeSupabaseDB:
 
     @staticmethod
     def _now_iso() -> str:
-        return datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return datetime.datetime.now(datetime.UTC).isoformat()
 
     # ── SupabaseDB protocol ─────────────────────────────────────────────────
     async def select(

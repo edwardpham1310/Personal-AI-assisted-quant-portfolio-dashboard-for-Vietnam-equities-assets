@@ -14,12 +14,10 @@ can investigate "who looked at the limits before the change".
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
-from fastapi import Header
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from core.config import Settings, get_settings
 from core.deps import get_db, get_market_provider, get_trading_provider
@@ -185,7 +183,7 @@ async def _persist_mode_transition(
         where={"user_id": user.user_id, "account_id": account_id},
         user_jwt=user.raw_token,
     )
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     state_patch: dict[str, Any] = {"mode": new_mode}
     if new_mode == "OFF":
         state_patch["is_running"] = False
@@ -299,7 +297,7 @@ async def stamp_reauth(
     # would silently no-op (return []) and the audit row below would
     # claim success while ``last_reauth_at`` was never persisted.
     await _get_or_create_settings_row(db, user, account_id)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     rows = await db.update(
         "auto_trade_settings",
         {"last_reauth_at": now},
@@ -530,7 +528,7 @@ async def confirm_live_auto_enable(
             last_reauth_at=current.last_reauth_at,
             risk_acknowledged_at=current.risk_acknowledged_at,
         )
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     settings, _ = await _persist_mode_transition(
         db, user, payload.account_id,
         new_mode="LIVE_AUTO", enabled=True,
@@ -595,7 +593,7 @@ async def emergency_stop(
     await _resolve_user_account(db, user, payload.account_id)
     current = await _get_or_create_settings_row(db, user, payload.account_id)
     await _get_or_create_state_row(db, user, payload.account_id)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     await db.update(
         "auto_trade_settings",
         {"mode": "OFF", "enabled": False},
@@ -690,7 +688,7 @@ async def list_audit_logs(
 # env flag, then delegates. There is NO background daemon.
 
 
-from schemas.auto_trade_engine import (
+from schemas.auto_trade_engine import (  # noqa: E402
     AutoTradeDecision,
     AutoTradeOrder,
     AutoTradeRiskCounter,
@@ -749,7 +747,7 @@ async def start_run(
             detail="Auto-trade mode is OFF for this account. Set a mode first.",
         )
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     row = await db.insert(
         "auto_trade_runs",
         {
@@ -808,9 +806,9 @@ async def _transition_run(
             status_code=409,
             detail=f"Illegal run transition {current} → {target}",
         )
-    patch = {"status": target, "updated_at": datetime.now(timezone.utc).isoformat()}
+    patch = {"status": target, "updated_at": datetime.now(UTC).isoformat()}
     if target in ("STOPPED", "EMERGENCY_STOPPED", "FAILED"):
-        patch["stopped_at"] = datetime.now(timezone.utc).isoformat()
+        patch["stopped_at"] = datetime.now(UTC).isoformat()
     if extra:
         patch.update(extra)
     updated = await db.update(
@@ -1004,7 +1002,7 @@ async def worker_tick(
         # code AND skipping the FAILED-state transition (since the run
         # isn't ours, we shouldn't touch it). Surface as 404.
         if "not owned" in str(exc).lower():
-            raise HTTPException(status_code=404, detail="Run not found.")
+            raise HTTPException(status_code=404, detail="Run not found.") from None
         raise
     except Exception as exc:
         # Engine-side failure → flip the run to FAILED so the next tick
@@ -1021,5 +1019,5 @@ async def worker_tick(
                 "error_class": type(exc).__name__,
             },
         )
-        raise HTTPException(status_code=502, detail="Engine tick failed.")
+        raise HTTPException(status_code=502, detail="Engine tick failed.") from exc
     return result

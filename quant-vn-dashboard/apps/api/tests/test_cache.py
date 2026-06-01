@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -79,7 +79,7 @@ async def test_market_cache_quote_roundtrip() -> None:
         change=500.0,
         change_pct=0.0058,
         volume=12_000.0,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         stale=False,
         source="mock",
     )
@@ -97,7 +97,7 @@ async def test_market_cache_get_quotes_preserves_missing_slots() -> None:
         symbol="FPT",
         exchange="HOSE",
         price=1.0,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         stale=False,
         source="mock",
     )
@@ -149,6 +149,7 @@ class _StubUpstashClient:
 @pytest.mark.asyncio
 async def test_upstash_set_then_get_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     import httpx
+
     from services.cache import UpstashRestCache
 
     captured: dict = {}
@@ -180,6 +181,7 @@ async def test_upstash_failure_returns_none_and_does_not_raise(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import httpx
+
     from services.cache import UpstashRestCache
 
     class _Failing:
@@ -205,6 +207,7 @@ async def test_upstash_logs_never_leak_token_or_url(
     caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import httpx
+
     from services.cache import UpstashRestCache
 
     class _Failing:

@@ -8,7 +8,7 @@ SSI/mock provider).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -22,7 +22,6 @@ from schemas.paper_trading import (
     PaperAccountCreate,
     PaperAccountSummary,
     PaperAuditAction,
-    PaperCashLedgerEntry,
     PaperEquityPoint,
     PaperFill,
     PaperOrder,
@@ -33,8 +32,6 @@ from schemas.paper_trading import (
 )
 from services import paper_trading as paper_orchestrator
 from services.paper_ledger import (
-    get_current_cash,
-    get_pending_cash,
     settle_pending,
 )
 from services.paper_performance import compute_snapshot, record_snapshot
@@ -300,7 +297,7 @@ async def equity_curve(
         if isinstance(last_ts, str):
             try:
                 last_dt = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
-                if (datetime.now(timezone.utc) - last_dt).total_seconds() < 60:
+                if (datetime.now(UTC) - last_dt).total_seconds() < 60:
                     should_append = False
             except ValueError:
                 pass

@@ -29,7 +29,7 @@ research-only estimate.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 from typing import Literal
 
 from schemas.market import Quote, Security
@@ -40,7 +40,6 @@ from schemas.trading import (
     StockPosition,
     ValidationStatus,
 )
-
 
 # ── Vietnam equity fee constants ───────────────────────────────────────────
 
@@ -216,7 +215,7 @@ def calculate_preview(inputs: PreviewInputs) -> OrderPreviewResult:
         status = _worst_status(status, "WARN")
 
     # ── 6. T+2 settlement date (naive — weekend skip only) ────────────
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     settlement = _add_business_days(today, 2)
 
     return OrderPreviewResult(

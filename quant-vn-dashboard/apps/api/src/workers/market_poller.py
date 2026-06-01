@@ -30,7 +30,6 @@ from providers.market_data.base import MarketDataProvider
 from services import market_cache
 from services.cache import Cache
 
-
 logger = logging.getLogger(__name__)
 
 _BACKOFF_CAP_SECONDS = 60.0
@@ -110,7 +109,7 @@ class MarketPoller:
         if self._task is not None:
             try:
                 await asyncio.wait_for(self._task, timeout=5.0)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except (TimeoutError, asyncio.CancelledError):
                 self._task.cancel()
             self._task = None
         logger.info("market_poller.stopped")
@@ -195,5 +194,5 @@ class MarketPoller:
 
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=wait)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass

@@ -16,7 +16,7 @@ cash row, and position rows in; the result is consumed by
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from services.order_preview import (
@@ -115,5 +115,5 @@ def simulate_fill(inputs: FillInputs) -> FillResult | RejectionResult:
         sell_tax=_round_vnd(sell_tax),
         slippage=_round_vnd(slippage),
         net_cash_impact=_round_vnd(net),
-        filled_at=datetime.now(timezone.utc),
+        filled_at=datetime.now(UTC),
     )

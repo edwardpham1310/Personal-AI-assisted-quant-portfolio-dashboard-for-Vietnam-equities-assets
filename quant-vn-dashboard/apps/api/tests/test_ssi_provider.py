@@ -9,12 +9,12 @@ These never reach the real SSI host. They exercise:
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 
 import httpx
 import pytest
 
 from providers.market_data import ProviderError, SSIFastConnectProvider
-
 
 SECRET_VALUE = "SSI_SECRET_THAT_MUST_NOT_LEAK"
 CONSUMER_ID = "SSI_CONSUMER_THAT_MUST_NOT_LEAK"
@@ -140,8 +140,9 @@ async def test_status_code_auth_failed_after_token_refresh_401(
 ) -> None:
     """A 401 from /AccessToken must surface as AUTH_FAILED on /status."""
     import httpx
-    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
+
     from providers.market_data.base import ProviderError
+    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
 
     class _Resp:
         def __init__(self, code: int) -> None:
@@ -160,7 +161,7 @@ async def test_status_code_auth_failed_after_token_refresh_401(
         def __init__(self, *args, **kwargs) -> None:
             pass
 
-        async def __aenter__(self) -> "_Client":
+        async def __aenter__(self) -> _Client:
             return self
 
         async def __aexit__(self, *_a) -> None:
@@ -191,14 +192,15 @@ async def test_status_code_provider_error_on_network_failure(
 ) -> None:
     """A connection failure (not 401/403) must surface as PROVIDER_ERROR."""
     import httpx
-    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
+
     from providers.market_data.base import ProviderError
+    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
 
     class _Client:
         def __init__(self, *args, **kwargs) -> None:
             pass
 
-        async def __aenter__(self) -> "_Client":
+        async def __aenter__(self) -> _Client:
             return self
 
         async def __aexit__(self, *_a) -> None:
@@ -230,7 +232,8 @@ async def test_status_code_provider_error_on_network_failure(
 @pytest.mark.asyncio
 async def test_status_code_stale_when_last_call_old() -> None:
     """``_last_call_ts`` older than 5 min must surface as STALE."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
+
     from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
 
     p = SSIFastConnectProvider(
@@ -241,7 +244,7 @@ async def test_status_code_stale_when_last_call_old() -> None:
         max_retries=0,
     )
     # Simulate a successful call more than 5 minutes ago.
-    p._last_call_ts = datetime.now(timezone.utc) - timedelta(minutes=10)
+    p._last_call_ts = datetime.now(UTC) - timedelta(minutes=10)
     s = await p.status()
     assert s.status_code == "STALE"
     assert s.ready is False
@@ -252,8 +255,9 @@ def test_status_code_config_missing_via_status() -> None:
     depth), but if the caller bypassed the check, ``status()`` would also
     report CONFIG_MISSING. We use a manually-zeroed instance for the test.
     """
-    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
     import asyncio
+
+    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
 
     # Construct a valid instance, then zero the creds to simulate the path.
     p = SSIFastConnectProvider(
@@ -276,8 +280,9 @@ async def test_status_code_rate_limited_after_429(
 ) -> None:
     """A 429 from /AccessToken must surface as RATE_LIMITED on /status."""
     import httpx
-    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
+
     from providers.market_data.base import ProviderError
+    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
 
     class _Resp:
         def __init__(self, code: int) -> None:
@@ -293,7 +298,7 @@ async def test_status_code_rate_limited_after_429(
         def __init__(self, *args, **kwargs) -> None:
             pass
 
-        async def __aenter__(self) -> "_Client":
+        async def __aenter__(self) -> _Client:
             return self
 
         async def __aexit__(self, *_a) -> None:

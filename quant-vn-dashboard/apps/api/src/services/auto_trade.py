@@ -16,16 +16,14 @@ Phase 2.6 invariants enforced here:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.config import Settings
 from schemas.auto_trade import (
-    AutoTradeMode,
     AutoTradeSettings,
     AutoTradeSettingsUpdate,
 )
-
 
 # ── Mode transition policy ──────────────────────────────────────────────────
 # Phase 2.6 deliberately allows any-to-any mode transitions. The gates are
@@ -63,7 +61,7 @@ def reauth_is_fresh(
     Phase 2.8 callers pass ``trading_reauth_max_age_seconds`` so the
     live-trading reauth window is independently configurable.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     max_age = (
         max_age_seconds
         if max_age_seconds is not None

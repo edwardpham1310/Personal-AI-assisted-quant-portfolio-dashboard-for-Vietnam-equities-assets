@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from schemas.market import Quote
 from services.portfolio_valuation import (
@@ -18,7 +18,7 @@ def _quote(symbol: str, price: float, *, ts: datetime | None = None) -> Quote:
         symbol=symbol,
         exchange="HOSE",
         price=price,
-        ts=ts or datetime(2026, 5, 29, 7, 0, tzinfo=timezone.utc),
+        ts=ts or datetime(2026, 5, 29, 7, 0, tzinfo=UTC),
         source="mock",
     )
 
@@ -208,7 +208,7 @@ def test_cost_breakdown_uses_asia_ho_chi_minh_for_default_today(
         def now(cls, tz=None):  # noqa: D401
             from datetime import datetime as _real
 
-            instant = _real(2026, 5, 31, 23, 30, tzinfo=timezone.utc)
+            instant = _real(2026, 5, 31, 23, 30, tzinfo=UTC)
             return instant.astimezone(tz) if tz is not None else instant
 
     monkeypatch.setattr(pv, "datetime", _FixedDatetime)

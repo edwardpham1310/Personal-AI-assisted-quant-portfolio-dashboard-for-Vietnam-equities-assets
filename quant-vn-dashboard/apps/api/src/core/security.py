@@ -11,7 +11,6 @@ from jose import JWTError, jwt
 
 from core.config import Settings, get_settings
 
-
 _HS256 = "HS256"
 _DEFAULT_AUDIENCE = "authenticated"
 

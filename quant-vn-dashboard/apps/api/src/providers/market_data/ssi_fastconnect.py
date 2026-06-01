@@ -12,14 +12,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
 
 from providers.market_data.base import Interval, MarketDataProvider, ProviderError
 from schemas.market import IndexInfo, OHLCVBar, ProviderStatus, Quote, Security
-
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +38,18 @@ def _parse_ssi_ts(value: Any) -> datetime | None:
     if not value:
         return None
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
     if isinstance(value, str):
         s = value.strip().replace("Z", "+00:00")
         # Try ISO first.
         try:
             dt = datetime.fromisoformat(s)
-            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
         except ValueError:
             pass
         # SSI sometimes uses dd/MM/yyyy.
         try:
-            return datetime.strptime(s, "%d/%m/%Y").replace(tzinfo=timezone.utc)
+            return datetime.strptime(s, "%d/%m/%Y").replace(tzinfo=UTC)
         except ValueError:
             return None
     return None
@@ -123,7 +122,7 @@ class SSIFastConnectProvider(MarketDataProvider):
             # surface AUTH_FAILED separately from PROVIDER_ERROR.
             if resp.status_code in (401, 403):
                 self._last_error_code = "AUTH_FAILED"
-                self._last_failed_call_ts = datetime.now(timezone.utc)
+                self._last_failed_call_ts = datetime.now(UTC)
                 self._last_error_message = f"HTTP{resp.status_code}"
                 logger.warning("ssi.token_refresh_auth_failed status=%d", resp.status_code)
                 raise ProviderError(
@@ -132,7 +131,7 @@ class SSIFastConnectProvider(MarketDataProvider):
                 )
             if resp.status_code == 429:
                 self._last_error_code = "RATE_LIMITED"
-                self._last_failed_call_ts = datetime.now(timezone.utc)
+                self._last_failed_call_ts = datetime.now(UTC)
                 self._last_error_message = "HTTP429"
                 logger.warning("ssi.token_refresh_rate_limited")
                 raise ProviderError(
@@ -146,7 +145,7 @@ class SSIFastConnectProvider(MarketDataProvider):
             # ``from None`` scrubs the chained exception so its traceback does
             # not leak the consumer_secret payload.
             self._last_error_code = "ERROR"
-            self._last_failed_call_ts = datetime.now(timezone.utc)
+            self._last_failed_call_ts = datetime.now(UTC)
             self._last_error_message = type(exc).__name__
             logger.warning("ssi.token_refresh_failed err=%s", type(exc).__name__)
             raise ProviderError(
@@ -158,7 +157,7 @@ class SSIFastConnectProvider(MarketDataProvider):
         token = (body.get("data") or {}).get("accessToken") or body.get("accessToken")
         if not token:
             self._last_error_code = "ERROR"
-            self._last_failed_call_ts = datetime.now(timezone.utc)
+            self._last_failed_call_ts = datetime.now(UTC)
             self._last_error_message = "missing_access_token"
             raise ProviderError(
                 f"SSI token response missing accessToken: {_safe(body)}",
@@ -187,7 +186,7 @@ class SSIFastConnectProvider(MarketDataProvider):
                         },
                         params=params or {},
                     )
-                self._last_call_ts = datetime.now(timezone.utc)
+                self._last_call_ts = datetime.now(UTC)
                 if resp.status_code == 429 or 500 <= resp.status_code < 600:
                     # Trigger a retry without leaking the body.
                     last_kind = f"HTTP{resp.status_code}"
@@ -360,7 +359,7 @@ class SSIFastConnectProvider(MarketDataProvider):
             _parse_ssi_ts(row.get("TradingDate"))
             or _parse_ssi_ts(row.get("tradingDate"))
             or _parse_ssi_ts(row.get("Date"))
-            or datetime.now(timezone.utc)
+            or datetime.now(UTC)
         )
         def f(*keys: str) -> float:
             for k in keys:
@@ -427,7 +426,7 @@ class SSIFastConnectProvider(MarketDataProvider):
             if not items:
                 continue
             row = items[0]
-            ts = _parse_ssi_ts(row.get("TradingDate")) or datetime.now(timezone.utc)
+            ts = _parse_ssi_ts(row.get("TradingDate")) or datetime.now(UTC)
             ref = row.get("RefPrice") or row.get("refPrice")
             close = (
                 row.get("ClosePrice")
@@ -534,7 +533,7 @@ class SSIFastConnectProvider(MarketDataProvider):
         if self._last_error_code in ("AUTH_FAILED", "RATE_LIMITED", "ERROR"):
             code = self._last_error_code
         elif self._last_call_ts is not None:
-            age = (datetime.now(timezone.utc) - self._last_call_ts).total_seconds()
+            age = (datetime.now(UTC) - self._last_call_ts).total_seconds()
             if age > 300:  # 5 min stale window
                 code = "STALE"
 

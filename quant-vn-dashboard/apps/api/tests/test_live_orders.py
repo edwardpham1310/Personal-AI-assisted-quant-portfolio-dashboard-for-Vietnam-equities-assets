@@ -17,7 +17,7 @@ Covers the AC checklist:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -33,7 +33,7 @@ def _mock_cash_for_any_account(monkeypatch: pytest.MonkeyPatch) -> None:
     return generous defaults regardless of account_id so the safety
     logic itself is what gets tested, not fixture wiring.
     """
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
 
     from providers.trading import MockTradingProvider
     from schemas.trading import CashBalance
@@ -46,7 +46,7 @@ def _mock_cash_for_any_account(monkeypatch: pytest.MonkeyPatch) -> None:
             withdrawable_cash=100_000_000,
             pending_cash=0,
             currency="VND",
-            as_of=_dt.now(_tz.utc),
+            as_of=_dt.now(UTC),
         )
 
     async def fake_positions(self, account_id):
@@ -473,6 +473,7 @@ def test_provider_status_reports_not_implemented_for_ssi_submit() -> None:
     """The SSI provider's submit_order method exists but raises 501. This
     pins the contract: Phase 2.8 scaffold only, no real HTTP yet."""
     import asyncio
+
     from providers.trading import SSITradingProvider
     from providers.trading.base import TradingProviderError
 
@@ -503,6 +504,7 @@ def test_mock_provider_submit_order_raises_501() -> None:
     contract, a future refactor that lets the mock return a synthetic
     fill would silently bypass every Phase 2.8 safety gate."""
     import asyncio
+
     from providers.trading import MockTradingProvider
     from providers.trading.base import TradingProviderError
 
@@ -595,7 +597,8 @@ def test_submit_rejected_when_quote_stale(
     """Phase 2.8 review fix: a non-None but stale quote must trigger
     QUOTE_STALE rejection. AC item 13 requires data freshness be
     enforced — previously only ``quote is None`` was checked."""
-    from datetime import datetime as _dt, timezone as _tz
+    from datetime import datetime as _dt
+
     from providers.market_data import MockMarketDataProvider
     from schemas.market import Quote
 
@@ -603,7 +606,7 @@ def test_submit_rejected_when_quote_stale(
         return [
             Quote(
                 symbol="FPT", exchange="HOSE",
-                price=86000, ts=_dt.now(_tz.utc),
+                price=86000, ts=_dt.now(UTC),
                 stale=True, source="mock",
             )
         ]
@@ -631,8 +634,9 @@ def test_orders_today_fail_closed_on_unparseable_timestamp(
     string previously bypassed the daily-order ceiling (the parse
     error was silently dropped). Fix: unparseable rows count toward
     the limit."""
-    from api.routes.trading import _orders_today_for
     import asyncio
+
+    from api.routes.trading import _orders_today_for
 
     headers, uid = auth_headers()
     account_id = _register_account(client, headers)
@@ -656,7 +660,6 @@ def test_orders_today_fail_closed_on_unparseable_timestamp(
     # We need a real auth token for the fake DB's user_jwt path —
     # reuse the auth_headers helper.
     headers2, _ = auth_headers(user_id=uid)
-    from jose import jwt as _jwt
 
     # Cheat: monkey-construct the AuthContext with the issued token.
     token = headers2["Authorization"].split(" ", 1)[1]

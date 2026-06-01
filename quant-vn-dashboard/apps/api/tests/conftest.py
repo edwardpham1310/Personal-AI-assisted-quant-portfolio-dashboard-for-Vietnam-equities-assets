@@ -13,12 +13,11 @@ from __future__ import annotations
 import datetime
 import os
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
-
 
 JWT_TEST_SECRET = "test-jwt-secret-do-not-use-in-prod"
 JWT_TEST_AUDIENCE = "authenticated"
@@ -106,7 +105,7 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def make_jwt(user_id: str | None = None, *, email: str = "test@example.com", expired: bool = False) -> str:
     """Sign a test JWT using the same secret the API will verify against."""
     uid = user_id or str(uuid.uuid4())
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     iat = int(now.timestamp())
     if expired:
         exp = int((now - datetime.timedelta(hours=1)).timestamp())

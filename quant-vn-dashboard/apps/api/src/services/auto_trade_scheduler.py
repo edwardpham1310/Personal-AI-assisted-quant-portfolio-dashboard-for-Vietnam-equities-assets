@@ -18,8 +18,8 @@ triggered by an external scheduler (cron / k8s CronJob / etc.) hitting
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
-from typing import Iterable
+from collections.abc import Iterable
+from datetime import UTC, datetime, time, timedelta, timezone
 
 # Vietnam = UTC+7. Standardise on a constant offset; no DST in VN.
 _VN_OFFSET = timedelta(hours=7)
@@ -27,7 +27,7 @@ _VN_OFFSET = timedelta(hours=7)
 
 def to_vn_local(now_utc: datetime) -> datetime:
     if now_utc.tzinfo is None:
-        now_utc = now_utc.replace(tzinfo=timezone.utc)
+        now_utc = now_utc.replace(tzinfo=UTC)
     return now_utc.astimezone(timezone(_VN_OFFSET))
 
 
@@ -36,7 +36,7 @@ def vn_market_is_open(now_utc: datetime | None = None) -> bool:
     window. Returns False at weekends and outside the morning/afternoon
     sessions. Holidays NOT modelled — same caveat as Phase 2.5/2.7/2.8.
     """
-    now_utc = now_utc or datetime.now(timezone.utc)
+    now_utc = now_utc or datetime.now(UTC)
     local = to_vn_local(now_utc)
     if local.weekday() >= 5:  # Saturday/Sunday
         return False
@@ -66,7 +66,7 @@ def cooldown_remaining_seconds(
     """
     if cooldown_minutes <= 0:
         return 0
-    now = now_utc or datetime.now(timezone.utc)
+    now = now_utc or datetime.now(UTC)
     cutoff = now - timedelta(minutes=cooldown_minutes)
     max_recent: datetime | None = None
     for o in recent_orders:

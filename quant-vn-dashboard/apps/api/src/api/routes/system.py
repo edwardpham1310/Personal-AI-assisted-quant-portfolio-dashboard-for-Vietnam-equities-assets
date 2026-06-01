@@ -14,7 +14,7 @@ Endpoint design notes
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import monotonic
 
 from fastapi import APIRouter, Depends
@@ -43,7 +43,6 @@ from services.data_quality import (
     summarize_supabase,
 )
 from workers.market_poller import MarketPoller
-
 
 router = APIRouter()
 
@@ -94,7 +93,7 @@ async def system_health(
         app_uptime_seconds=max(0.0, monotonic() - _PROCESS_STARTED_AT),
         cache_reachable=cache_reachable,
         settings_loaded=settings_loaded,
-        checked_at=datetime.now(timezone.utc),
+        checked_at=datetime.now(UTC),
     )
 
 
@@ -133,7 +132,7 @@ async def system_status(
         duckdb=DuckDBHealth(**duckdb_summary),
         poller=PollerHealth(**poller_summary),
         data_quality=DataQualitySnapshot(**data_quality),
-        checked_at=datetime.now(timezone.utc),
+        checked_at=datetime.now(UTC),
     )
 
 

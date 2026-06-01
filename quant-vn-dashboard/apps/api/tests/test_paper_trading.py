@@ -17,12 +17,10 @@ Covers the AC checklist:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
-
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -219,7 +217,7 @@ def test_t_plus_2_settles_pending_shares_to_sellable(
     )
     # Age the fill row by 3 days so T+2 has matured.
     fills = fake_db._tables["paper_fills"]
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
     for f in fills:
         if f["paper_account_id"] == account_id:
             f["filled_at"] = old
@@ -249,7 +247,7 @@ def test_sell_proceeds_become_pending_cash(
         headers=headers,
         json={"symbol": "FPT", "side": "BUY", "order_type": "MARKET", "quantity": 100},
     )
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
     for f in fake_db._tables["paper_fills"]:
         if f["paper_account_id"] == account_id:
             f["filled_at"] = old
@@ -285,7 +283,7 @@ def test_pending_cash_settles_to_current_cash_after_2bd(
         headers=headers,
         json={"symbol": "FPT", "side": "BUY", "order_type": "MARKET", "quantity": 100},
     )
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
     for f in fake_db._tables["paper_fills"]:
         if f["paper_account_id"] == account_id:
             f["filled_at"] = old
@@ -506,7 +504,7 @@ def test_sell_limit_above_market_fills_at_limit_not_market(
     """CRITICAL: SELL LIMIT 110 with market=100 must fill at >=limit
     (max(limit, market)), never at market 100. Previously ``min(limit,
     market)`` silently sold below the user's ask."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from providers.market_data import MockMarketDataProvider
     from schemas.market import Quote
@@ -520,8 +518,8 @@ def test_sell_limit_above_market_fills_at_limit_not_market(
         headers=headers,
         json={"symbol": "FPT", "side": "BUY", "order_type": "MARKET", "quantity": 100},
     )
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
-    for f in client.app.dependency_overrides:
+    _old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
+    for _f in client.app.dependency_overrides:
         pass  # no-op; access fake_db via fixture in next test if needed
     # Force a low market price (100k) but user wants SELL LIMIT 120k.
     LOW_MARKET = 50_000.0
@@ -532,7 +530,7 @@ def test_sell_limit_above_market_fills_at_limit_not_market(
                 symbol="FPT",
                 exchange="HOSE",
                 price=LOW_MARKET,
-                ts=datetime.now(timezone.utc),
+                ts=datetime.now(UTC),
                 stale=False,
                 source="mock",
             )
@@ -548,7 +546,7 @@ def test_sell_limit_above_market_fills_at_limit_not_market(
     # a SELL with sellable_quantity=100. We just need to assert the
     # orchestrator chooses max(limit, market) on the SELL path. Use a
     # direct unit test instead.
-    from services.paper_execution import simulate_fill, FillInputs
+    from services.paper_execution import FillInputs, simulate_fill
 
     # Direct unit: simulate a SELL fill at limit_price=120000 with
     # market_price embedded in the FillResult (no orchestrator).
@@ -570,7 +568,7 @@ def test_sellable_qty_correct_after_sell_then_rebuy(
     sellable_quantity must be 100 (the 100 leftover from the original
     settled batch), pending_quantity 100. Previously the bug let
     sellable=200 because settled_buy didn't subtract the SELL."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     headers, _ = auth_headers()
     account_id = _create_account(client, headers)
@@ -580,7 +578,7 @@ def test_sellable_qty_correct_after_sell_then_rebuy(
         headers=headers,
         json={"symbol": "FPT", "side": "BUY", "order_type": "MARKET", "quantity": 200},
     )
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
     for f in fake_db._tables["paper_fills"]:
         if f["paper_account_id"] == account_id:
             f["filled_at"] = old
@@ -618,7 +616,7 @@ def test_settle_pending_writes_audit_when_rows_flip(
 ) -> None:
     """settle_pending now emits PAPER_SETTLEMENT_APPLIED audit rows so
     the dead enum value is actually exercised."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     headers, uid = auth_headers()
     account_id = _create_account(client, headers)
@@ -627,7 +625,7 @@ def test_settle_pending_writes_audit_when_rows_flip(
         headers=headers,
         json={"symbol": "FPT", "side": "BUY", "order_type": "MARKET", "quantity": 100},
     )
-    old = (datetime.now(timezone.utc) - timedelta(days=4)).isoformat()
+    old = (datetime.now(UTC) - timedelta(days=4)).isoformat()
     for f in fake_db._tables["paper_fills"]:
         if f["paper_account_id"] == account_id:
             f["filled_at"] = old
@@ -666,7 +664,9 @@ def test_simulate_fill_symbol_not_tradable_rejection() -> None:
     """Calculator unit test — previously unreachable via routes because
     the mock provider always returns ACTIVE securities."""
     from services.paper_execution import (
-        FillInputs, RejectionResult, simulate_fill,
+        FillInputs,
+        RejectionResult,
+        simulate_fill,
     )
     result = simulate_fill(
         FillInputs(
@@ -682,7 +682,9 @@ def test_simulate_fill_price_above_ceiling_rejection() -> None:
     """Calculator unit test for VN daily-band breach — the mock provider
     doesn't expose ceiling/floor, so this branch had zero coverage."""
     from services.paper_execution import (
-        FillInputs, RejectionResult, simulate_fill,
+        FillInputs,
+        RejectionResult,
+        simulate_fill,
     )
     result = simulate_fill(
         FillInputs(
@@ -696,7 +698,9 @@ def test_simulate_fill_price_above_ceiling_rejection() -> None:
 
 def test_simulate_fill_price_below_floor_rejection() -> None:
     from services.paper_execution import (
-        FillInputs, RejectionResult, simulate_fill,
+        FillInputs,
+        RejectionResult,
+        simulate_fill,
     )
     result = simulate_fill(
         FillInputs(
@@ -714,7 +718,7 @@ def test_upsert_position_on_buy_existing_recomputes_avg_cost(
     """Buy 100 @ 80k then buy 100 @ 100k. Expected avg_cost = 90k.
     Previously the existing-position branch of _upsert_position_on_buy
     had no coverage at all."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from providers.market_data import MockMarketDataProvider
     from schemas.market import Quote
@@ -729,7 +733,7 @@ def test_upsert_position_on_buy_existing_recomputes_avg_cost(
         return [
             Quote(
                 symbol="FPT", exchange="HOSE",
-                price=p, ts=datetime.now(timezone.utc),
+                price=p, ts=datetime.now(UTC),
                 stale=False, source="mock",
             )
         ]

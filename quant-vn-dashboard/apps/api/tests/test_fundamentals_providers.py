@@ -10,8 +10,7 @@ import pytest
 
 from providers.fundamentals.csv_provider import CSVFundamentalProvider
 from providers.fundamentals.null_provider import NullFundamentalProvider
-from schemas.fundamentals import compute_data_status, Fundamentals
-
+from schemas.fundamentals import Fundamentals, compute_data_status
 
 # ── NullFundamentalProvider ────────────────────────────────────────────────
 

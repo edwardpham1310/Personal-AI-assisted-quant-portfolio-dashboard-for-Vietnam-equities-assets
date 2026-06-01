@@ -50,4 +50,14 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]
+# E501   — long lines: line-length enforced separately; tests + docstrings exceed.
+# B008   — function call in default arg: FastAPI's ``Depends()`` / ``Query()`` /
+#          ``Header()`` / ``Body()`` are the framework's declarative DI idiom,
+#          not the mutable-default bug B008 was designed to catch.
+# SIM102 — collapse nested ``if``: refactoring nested guards would touch
+#          scanner / recommendation / guardrail control flow.
+# SIM105 — ``contextlib.suppress`` instead of ``try/except/pass``: behaviour
+#          equivalent but the existing pattern is the FastAPI codebase norm.
+# SIM108 — ``x = a if cond else b`` ternary: stylistic; readability of the
+#          long-form is preferred in scanner math + paper-trading pricing.
+ignore = ["E501", "B008", "SIM102", "SIM105", "SIM108"]

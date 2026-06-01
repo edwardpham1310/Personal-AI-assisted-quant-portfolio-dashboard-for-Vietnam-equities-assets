@@ -7,7 +7,6 @@ to keep handlers thin.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from core.security import AuthContext
@@ -15,14 +14,12 @@ from providers.market_data import MarketDataProvider, ProviderError
 from schemas.paper_trading import OrderType, Side, SourceType
 from services.paper_execution import (
     FillInputs,
-    FillResult,
     RejectionResult,
     simulate_fill,
 )
 from services.paper_ledger import (
     apply_fill,
     get_current_cash,
-    get_pending_cash,
 )
 from services.supabase_db import SupabaseDB
 

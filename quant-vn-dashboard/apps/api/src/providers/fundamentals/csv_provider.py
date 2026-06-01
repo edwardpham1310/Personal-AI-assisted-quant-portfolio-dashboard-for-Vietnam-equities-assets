@@ -25,14 +25,13 @@ restarting the API.
 from __future__ import annotations
 
 import csv
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 from schemas.fundamentals import Fundamentals
 
 from .base import FundamentalDataProvider, FundamentalsProviderStatus
-
 
 _AUDIT_NORMALISE: dict[str, str] = {
     "UNQUALIFIED": "UNQUALIFIED",
@@ -138,7 +137,7 @@ class CSVFundamentalProvider(FundamentalDataProvider):
                         is_vn100=_to_bool(row.get("is_vn100")),
                     )
                     self._rows[sym] = fundamentals
-            self._loaded_at = datetime.now(timezone.utc).isoformat()
+            self._loaded_at = datetime.now(UTC).isoformat()
         except Exception as exc:  # noqa: BLE001
             self._last_error = f"CSV load failed: {exc}"
         finally:

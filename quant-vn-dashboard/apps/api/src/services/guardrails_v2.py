@@ -26,11 +26,10 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from schemas.fundamentals import (
-    Fundamentals,
     FundamentalDataStatus,
+    Fundamentals,
     compute_data_status,
 )
-
 
 # ── Thresholds ──────────────────────────────────────────────────────────────
 
@@ -277,9 +276,7 @@ def evaluate_layer3_anti_manipulation(ev: GuardrailEvidenceV2) -> LayerResult:
         if (
             ev.ceiling_price is not None
             and ev.last_price > ev.ceiling_price * 1.0001
-        ):
-            rejects.append(R3_PRICE_OUTSIDE_TRADING_BAND)
-        elif (
+        ) or (
             ev.floor_price is not None
             and ev.last_price < ev.floor_price * 0.9999
         ):
@@ -320,7 +317,7 @@ def evaluate(ev: GuardrailEvidenceV2) -> GuardrailReport:
         rejection_reasons.extend(layer.rejection_reasons)
         warnings.extend(layer.warnings)
     status: Literal["PASS", "REJECTED"] = (
-        "REJECTED" if any(l.status == "REJECTED" for l in layers) else "PASS"
+        "REJECTED" if any(layer.status == "REJECTED" for layer in layers) else "PASS"
     )
     return GuardrailReport(
         status=status,

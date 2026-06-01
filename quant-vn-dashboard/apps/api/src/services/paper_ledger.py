@@ -17,7 +17,7 @@ T+2 skips weekends AND VN market holidays via
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 from core.security import AuthContext
@@ -84,7 +84,7 @@ async def settle_pending(
     ``new_sellable = max(0, settled_buy_total - sell_total)``,
     bounded by the current ``quantity``.
     """
-    today = (now or datetime.now(timezone.utc)).date()
+    today = (now or datetime.now(UTC)).date()
     pending = await db.select(
         "paper_cash_ledger",
         where={"paper_account_id": account_id, "status": "PENDING"},

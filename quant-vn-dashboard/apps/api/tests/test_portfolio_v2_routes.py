@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
 from fastapi.testclient import TestClient
 
 from schemas.market import Quote
@@ -18,7 +17,7 @@ def _seed_quote(fake_cache, symbol: str, price: float) -> None:
         symbol=symbol,
         exchange="HOSE",
         price=price,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         source="mock",
     )
     # Synchronous shim — InMemoryCache stores str values.

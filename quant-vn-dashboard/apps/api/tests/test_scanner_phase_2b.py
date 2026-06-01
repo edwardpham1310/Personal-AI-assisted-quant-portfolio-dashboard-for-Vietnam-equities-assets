@@ -9,13 +9,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from schemas.market import OHLCVBar
 from services import scanner
-from services.scanner import VOL_COV_WINDOW, _consecutive_ceilings, _vol_cov
+from services.scanner import VOL_COV_WINDOW, _consecutive_ceilings
 
 
 def _bars(
@@ -25,7 +25,7 @@ def _bars(
     ceilings: list[float | None] | None = None,
     start: datetime | None = None,
 ) -> list[OHLCVBar]:
-    start = start or datetime(2026, 1, 2, tzinfo=timezone.utc)
+    start = start or datetime(2026, 1, 2, tzinfo=UTC)
     vols = volumes or [1_000_000.0] * len(closes)
     out: list[OHLCVBar] = []
     for i, close in enumerate(closes):

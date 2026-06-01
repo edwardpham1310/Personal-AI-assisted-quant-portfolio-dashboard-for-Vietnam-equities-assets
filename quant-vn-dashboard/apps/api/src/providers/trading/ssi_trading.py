@@ -18,7 +18,7 @@ NOT_IMPLEMENTED)``. The route layer turns that into a clean response
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date
 
 from providers.trading.base import TradingProvider, TradingProviderError
 from schemas.trading import (
@@ -30,7 +30,6 @@ from schemas.trading import (
     StockPosition,
     TradingProviderStatus,
 )
-
 
 _NOT_IMPLEMENTED_MSG = (
     "SSI Trading read-only sync is not implemented in Phase 2.5. "

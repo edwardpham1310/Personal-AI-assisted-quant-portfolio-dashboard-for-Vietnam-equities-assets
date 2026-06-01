@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -26,7 +26,6 @@ from schemas.market import (
 from services import market_cache
 from services.cache import Cache
 from workers.market_poller import MarketPoller
-
 
 router = APIRouter()
 
@@ -73,7 +72,7 @@ def _parse_symbol_list(raw: str) -> list[str]:
 
 
 def _validate_date_range(start: date, end: date, *, max_days: int) -> None:
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     if start > end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -213,7 +212,7 @@ async def get_quotes(
         quotes = await provider.get_latest_quotes(syms)
     except ProviderError as exc:
         raise _provider_error_to_http(exc) from None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = timedelta(seconds=settings.ssi_quote_stale_seconds)
     return [
         q.model_copy(update={"stale": (now - q.ts) > threshold})
@@ -252,7 +251,7 @@ async def live_quotes(
 ) -> list[Quote]:
     syms = _parse_symbol_list(symbols)
     rows = await market_cache.get_quotes(cache, syms)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = timedelta(seconds=settings.ssi_quote_stale_seconds)
     out: list[Quote] = []
     for q in rows:
@@ -338,8 +337,8 @@ def _bar_to_candle(
     stale_after_s: int,
 ) -> Candle:
     """Convert the legacy ``OHLCVBar`` to the Phase 2 ``Candle`` schema."""
-    now = datetime.now(timezone.utc)
-    bar_ts = bar.ts if bar.ts.tzinfo else bar.ts.replace(tzinfo=timezone.utc)
+    now = datetime.now(UTC)
+    bar_ts = bar.ts if bar.ts.tzinfo else bar.ts.replace(tzinfo=UTC)
     age = (now - bar_ts).total_seconds()
     return Candle(
         symbol=bar.symbol,
@@ -359,8 +358,8 @@ def _bar_to_candle(
 
 def _quote_to_latest(quote: Quote, *, stale_after_s: int) -> LatestQuote:
     """Project the legacy ``Quote`` into the enriched ``LatestQuote``."""
-    now = datetime.now(timezone.utc)
-    provider_ts = quote.ts if quote.ts.tzinfo else quote.ts.replace(tzinfo=timezone.utc)
+    now = datetime.now(UTC)
+    provider_ts = quote.ts if quote.ts.tzinfo else quote.ts.replace(tzinfo=UTC)
     age = (now - provider_ts).total_seconds()
     return LatestQuote(
         symbol=quote.symbol,
@@ -413,7 +412,7 @@ async def get_candles(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported range. Allowed: {tuple(_RANGE_DAYS)}",
         )
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     start = today - timedelta(days=days)
 
     try:
@@ -489,7 +488,7 @@ async def get_symbol_detail(
     except ProviderError as exc:
         warnings.append(f"quote_unavailable:{exc.status_code}")
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
 
     # Intraday — last 24 h at 15-minute granularity is a sensible default
     # for the chart drawer. The /candles endpoint exposes finer control.
@@ -529,7 +528,7 @@ async def get_symbol_detail(
     provider_status = await provider.status()
 
     # Per-section freshness.
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     quote_age = None
     if quote_out is not None:
         quote_age = (now - quote_out.provider_timestamp).total_seconds()

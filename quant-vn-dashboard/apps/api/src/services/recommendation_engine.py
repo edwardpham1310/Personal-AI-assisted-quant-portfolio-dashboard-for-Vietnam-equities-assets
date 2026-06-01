@@ -35,9 +35,10 @@ from services import scanner as scanner_service
 from services.guardrails_v2 import (
     GuardrailEvidenceV2,
     GuardrailMode,
+)
+from services.guardrails_v2 import (
     evaluate as evaluate_v2,
 )
-
 
 # ── Constants ───────────────────────────────────────────────────────────────
 
@@ -292,9 +293,7 @@ def derive_action(
     # caller decides — engine just honors what it's told).
     ma200_ok = True
     if REQUIRE_PRICE_ABOVE_MA200_FOR_BUY:
-        if price_above_ma200 is False:
-            ma200_ok = False
-        elif price_above_ma200 is None and strict_mode:
+        if price_above_ma200 is False or price_above_ma200 is None and strict_mode:
             ma200_ok = False
     if strict_mode and bars_count < MIN_BARS_FOR_BUY_CANDIDATE:
         ma200_ok = False

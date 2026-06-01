@@ -8,13 +8,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from schemas.fundamentals import Fundamentals
 from schemas.market import OHLCVBar, Quote
-from services import recommendation_engine
 from services.recommendation_engine import (
     ACTION_BUY_THRESHOLD,
     apply_v2_guardrails,
@@ -30,7 +27,7 @@ def _bars(closes: list[float], *, volumes: list[float] | None = None) -> list[OH
     Default daily value ≈ close × 3e9 with ±33% bar-to-bar variance
     (CoV around 0.3) — well above the 0.1 anomaly floor.
     """
-    start = datetime(2025, 1, 2, tzinfo=timezone.utc)
+    start = datetime(2025, 1, 2, tzinfo=UTC)
     if volumes is None:
         base = 3_000_000_000.0
         # Multiplier cycle gives population std/mean ≈ 0.3 over any 20-bar window.
@@ -58,7 +55,7 @@ def _quote(price: float, *, stale: bool = False) -> Quote:
     return Quote(
         symbol="TEST",
         price=price,
-        ts=datetime(2025, 12, 31, tzinfo=timezone.utc),
+        ts=datetime(2025, 12, 31, tzinfo=UTC),
         stale=stale,
         source="ssi",
         ceiling_price=price * 1.07,
@@ -229,7 +226,7 @@ def test_apply_v2_guardrails_relaxed_missing_fundamentals_no_buy() -> None:
 def test_apply_v2_guardrails_includes_layer_breakdown() -> None:
     rec = _baseline_rec()
     out = apply_v2_guardrails(rec, fundamentals=_clean_fundamentals(), mode="strict")
-    labels = {l["layer"] for l in out.guardrail_layer_results}
+    labels = {lr["layer"] for lr in out.guardrail_layer_results}
     assert labels == {"size_liquidity", "fundamentals", "anti_manipulation"}
 
 

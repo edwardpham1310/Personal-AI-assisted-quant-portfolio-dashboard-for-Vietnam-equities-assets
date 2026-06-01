@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -32,7 +32,7 @@ def test_live_quotes_returns_fresh_quote(client: TestClient, auth_headers, fake_
             exchange="HOSE",
             price=25_500.0,
             reference_price=25_000.0,
-            ts=datetime.now(timezone.utc),
+            ts=datetime.now(UTC),
             stale=False,
             source="mock",
         ),
@@ -47,7 +47,7 @@ def test_live_quotes_returns_fresh_quote(client: TestClient, auth_headers, fake_
 
 
 def test_live_quotes_marks_stale_when_old(client: TestClient, auth_headers, fake_cache) -> None:
-    old_ts = datetime.now(timezone.utc) - timedelta(minutes=10)
+    old_ts = datetime.now(UTC) - timedelta(minutes=10)
     _seed(
         fake_cache,
         Quote(

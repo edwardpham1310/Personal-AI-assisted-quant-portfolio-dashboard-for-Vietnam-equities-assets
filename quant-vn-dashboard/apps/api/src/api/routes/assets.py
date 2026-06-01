@@ -8,10 +8,10 @@ All numbers are read-only research output. No order placement happens here.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 
 from core.deps import get_cache, get_db
 from core.security import AuthContext, get_current_user
@@ -50,7 +50,7 @@ async def _get_default_account_row(
 def _empty_cash(account_id: str | None) -> CashBalance:
     return CashBalance(
         account_id=account_id or "",
-        as_of=datetime.now(timezone.utc).isoformat(),
+        as_of=datetime.now(UTC).isoformat(),
     )
 
 

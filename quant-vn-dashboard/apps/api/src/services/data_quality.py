@@ -16,17 +16,15 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlparse
 
 from core.config import Settings
 from providers.market_data.base import MarketDataProvider
-from schemas.market import Quote
 from services import market_cache
 from services.cache import Cache
 from workers.market_poller import MarketPoller
-
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +66,7 @@ async def count_stale_quotes(
     if not symbols:
         return 0
     quotes = await market_cache.get_quotes(cache, symbols)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = timedelta(seconds=max(1, stale_threshold_s))
     stale = 0
     for q in quotes:
@@ -85,7 +83,7 @@ async def find_symbols_without_quote(cache: Cache, symbols: list[str]) -> list[s
         return []
     quotes = await market_cache.get_quotes(cache, symbols)
     missing: list[str] = []
-    for sym, q in zip(symbols, quotes):
+    for sym, q in zip(symbols, quotes, strict=False):
         if q is None:
             missing.append(sym.upper())
     return sorted(set(missing))
@@ -98,10 +96,10 @@ async def list_stale_quote_details(
     if not symbols:
         return []
     quotes = await market_cache.get_quotes(cache, symbols)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = timedelta(seconds=max(1, stale_threshold_s))
     rows: list[dict[str, Any]] = []
-    for sym, q in zip(symbols, quotes):
+    for sym, q in zip(symbols, quotes, strict=False):
         if q is None:
             continue
         age_s = (now - q.ts).total_seconds()
@@ -312,7 +310,7 @@ async def build_data_quality_snapshot(
         notes.append(f"{stale_count} stale quote(s) past {settings.ssi_quote_stale_seconds}s")
 
     return {
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
         "stale_quote_count": stale_count,
         "total_tracked_symbols": len(tracked),
         "symbols_without_quote": missing,

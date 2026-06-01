@@ -30,15 +30,12 @@ from schemas.recommendation import (
     RecommendationPreviewRequest,
     RecommendationProfile,
     RecommendationResult,
+    RecommendationScores,
 )
 from services import recommendation_engine as engine
 from services import risk_guardrails as guards
 from services.cache import Cache
 from services.supabase_db import PostgrestError, SupabaseDB
-from schemas.recommendation import (
-    RecommendationScores,
-)
-
 
 router = APIRouter()
 
@@ -46,10 +43,10 @@ router = APIRouter()
 def _build_unavailable_result(
     *,
     symbol: str,
-    profile: "RecommendationProfile",
-    horizon: "RecommendationHorizon",
+    profile: RecommendationProfile,
+    horizon: RecommendationHorizon,
     cause: str,
-) -> "RecommendationResult":
+) -> RecommendationResult:
     """Phase 2 data-policy: when we cannot fetch market data for a symbol
     we still return a recommendation row so the UI can render the
     DATA_UNAVAILABLE / PROVIDER_ERROR badge. The recommendation is

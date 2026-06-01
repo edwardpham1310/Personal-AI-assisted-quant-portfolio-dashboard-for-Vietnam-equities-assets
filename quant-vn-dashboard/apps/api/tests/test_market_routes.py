@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -117,8 +117,8 @@ def test_daily_ohlcv_rejects_oversized_range(client: TestClient, auth_headers) -
     # Use UTC date to match the route's own clock — local + UTC can diverge
     # around midnight, which would trip the "end cannot be in the future"
     # check before the max-days check we want to assert against.
-    from datetime import datetime as _dt, timezone as _tz
-    today = _dt.now(_tz.utc).date()
+    from datetime import datetime as _dt
+    today = _dt.now(UTC).date()
     r = client.get(
         f"/market/ohlcv/daily/FPT?start={(today - timedelta(days=500)).isoformat()}&end={today.isoformat()}",
         headers=headers,

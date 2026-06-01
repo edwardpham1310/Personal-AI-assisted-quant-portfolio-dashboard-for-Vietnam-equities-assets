@@ -23,7 +23,7 @@ import asyncio
 import json
 import re
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -34,7 +34,6 @@ from services import market_cache
 from services.cache import Cache
 from services.supabase_db import SupabaseDB
 from workers.market_poller import MarketPoller
-
 
 router = APIRouter()
 
@@ -67,7 +66,7 @@ def _sse(event: str, payload: dict) -> str:
 
 
 def _keepalive() -> str:
-    return f": keepalive {datetime.now(timezone.utc).isoformat()}\n\n"
+    return f": keepalive {datetime.now(UTC).isoformat()}\n\n"
 
 
 async def _quote_event_loop(
@@ -87,7 +86,7 @@ async def _quote_event_loop(
             if payload != last_payload:
                 envelope = {
                     "type": "quote_update",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "data": payload,
                 }
                 yield _sse("quote_update", envelope)
@@ -109,11 +108,11 @@ async def heartbeat() -> StreamingResponse:
     """Emits a ``hello`` event then a ``ping`` every 5s — no auth required."""
 
     async def gen() -> AsyncIterator[str]:
-        yield _sse("hello", {"ts": datetime.now(timezone.utc).isoformat()})
+        yield _sse("hello", {"ts": datetime.now(UTC).isoformat()})
         try:
             while True:
                 await asyncio.sleep(5)
-                yield _sse("ping", {"ts": datetime.now(timezone.utc).isoformat()})
+                yield _sse("ping", {"ts": datetime.now(UTC).isoformat()})
         except (asyncio.CancelledError, GeneratorExit):
             return
 
@@ -160,7 +159,7 @@ async def stream_watchlist(
                 "quote_update",
                 {
                     "type": "quote_update",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "data": [],
                 },
             )
@@ -203,7 +202,7 @@ async def stream_market_overview(
                         "market_overview",
                         {
                             "type": "market_overview",
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                             "data": payload,
                         },
                     )

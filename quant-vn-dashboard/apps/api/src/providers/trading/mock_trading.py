@@ -14,7 +14,7 @@ Mock account IDs supported:
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from providers.trading.base import TradingProvider, TradingProviderError
 from schemas.trading import (
@@ -26,7 +26,6 @@ from schemas.trading import (
     StockPosition,
     TradingProviderStatus,
 )
-
 
 _DEFAULT_ACCOUNT = "ACC-DEFAULT"
 
@@ -85,12 +84,12 @@ class MockTradingProvider(TradingProvider):
             withdrawable_cash=row["withdrawable_cash"],
             pending_cash=row["pending_cash"],
             currency="VND",
-            as_of=datetime.now(timezone.utc),
+            as_of=datetime.now(UTC),
         )
 
     async def get_stock_positions(self, account_id: str) -> list[StockPosition]:
         rows = _MOCK_POSITIONS.get(account_id, [])
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         out: list[StockPosition] = []
         for r in rows:
             mv = r["market_price"] * r["quantity"]
@@ -128,7 +127,7 @@ class MockTradingProvider(TradingProvider):
             max_quantity=max_lot,
             buying_power=cash.buying_power,
             note="Estimated from buying_power; broker's official quote may differ.",
-            as_of=datetime.now(timezone.utc),
+            as_of=datetime.now(UTC),
         )
 
     async def get_max_sell_qty(
@@ -145,7 +144,7 @@ class MockTradingProvider(TradingProvider):
             max_quantity=sellable,
             sellable_quantity=sellable,
             note="Mock provider — sellable equals settled quantity.",
-            as_of=datetime.now(timezone.utc),
+            as_of=datetime.now(UTC),
         )
 
     async def get_order_book(self, account_id: str) -> list[OrderBookEntry]:
@@ -193,7 +192,7 @@ class MockTradingProvider(TradingProvider):
             read_only=True,
             order_placement_enabled=False,
             status_code="READ_ONLY",
-            last_call_ts=datetime.now(timezone.utc),
+            last_call_ts=datetime.now(UTC),
             last_error_sanitized=None,
             note="Deterministic mock trading provider. No broker contact.",
         )

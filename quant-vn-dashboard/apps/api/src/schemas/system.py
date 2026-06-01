@@ -13,7 +13,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 HealthLevel = Literal["ok", "degraded", "down"]
 
 
