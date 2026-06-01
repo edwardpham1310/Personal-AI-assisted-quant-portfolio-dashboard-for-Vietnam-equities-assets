@@ -58,6 +58,42 @@ export default function DataQualityPage() {
         redacted on the API side before it reaches this view.
       </div>
 
+      {/* Phase 2.5 critical banner: production must never serve mock data. */}
+      {status.data?.app_env === "production" &&
+      status.data?.provider?.mode === "MOCK_TEST_ONLY" ? (
+        <div
+          role="alert"
+          className="rounded border border-accent-down/60 bg-accent-down/10 px-3 py-2 text-xs text-accent-down"
+          data-testid="production-mock-banner"
+        >
+          <strong className="font-semibold">CRITICAL:</strong> Production is
+          serving MOCK_TEST_ONLY market data. The backend startup guard
+          should have prevented this — investigate immediately and set
+          <code className="ml-1 font-mono">SSI_USE_MOCK=false</code> +
+          populate SSI credentials. Recommendations and quotes shown on
+          the dashboard are NOT backed by real SSI.
+        </div>
+      ) : null}
+
+      {/* Phase 2.5 production-readiness checklist driven by provider flags. */}
+      {status.data?.provider?.production_ready === false &&
+      status.data?.provider?.mode === "REAL" ? (
+        <div
+          role="alert"
+          className="rounded border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+          data-testid="production-not-ready-banner"
+        >
+          Provider is in REAL mode but not production-ready —{" "}
+          <code className="font-mono">
+            {status.data.provider.status_code ?? "UNKNOWN"}
+          </code>
+          {status.data.provider.last_error_sanitized ? (
+            <span> — last error: {status.data.provider.last_error_sanitized}</span>
+          ) : null}
+          . Check SSI credentials, network, and rate-limit headroom.
+        </div>
+      ) : null}
+
       {/* ── KPIs ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <KpiCard

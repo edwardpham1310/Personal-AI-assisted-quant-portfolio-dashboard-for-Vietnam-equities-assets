@@ -2,7 +2,16 @@
 
 Doc này là hướng dẫn **lần đầu** dựng frontend trên Cloudflare Pages.
 Sau khi xong, bạn sẽ có một URL công khai dạng
-`https://quant-vn.pages.dev` (hoặc domain riêng) để truy cập dashboard.
+`https://quant-vn.trunghieu1096.workers.dev` (hoặc domain riêng) để truy cập dashboard.
+
+> **Lưu ý về định dạng URL Cloudflare**:
+> - Domain mặc định mà Cloudflare cung cấp có thể là `<project>.pages.dev`
+>   (Cloudflare Pages cũ) **hoặc** `<project>.<account-name>.workers.dev`
+>   (Workers/Pages unified mới).
+> - Cả hai đều OK cho dashboard này — Pages và Workers đã được Cloudflare
+>   merge. Trong doc này ta dùng URL Workers thật của bạn:
+>   `quant-vn.trunghieu1096.workers.dev`. Nếu Cloudflare cấp `.pages.dev`
+>   thay thì thay tương ứng vào các lệnh bên dưới.
 
 Doc tham khảo (reference, không phải tutorial):
 [`cloudflare-pages.md`](./cloudflare-pages.md).
@@ -46,7 +55,7 @@ Trên trang **Set up builds and deployments**:
 
 | Field | Giá trị | Ghi chú |
 |---|---|---|
-| **Project name** | `quant-vn` (tuỳ ý — sẽ thành phần đầu của URL `quant-vn.pages.dev`) | Phải unique trên Cloudflare; chỉ dùng lowercase + dấu gạch ngang |
+| **Project name** | `quant-vn` (tuỳ ý — sẽ thành phần đầu của URL `quant-vn.trunghieu1096.workers.dev`) | Phải unique trên Cloudflare; chỉ dùng lowercase + dấu gạch ngang |
 | **Production branch** | `main` | |
 | **Framework preset** | **Next.js (Static HTML Export)** hoặc **None** | Nếu thấy "Next.js" có nhiều variant, chọn variant tĩnh; chúng ta build ra `apps/web/.next` |
 | **Build command** | `cd apps/web && pnpm install --frozen-lockfile=false && pnpm build` | |
@@ -153,7 +162,7 @@ set sẽ build fail với lỗi `error Node.js v18 is below the minimum...`.
 
 1. Sau khi điền xong 5 env vars Production, bấm **Save and Deploy**.
 2. Pages bắt đầu chạy build. Khoảng 3–5 phút.
-3. Khi xong, sẽ có link dạng `https://quant-vn.pages.dev` (project name
+3. Khi xong, sẽ có link dạng `https://quant-vn.trunghieu1096.workers.dev` (project name
    bạn đặt ở bước 2).
 4. Mở link → sẽ thấy trang `/login` của dashboard. (Nếu thấy lỗi build,
    xem mục 8 Troubleshooting.)
@@ -170,7 +179,7 @@ _assert_production_cors`). Bạn phải set `CORS_ORIGINS` chứa URL Pages.
 
 ```bash
 cd apps/api
-fly secrets set CORS_ORIGINS='["https://quant-vn.pages.dev"]'
+fly secrets set CORS_ORIGINS='["https://quant-vn.trunghieu1096.workers.dev"]'
 fly deploy   # restart để pick up CORS_ORIGINS mới
 ```
 
@@ -178,7 +187,7 @@ fly deploy   # restart để pick up CORS_ORIGINS mới
 
 Sửa `.env` trên server:
 ```
-CORS_ORIGINS=["https://quant-vn.pages.dev"]
+CORS_ORIGINS=["https://quant-vn.trunghieu1096.workers.dev"]
 ```
 Sau đó `sudo systemctl restart quant-vn-api`.
 
@@ -194,17 +203,17 @@ chuỗi trong dấu ngoặc kép).
 ## 7. (Tuỳ chọn) Custom domain
 
 Nếu muốn URL đẹp như `https://dashboard.quantvn.com` thay cho
-`pages.dev`:
+`workers.dev`:
 
 1. Pages project → tab **Custom domains** → **Set up a custom domain**.
 2. Nhập tên domain → Pages cho bạn 2 cách verify:
    - Nếu domain đã được host DNS trên Cloudflare → tự động proxy.
    - Nếu domain ở registrar khác → bạn cần CNAME record về
-     `quant-vn.pages.dev`.
+     `quant-vn.trunghieu1096.workers.dev`.
 3. Sau khi domain active, **cập nhật backend CORS** để gồm cả domain
    này:
    ```
-   CORS_ORIGINS=["https://quant-vn.pages.dev","https://dashboard.quantvn.com"]
+   CORS_ORIGINS=["https://quant-vn.trunghieu1096.workers.dev","https://dashboard.quantvn.com"]
    ```
 
 ---
@@ -212,7 +221,7 @@ Nếu muốn URL đẹp như `https://dashboard.quantvn.com` thay cho
 ## 8. (Tuỳ chọn) Preview deployments
 
 Mỗi PR / branch push sẽ tạo một preview URL dạng
-`https://<commit-hash>.quant-vn.pages.dev`.
+`https://<commit-hash>.quant-vn.trunghieu1096.workers.dev`.
 
 Mặc định Preview deployments dùng **cùng env vars** với Production —
 tức là Preview cũng trỏ vào production backend, có thể không an toàn
@@ -276,7 +285,7 @@ bị reject), nên staging có thể chạy mock không cần SSI credential th�
 
 | | |
 |---|---|
-| ☐ | Pages build xanh; URL `https://<project>.pages.dev` mở được |
+| ☐ | Pages build xanh; URL `https://quant-vn.trunghieu1096.workers.dev` mở được |
 | ☐ | Login Supabase thành công, redirect về `/dashboard` |
 | ☐ | `/data-quality` cho thấy `provider.status_code = READY`, `provider.mock = false` (Phase 2) |
 | ☐ | `/market` hiển thị giá thật, KHÔNG có badge "Mock Data" |

@@ -25,6 +25,29 @@ _USER_OWNED_TABLES = {
     "manual_portfolio_accounts",
     "recommendation_snapshots",
     "security_audit_logs",
+    # Phase 2.5 SSI Trading read-only + preview tables.
+    "trading_accounts",
+    "order_previews",
+    "trading_audit_logs",
+    # Phase 2.6 auto-trade tables.
+    "auto_trade_settings",
+    "auto_trade_state",
+    # Phase 2.7 paper-trading tables.
+    "paper_accounts",
+    "paper_orders",
+    "paper_fills",
+    "paper_positions",
+    "paper_cash_ledger",
+    "paper_equity_curve",
+    "paper_audit_logs",
+    # Phase 2.8 live-trading scaffold tables.
+    "live_order_intents",
+    "live_order_submissions",
+    # Phase 2.9 guarded auto-trading engine tables.
+    "auto_trade_runs",
+    "auto_trade_decisions",
+    "auto_trade_orders",
+    "auto_trade_risk_counters",
 }
 
 

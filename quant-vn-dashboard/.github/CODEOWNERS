@@ -1,0 +1,5 @@
+# Single-operator project — every change requires review by @edwardpham1310.
+# Branch protection on `main` should require this review + the CI checks
+# defined in .github/workflows/ci.yml.
+
+*       @edwardpham1310

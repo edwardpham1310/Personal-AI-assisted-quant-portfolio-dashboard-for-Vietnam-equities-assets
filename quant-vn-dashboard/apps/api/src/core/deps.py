@@ -10,6 +10,11 @@ from providers.market_data import (
     MockMarketDataProvider,
     SSIFastConnectProvider,
 )
+from providers.trading import (
+    MockTradingProvider,
+    SSITradingProvider,
+    TradingProvider,
+)
 from services.cache import Cache, build_cache
 from services.supabase_db import PostgrestDB, SupabaseDB
 from workers.market_poller import MarketPoller
@@ -61,6 +66,46 @@ def reset_market_provider_cache() -> None:
     global _market_provider_instance, _market_provider_use_mock
     _market_provider_instance = None
     _market_provider_use_mock = None
+
+
+# ── Phase 2.5 Trading provider (read-only + preview) ────────────────────────
+_trading_provider_instance: TradingProvider | None = None
+_trading_provider_use_mock: bool | None = None
+
+
+def get_trading_provider(
+    settings: Settings = Depends(get_settings),
+) -> TradingProvider:
+    """Return the SSI Trading provider (read-only) or its mock.
+
+    Selection follows ``SSI_TRADING_USE_MOCK``. The Phase 2.5 product
+    surface is read-only + preview; the providers themselves do not
+    contain ``place_order`` so the type system blocks accidental
+    submissions.
+    """
+    global _trading_provider_instance, _trading_provider_use_mock
+    if (
+        _trading_provider_instance is None
+        or _trading_provider_use_mock != settings.ssi_trading_use_mock
+    ):
+        if settings.ssi_trading_use_mock:
+            _trading_provider_instance = MockTradingProvider()
+        else:
+            _trading_provider_instance = SSITradingProvider(
+                consumer_id=settings.ssi_trading_consumer_id,
+                consumer_secret=settings.ssi_trading_consumer_secret,
+                base_url=settings.ssi_trading_base_url,
+                timeout=settings.ssi_trading_timeout_seconds,
+            )
+        _trading_provider_use_mock = settings.ssi_trading_use_mock
+    return _trading_provider_instance
+
+
+def reset_trading_provider_cache() -> None:
+    """Drop the cached trading provider — used by tests between scenarios."""
+    global _trading_provider_instance, _trading_provider_use_mock
+    _trading_provider_instance = None
+    _trading_provider_use_mock = None
 
 
 # Process-wide cache + poller singletons. Initialized lazily so unit tests

@@ -35,17 +35,63 @@ from services import recommendation_engine as engine
 from services import risk_guardrails as guards
 from services.cache import Cache
 from services.supabase_db import PostgrestError, SupabaseDB
+from schemas.recommendation import (
+    RecommendationScores,
+)
 
 
 router = APIRouter()
 
 
-# How many calendar days of history to pull. ~80 covers MA50 + breakout +
-# regime calculations with holiday padding.
-DAILY_HISTORY_DAYS = 80
+def _build_unavailable_result(
+    *,
+    symbol: str,
+    profile: "RecommendationProfile",
+    horizon: "RecommendationHorizon",
+    cause: str,
+) -> "RecommendationResult":
+    """Phase 2 data-policy: when we cannot fetch market data for a symbol
+    we still return a recommendation row so the UI can render the
+    DATA_UNAVAILABLE / PROVIDER_ERROR badge. The recommendation is
+    deliberately neutered — action=REJECTED, status=REJECTED — so the
+    operator never sees a confident call backed by nothing.
+    """
+    zero_scores = RecommendationScores(
+        trend=0, momentum=0, volume=0, liquidity=0, risk=50,
+        risk_inverse=50, market_regime=50, portfolio_fit=100,
+        ml_probability=None,
+    )
+    return RecommendationResult(
+        symbol=symbol.upper(),
+        profile=profile,
+        horizon=horizon,
+        action="REJECTED",
+        status="REJECTED",
+        confidence=0.0,
+        final_score=0,
+        scores=zero_scores,
+        last_price=None,
+        as_of=datetime.now(UTC).isoformat(),
+        signals=[],
+        reasons=[f"DATA_{cause}"],
+        warnings=[cause.lower()],
+        avg_value_20d=None,
+        data_status=cause,  # type: ignore[arg-type]
+        latest_quote=None,
+        chart_context=None,
+        chart_url=f"/market/{symbol.upper()}",
+    )
 
-# How many calendar days of VNINDEX history to pull for the regime check.
-VNINDEX_HISTORY_DAYS = 150
+
+# Phase 2.B: bumped from 80→365 calendar days so MA200 (≥200 bars) and
+# the strict guardrail minimum (≥250 bars) have headroom around VN
+# holidays. Preferred ~430 calendar days (≈300 trading bars).
+DAILY_HISTORY_DAYS = 365
+
+# Phase 2.B: VNINDEX history pulled out to 430 calendar days so the
+# market-regime check can read a 200-bar trend instead of a 50-bar
+# snapshot. Falls back gracefully when the upstream returns fewer.
+VNINDEX_HISTORY_DAYS = 430
 
 # Concurrency cap for batch scans — keeps SSI happy.
 SCAN_CONCURRENCY = 5
@@ -172,12 +218,25 @@ async def _run_one(
         except Exception:
             await cache.delete(cache_key)
 
+    # Phase 2 data policy: track provider failures so the recommendation
+    # carries data_status=PROVIDER_ERROR / DATA_UNAVAILABLE rather than
+    # being silently dropped.
+    bars_provider_error = False
     try:
         bars = await _fetch_bars(symbol, provider=provider, days=DAILY_HISTORY_DAYS)
     except ProviderError:
-        return None
+        bars = []
+        bars_provider_error = True
     if not bars:
-        return None
+        # Empty bars = symbol unknown OR provider returned nothing.
+        # We still return a result with data_status set, so the UI can
+        # render the "data unavailable" badge. Action defaults to WATCH.
+        return _build_unavailable_result(
+            symbol=symbol,
+            profile=profile,
+            horizon=horizon,
+            cause="PROVIDER_ERROR" if bars_provider_error else "DATA_UNAVAILABLE",
+        )
     bars_sorted = sorted(bars, key=lambda b: b.ts)
 
     quote = await _fetch_quote(symbol, provider=provider)
@@ -226,6 +285,9 @@ async def _run_one(
         current_position_weight_pct=held_weight,
         last_price=rec.last_price,
     )
+    # Phase 2 chart context: set the chart_url for the UI deep-link.
+    rec = rec.model_copy(update={"chart_url": f"/market/{rec.symbol}"})
+
     final_action, final_status, final_warnings, reasons_extra = guards.apply_guardrails(
         rec, evidence
     )

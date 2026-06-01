@@ -51,6 +51,16 @@ RecommendationStatus = Literal["VALID", "WARNING", "REJECTED"]
 GuardrailSeverity = Literal["REJECT", "WARN", "INFO"]
 
 
+# Phase 2 chart module: tells the UI whether the data backing this
+# recommendation is trustworthy. Drives the freshness badge.
+DataStatus = Literal[
+    "FRESH",              # quote + bars present, quote within stale window
+    "STALE",              # quote present but older than stale window
+    "DATA_UNAVAILABLE",   # quote or bars missing → recommendation downgraded
+    "PROVIDER_ERROR",     # provider returned an error (AUTH_FAILED / etc.)
+]
+
+
 # ── Building blocks ──────────────────────────────────────────────────────────
 
 
@@ -74,6 +84,25 @@ class GuardrailHit(BaseModel):
     code: str
     severity: GuardrailSeverity
     message: str
+
+
+class ChartContext(BaseModel):
+    """Compact technical snapshot embedded on every recommendation.
+
+    The UI uses this to render a thumbnail/badge row beside the action
+    without having to call ``/market/symbol-detail`` separately. Numbers
+    here are the SAME indicators used to derive the action, so the chart
+    and the recommendation can never disagree.
+    """
+
+    timeframe: str = "1d"
+    last_candle_time: str | None = None     # ISO timestamp of newest bar
+    trend: str = "UNKNOWN"
+    ma20: float | None = None
+    ma50: float | None = None
+    rsi: float | None = None
+    volume_ratio_20d: float | None = None
+    atr14: float | None = None
 
 
 class RecommendationResult(BaseModel):
@@ -104,11 +133,39 @@ class RecommendationResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     as_of: str
 
+    # Phase 2 chart module — every recommendation now carries the inputs
+    # operators need to verify the call without leaving the page.
+    data_status: DataStatus = "FRESH"
+    latest_quote: dict | None = None       # serialised LatestQuote, or None
+    chart_context: ChartContext | None = None
+    chart_url: str = ""                    # set by the route layer
+
     # Surfaced so the route layer can run guardrails without re-computing
     # scanner indicators. Phase 1 review found the route was calling
     # ``scanner_service.compute_indicators(bars)`` a second time purely to
     # read this value — now the engine emits it directly.
     avg_value_20d: float | None = None
+
+    # Phase 2.B guardrail upgrade — additional indicator surface so the
+    # frontend can render the guardrail panel without re-fetching scanner.
+    vol_cov_20d: float | None = None
+    consecutive_ceilings: int | None = None
+    ma200: float | None = None
+    price_above_ma200: bool | None = None
+
+    # Phase 2.B guardrail report (3-layer pipeline outcome). All fields
+    # default to backwards-compatible "no guardrail run" values so old
+    # callers that don't pass fundamentals still get a sensible payload.
+    guardrail_status: Literal["PASS", "REJECTED", "NOT_RUN"] = "NOT_RUN"
+    guardrail_layer_results: list[dict] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
+    fundamental_data_status: Literal[
+        "FUNDAMENTAL_DATA_AVAILABLE",
+        "FUNDAMENTAL_DATA_MISSING",
+        "FUNDAMENTAL_DATA_PARTIAL",
+        "NOT_EVALUATED",
+    ] = "NOT_EVALUATED"
+    action_threshold_used: int = 0
 
     disclaimer: str = "research signal · not financial advice · no orders placed"
 

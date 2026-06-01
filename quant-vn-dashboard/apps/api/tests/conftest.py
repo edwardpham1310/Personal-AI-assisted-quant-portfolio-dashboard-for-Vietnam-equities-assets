@@ -49,13 +49,56 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> None:
     # All market data routes use the deterministic mock provider in tests.
     monkeypatch.setenv("SSI_USE_MOCK", "true")
 
+    # Phase 2.5 trading defaults — mock provider, read-only, placement off.
+    monkeypatch.setenv("SSI_TRADING_USE_MOCK", "true")
+    monkeypatch.setenv("SSI_TRADING_READ_ONLY", "true")
+    monkeypatch.setenv("SSI_TRADING_ORDER_PLACEMENT_ENABLED", "false")
+
+    # Phase 2.9 guarded auto-trading engine defaults — all conservative.
+    monkeypatch.setenv("AUTO_TRADE_DRY_RUN", "true")
+    monkeypatch.setenv("AUTO_TRADE_WORKER_ENABLED", "false")
+    monkeypatch.setenv("AUTO_TRADE_MAX_RUNTIME_MINUTES", "240")
+    monkeypatch.setenv("AUTO_TRADE_REQUIRE_MARKET_OPEN", "false")
+    monkeypatch.setenv("AUTO_TRADE_SYMBOL_COOLDOWN_MINUTES", "30")
+    monkeypatch.setenv("AUTO_TRADE_WORKER_SECRET", "")
+    monkeypatch.setenv("AUTO_TRADE_MAX_DECISIONS_PER_TICK", "20")
+
+    # Phase 2.8 manual-confirm live trading — every flag conservative
+    # by default so tests opting in to live submission must set them
+    # explicitly. ``dry_run=true`` AND ``live_order_enabled=false`` means
+    # the gate is closed → orchestrator dispatches dry-run.
+    monkeypatch.setenv("TRADING_LIVE_ORDER_ENABLED", "false")
+    monkeypatch.setenv("TRADING_MANUAL_CONFIRM_ENABLED", "false")
+    monkeypatch.setenv("TRADING_REQUIRE_REAUTH", "true")
+    monkeypatch.setenv("TRADING_REAUTH_MAX_AGE_SECONDS", "300")
+    monkeypatch.setenv("TRADING_ORDER_PLACEMENT_DRY_RUN", "true")
+    monkeypatch.setenv("ORDER_PREVIEW_MAX_AGE_SECONDS", "60")
+
+    # Phase 2.6 auto-trade defaults for the test environment.
+    #   * AUTO_TRADE_ENABLED=true   — mode selection routes are reachable.
+    #   * AUTO_TRADE_LIVE_ENABLED=true — allows LIVE_AUTO to be SELECTED
+    #     so tests can exercise the request → confirm flow. Production
+    #     startup refuses this combination (verified by a separate test).
+    #   * AUTO_TRADE_ORDER_PLACEMENT_ENABLED=false — execution stays off.
+    #     ``is_live_execution_enabled`` returns False because of this.
+    monkeypatch.setenv("AUTO_TRADE_ENABLED", "true")
+    monkeypatch.setenv("AUTO_TRADE_LIVE_ENABLED", "true")
+    monkeypatch.setenv("AUTO_TRADE_REAUTH_MAX_AGE_SECONDS", "300")
+    monkeypatch.setenv("AUTO_TRADE_ORDER_PLACEMENT_ENABLED", "false")
+
     # Force a re-read of Settings on the next get_settings() call, and drop
     # any cached market provider/cache that might have come from a previous test.
     from core.config import get_settings
-    from core.deps import reset_cache, reset_market_provider_cache, set_poller
+    from core.deps import (
+        reset_cache,
+        reset_market_provider_cache,
+        reset_trading_provider_cache,
+        set_poller,
+    )
 
     get_settings.cache_clear()
     reset_market_provider_cache()
+    reset_trading_provider_cache()
     reset_cache()
     set_poller(None)
 

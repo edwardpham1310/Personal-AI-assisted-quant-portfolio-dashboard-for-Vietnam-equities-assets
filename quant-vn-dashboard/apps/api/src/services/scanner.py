@@ -38,12 +38,19 @@ from schemas.scanner import (
 
 MA_SHORT_WINDOW = 20
 MA_LONG_WINDOW = 50
+MA_TREND_WINDOW = 200          # Phase 2.B: long-trend insurance
 RSI_WINDOW = 14
 ATR_WINDOW = 14
 VOLUME_LOOKBACK = 20
 BREAKOUT_SHORT_WINDOW = 20
 BREAKOUT_LONG_WINDOW = 55
 AVG_VALUE_WINDOW = 20
+
+# Phase 2.B guardrail upgrade — anti-manipulation indicator windows.
+VOL_COV_WINDOW = 20            # rolling window for the volume coefficient of variation
+MIN_BARS_FOR_BUY_CANDIDATE = 250   # strict-mode minimum bars (≥250) for BUY_CANDIDATE
+PREFERRED_BARS = 300               # preferred bars (per spec; documentary only)
+CEILING_TOLERANCE = 1e-6           # float compare slack on ceiling==close
 
 RSI_OVERBOUGHT = 70.0
 RSI_OVERSOLD = 30.0
@@ -136,6 +143,67 @@ def _avg_value(bars: list[OHLCVBar], window: int = AVG_VALUE_WINDOW) -> float | 
     return _mean(values)
 
 
+# ── Phase 2.B additions ────────────────────────────────────────────────────
+
+
+def _vol_cov(
+    volumes: list[float], window: int = VOL_COV_WINDOW
+) -> float | None:
+    """Coefficient of variation of volume over the PREVIOUS ``window`` bars.
+
+    Excludes today's volume from the rolling window per spec (a pump in
+    progress would otherwise lower its own CoV and mask itself).
+
+    Returns ``None`` when:
+      * fewer than ``window`` previous bars are available, OR
+      * the mean of those volumes is 0/None.
+
+    Uses population std (ddof=0) — consistent with the rolling-mean
+    convention used elsewhere in this module.
+    """
+    if len(volumes) < window + 1:
+        return None
+    prior = volumes[-(window + 1) : -1]
+    mean_v = _mean(prior)
+    if mean_v <= 0:
+        return None
+    # Population variance (ddof=0) avoids importing numpy in pure-math
+    # scanner; matches np.std(default ddof=0) numerically.
+    variance = sum((v - mean_v) ** 2 for v in prior) / len(prior)
+    std = math.sqrt(variance)
+    return std / mean_v
+
+
+def _consecutive_ceilings(bars: list[OHLCVBar]) -> int | None:
+    """Count trailing bars where ``close == ceiling_price`` (within tolerance).
+
+    Returns:
+      * the count when ceiling_price is present on every relevant bar,
+      * 0 when present but the latest bar isn't at ceiling,
+      * ``None`` when ceiling_price is missing on every bar — the caller
+        should warn ``missing_ceiling_price_for_consecutive_ceilings``.
+
+    Walks backwards from the latest bar until the streak breaks or a
+    bar without ``ceiling_price`` is encountered. A single bar with
+    ceiling==close counts as 1.
+    """
+    if not bars:
+        return None
+    # If no bar carries a ceiling_price, we have no signal.
+    if not any(getattr(b, "ceiling_price", None) is not None for b in bars):
+        return None
+    count = 0
+    for bar in reversed(bars):
+        ceiling = getattr(bar, "ceiling_price", None)
+        if ceiling is None:
+            break
+        if abs(bar.close - ceiling) <= max(CEILING_TOLERANCE, ceiling * 1e-4):
+            count += 1
+        else:
+            break
+    return count
+
+
 def compute_indicators(bars: list[OHLCVBar]) -> ScannerIndicators:
     """Compute all indicators from a daily, ascending list of ``OHLCVBar``.
 
@@ -146,15 +214,27 @@ def compute_indicators(bars: list[OHLCVBar]) -> ScannerIndicators:
         return ScannerIndicators()
     closes = [b.close for b in bars]
     volumes = [b.volume for b in bars]
+    ma200 = _sma(closes, MA_TREND_WINDOW)
+    last_close = closes[-1]
+    price_above_ma200: bool | None
+    if ma200 is None:
+        price_above_ma200 = None
+    else:
+        price_above_ma200 = last_close > ma200
     return ScannerIndicators(
         ma20=_sma(closes, MA_SHORT_WINDOW),
         ma50=_sma(closes, MA_LONG_WINDOW),
+        ma200=ma200,
         rsi14=_rsi_wilder(closes, RSI_WINDOW),
         atr14=_atr_wilder(bars, ATR_WINDOW),
         volume_ratio_20d=_volume_ratio(volumes, VOLUME_LOOKBACK),
         high_20d=_prior_high(closes, BREAKOUT_SHORT_WINDOW),
         high_55d=_prior_high(closes, BREAKOUT_LONG_WINDOW),
         avg_value_20d=_avg_value(bars, AVG_VALUE_WINDOW),
+        vol_cov_20d=_vol_cov(volumes, VOL_COV_WINDOW),
+        consecutive_ceilings=_consecutive_ceilings(bars),
+        price_above_ma200=price_above_ma200,
+        bars_count=len(bars),
     )
 
 
@@ -349,6 +429,24 @@ def _warnings(
         # Don't double-warn if we already flagged insufficient history.
         if "insufficient_history" not in out:
             out.append("insufficient_liquidity_history")
+    # Phase 2.B: MA200, vol_cov, consecutive_ceilings each carry their own
+    # warning code so the route layer can render a precise data-quality
+    # banner instead of a generic "insufficient_history".
+    if indicators.ma200 is None:
+        out.append("insufficient_history_for_ma200")
+    if indicators.vol_cov_20d is None:
+        if indicators.bars_count < VOL_COV_WINDOW + 1:
+            out.append("insufficient_volume_history_for_vol_cov")
+        else:
+            out.append("zero_mean_volume_for_vol_cov")
+    if indicators.consecutive_ceilings is None:
+        out.append("missing_ceiling_price_for_consecutive_ceilings")
+    elif not any(
+        getattr(b, "ceiling_price", None) is not None for b in bars[:-1]
+    ):
+        # Only the latest bar has a ceiling — earlier bars don't, so
+        # the streak count is necessarily limited to 0 or 1.
+        out.append("limited_ceiling_history")
     if latest_quote is not None and latest_quote.stale:
         out.append("stale_data")
     if not bars:

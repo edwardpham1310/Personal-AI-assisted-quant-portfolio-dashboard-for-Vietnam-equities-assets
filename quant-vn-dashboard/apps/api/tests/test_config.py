@@ -48,6 +48,10 @@ def test_production_refuses_to_start_with_missing_secrets(
     # Pin SSI_USE_MOCK=false so the Phase 2A guard passes; we're testing
     # the missing-secrets path specifically.
     monkeypatch.setenv("SSI_USE_MOCK", "false")
+    # The conftest enables AUTO_TRADE_LIVE_ENABLED for the auto-trade
+    # route tests, but the Phase 2.6 production guard refuses that flag.
+    # Pin it back to false so this test exercises the missing-secrets path.
+    monkeypatch.setenv("AUTO_TRADE_LIVE_ENABLED", "false")
     monkeypatch.delenv("SUPABASE_JWT_SECRET", raising=False)
     get_settings.cache_clear()
     settings = get_settings()
@@ -101,9 +105,14 @@ def test_ssi_trading_keys_are_inert_in_phase_1() -> None:
     # Require a parenthesis after the symbol so we catch CALLS, not the
     # words mentioned in docstrings or comments.
     pattern = re.compile(
-        r"\b(NewOrder|placeOrder|place_order|new_order|submit_order|"
+        r"\b(NewOrder|placeOrder|place_order|new_order|"
         r"send_order|create_order)\s*\("
     )
+    # ``submit_order`` is intentionally introduced by Phase 2.8 as the
+    # provider scaffold (still gated by the 5-flag orchestrator and
+    # raises 501 in this phase). It is NOT part of this allow-list test;
+    # Phase 2.8 has its own ``test_no_background_submit_path_exists``
+    # regression. Other patterns remain forbidden.
     offenders: list[str] = []
     for py in src_root.rglob("*.py"):
         text = py.read_text(encoding="utf-8")
@@ -149,7 +158,53 @@ def test_production_allows_ssi_use_mock_false_with_creds(
     monkeypatch.setenv("DATABASE_URL", "postgresql://x")
     monkeypatch.setenv("SSI_CONSUMER_ID", "x")
     monkeypatch.setenv("SSI_CONSUMER_SECRET", "x")
+    # Conftest enables AUTO_TRADE_LIVE_ENABLED for the route tests; the
+    # Phase 2.6 production guard would block startup. Pin it back to
+    # false for this happy-path-prod-boot test.
+    monkeypatch.setenv("AUTO_TRADE_LIVE_ENABLED", "false")
+    monkeypatch.setenv("AUTO_TRADE_ORDER_PLACEMENT_ENABLED", "false")
     get_settings.cache_clear()
     settings = get_settings()
     # Should NOT raise.
     assert settings.warn_if_missing_secrets() == []
+
+
+def test_production_refuses_order_placement_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 2.5: production startup must refuse
+    ``SSI_TRADING_ORDER_PLACEMENT_ENABLED=true``. Live order placement
+    is a Phase 3 milestone gated by its own review."""
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", '["https://app.example.com"]')
+    monkeypatch.setenv("SSI_USE_MOCK", "false")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "x")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "x")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x")
+    monkeypatch.setenv("SSI_CONSUMER_ID", "x")
+    monkeypatch.setenv("SSI_CONSUMER_SECRET", "x")
+    monkeypatch.setenv("SSI_TRADING_ORDER_PLACEMENT_ENABLED", "true")
+    get_settings.cache_clear()
+    settings = get_settings()
+    with pytest.raises(
+        RuntimeError, match="SSI_TRADING_ORDER_PLACEMENT_ENABLED=true"
+    ):
+        settings.warn_if_missing_secrets()
+
+
+def test_phase_2_5_trading_flags_default_safe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Phase 2.5 trading flags must default to the safe values:
+    mock=true, read_only=true, order_placement_enabled=false. An operator
+    can override per-env, but the *defaults* must never live-trade.
+    """
+    monkeypatch.delenv("SSI_TRADING_USE_MOCK", raising=False)
+    monkeypatch.delenv("SSI_TRADING_READ_ONLY", raising=False)
+    monkeypatch.delenv("SSI_TRADING_ORDER_PLACEMENT_ENABLED", raising=False)
+    get_settings.cache_clear()
+    settings = get_settings()
+    assert settings.ssi_trading_use_mock is True
+    assert settings.ssi_trading_read_only is True
+    assert settings.ssi_trading_order_placement_enabled is False

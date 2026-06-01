@@ -68,6 +68,10 @@ const FPT_REC: RecommendationResult = {
   warnings: [],
   as_of: new Date().toISOString(),
   avg_value_20d: null,
+  data_status: "FRESH",
+  latest_quote: null,
+  chart_context: null,
+  chart_url: "/market/FPT",
   disclaimer: "research signal · not financial advice · no orders placed",
 };
 

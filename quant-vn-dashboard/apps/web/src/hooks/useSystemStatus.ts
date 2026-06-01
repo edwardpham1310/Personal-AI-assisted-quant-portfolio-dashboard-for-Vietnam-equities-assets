@@ -3,6 +3,22 @@
 import { useApi } from "@/lib/api";
 import { usePollingResource } from "./usePollingResource";
 
+// Phase 2.5 codes — CONNECTED preferred, READY/PROVIDER_ERROR kept for
+// back-compat with cached snapshots.
+export type ProviderStatusCode =
+  | "CONNECTED"
+  | "READY"
+  | "CONFIG_MISSING"
+  | "AUTH_FAILED"
+  | "RATE_LIMITED"
+  | "ERROR"
+  | "PROVIDER_ERROR"
+  | "STALE";
+
+export type ProviderMode = "REAL" | "MOCK_TEST_ONLY";
+
+export type TokenStatus = "VALID" | "EXPIRED" | "MISSING" | "UNKNOWN";
+
 export type ProviderHealth = {
   name: string;
   ready: boolean;
@@ -11,6 +27,15 @@ export type ProviderHealth = {
   last_call_ts: string | null;
   note: string | null;
   error: string | null;
+  // Phase 2.5 additions — UI uses these for color-coded badges + the
+  // critical production-mock banner.
+  status_code?: ProviderStatusCode;
+  mode?: ProviderMode;
+  last_successful_call_at?: string | null;
+  last_failed_call_at?: string | null;
+  last_error_sanitized?: string | null;
+  token_status?: TokenStatus;
+  production_ready?: boolean;
 };
 
 export type CacheHealth = {

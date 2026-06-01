@@ -53,10 +53,24 @@ def test_symbol_returns_full_schema(client: TestClient, auth_headers) -> None:
     assert 0.0 <= body["confidence"] <= 1.0
 
 
-def test_symbol_404_on_unknown(client: TestClient, auth_headers) -> None:
+def test_symbol_unknown_returns_data_unavailable(
+    client: TestClient, auth_headers
+) -> None:
+    """Phase 2 data policy: unknown symbol must surface as a recommendation
+    row with ``data_status=DATA_UNAVAILABLE`` and ``action=REJECTED`` so
+    the UI can render the freshness badge — never a silent 404 or a
+    confident recommendation backed by nothing.
+    """
     headers, _ = auth_headers()
     r = client.get("/recommendations/symbol/NOSUCH", headers=headers)
-    assert r.status_code == 404
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["symbol"] == "NOSUCH"
+    assert body["data_status"] in {"DATA_UNAVAILABLE", "PROVIDER_ERROR"}
+    assert body["action"] == "REJECTED"
+    assert body["status"] == "REJECTED"
+    assert body["confidence"] == 0.0
+    assert body["chart_url"] == "/market/NOSUCH"
 
 
 def test_symbol_400_on_invalid_symbol(client: TestClient, auth_headers) -> None:
@@ -179,3 +193,87 @@ def test_response_contains_research_disclaimer(
     )
     assert r.status_code == 200
     assert "research signal" in r.json()["disclaimer"]
+
+
+# ── Phase 2 chart context + data_status ────────────────────────────────────
+
+
+def test_symbol_response_includes_phase2_chart_fields(
+    client: TestClient, auth_headers
+) -> None:
+    """Every recommendation must carry the Phase 2 chart fields so the UI
+    can render the freshness badge + view-chart deep link inline.
+    """
+    headers, _ = auth_headers()
+    r = client.get(
+        "/recommendations/symbol/FPT?profile=short_aggressive&horizon=SHORT_2W",
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    # data_status must be one of the closed set.
+    assert body["data_status"] in {
+        "FRESH", "STALE", "DATA_UNAVAILABLE", "PROVIDER_ERROR",
+    }
+
+    # chart_url must deep-link to /market/{symbol}.
+    assert body["chart_url"] == "/market/FPT"
+
+    # chart_context populated (engine builds it from indicators it
+    # already computed).
+    ctx = body.get("chart_context")
+    assert ctx is not None, "chart_context missing"
+    for key in (
+        "timeframe",
+        "last_candle_time",
+        "trend",
+        "ma20",
+        "ma50",
+        "rsi",
+        "volume_ratio_20d",
+        "atr14",
+    ):
+        assert key in ctx, f"chart_context missing key: {key}"
+    assert ctx["timeframe"] == "1d"
+
+    # latest_quote present when a quote was fetched (mock provider
+    # always returns one for known symbols).
+    lq = body.get("latest_quote")
+    if lq is not None:
+        # Carries the enriched fields the Phase 2 schema added.
+        for key in ("symbol", "price", "source", "ts"):
+            assert key in lq, f"latest_quote missing key: {key}"
+
+
+def test_fresh_quote_yields_fresh_data_status(
+    client: TestClient, auth_headers
+) -> None:
+    """When bars + non-stale quote are present, data_status must be FRESH."""
+    headers, _ = auth_headers()
+    r = client.get(
+        "/recommendations/symbol/FPT?profile=short_aggressive&horizon=SHORT_2W",
+        headers=headers,
+    )
+    body = r.json()
+    # Mock provider returns non-stale quotes synchronously, so a happy
+    # path call must report FRESH.
+    assert body["data_status"] == "FRESH"
+
+
+def test_data_unavailable_response_is_research_only(
+    client: TestClient, auth_headers
+) -> None:
+    """A DATA_UNAVAILABLE recommendation must NOT carry a confident action.
+
+    Phase 2 rule: never silently generate from fake data; instead surface
+    REJECTED + 0 confidence + clear warning so the operator can act.
+    """
+    headers, _ = auth_headers()
+    r = client.get("/recommendations/symbol/UNKNOWN_SYM", headers=headers)
+    body = r.json()
+    assert body["action"] == "REJECTED"
+    assert body["confidence"] == 0.0
+    assert body["final_score"] == 0
+    # Disclaimer still present — research-only stance is unchanged.
+    assert body["disclaimer"].startswith("research signal")

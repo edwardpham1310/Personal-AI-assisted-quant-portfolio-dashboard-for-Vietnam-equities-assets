@@ -97,8 +97,11 @@ class SSIFastConnectProvider(MarketDataProvider):
         self._last_call_ts: datetime | None = None
         # Phase 2 data-policy state: tracks the *cause* of the last error so
         # the system status surface can distinguish AUTH_FAILED from generic
-        # PROVIDER_ERROR. Cleared on success.
+        # ERROR. Cleared on success.
         self._last_error_code: str | None = None
+        # Phase 2.5 — explicit failure timestamp + sanitized message.
+        self._last_failed_call_ts: datetime | None = None
+        self._last_error_message: str | None = None
 
     # ── Token management ───────────────────────────────────────────────────
     async def get_access_token(self) -> str:
@@ -120,9 +123,20 @@ class SSIFastConnectProvider(MarketDataProvider):
             # surface AUTH_FAILED separately from PROVIDER_ERROR.
             if resp.status_code in (401, 403):
                 self._last_error_code = "AUTH_FAILED"
+                self._last_failed_call_ts = datetime.now(timezone.utc)
+                self._last_error_message = f"HTTP{resp.status_code}"
                 logger.warning("ssi.token_refresh_auth_failed status=%d", resp.status_code)
                 raise ProviderError(
                     f"SSI token refresh rejected: HTTP {resp.status_code}",
+                    status_code=502,
+                )
+            if resp.status_code == 429:
+                self._last_error_code = "RATE_LIMITED"
+                self._last_failed_call_ts = datetime.now(timezone.utc)
+                self._last_error_message = "HTTP429"
+                logger.warning("ssi.token_refresh_rate_limited")
+                raise ProviderError(
+                    "SSI token refresh rate-limited: HTTP 429",
                     status_code=502,
                 )
             resp.raise_for_status()
@@ -131,7 +145,9 @@ class SSIFastConnectProvider(MarketDataProvider):
         except httpx.HTTPError as exc:
             # ``from None`` scrubs the chained exception so its traceback does
             # not leak the consumer_secret payload.
-            self._last_error_code = "PROVIDER_ERROR"
+            self._last_error_code = "ERROR"
+            self._last_failed_call_ts = datetime.now(timezone.utc)
+            self._last_error_message = type(exc).__name__
             logger.warning("ssi.token_refresh_failed err=%s", type(exc).__name__)
             raise ProviderError(
                 f"SSI token refresh failed: {type(exc).__name__}",
@@ -141,7 +157,9 @@ class SSIFastConnectProvider(MarketDataProvider):
         body = resp.json()
         token = (body.get("data") or {}).get("accessToken") or body.get("accessToken")
         if not token:
-            self._last_error_code = "PROVIDER_ERROR"
+            self._last_error_code = "ERROR"
+            self._last_failed_call_ts = datetime.now(timezone.utc)
+            self._last_error_message = "missing_access_token"
             raise ProviderError(
                 f"SSI token response missing accessToken: {_safe(body)}",
                 status_code=502,
@@ -438,6 +456,16 @@ class SSIFastConnectProvider(MarketDataProvider):
                 or row.get("volume")
                 or 0
             )
+            # Phase 2 chart module: surface ceiling / floor / value when
+            # SSI provides them. These appear on DailyStockPrice responses.
+            ceiling = row.get("CeilingPrice") or row.get("ceilingPrice")
+            floor = row.get("FloorPrice") or row.get("floorPrice")
+            value_field = (
+                row.get("TotalMatchVal")
+                or row.get("totalMatchVal")
+                or row.get("Value")
+                or row.get("value")
+            )
             out.append(
                 Quote(
                     symbol=sym,
@@ -455,6 +483,9 @@ class SSIFastConnectProvider(MarketDataProvider):
                     change=float(change) if change is not None else None,
                     change_pct=float(ratio) if ratio is not None else None,
                     volume=float(volume),
+                    ceiling_price=float(ceiling) if ceiling is not None else None,
+                    floor_price=float(floor) if floor is not None else None,
+                    value=float(value_field) if value_field is not None else None,
                     ts=ts,
                     stale=False,
                     source="ssi",
@@ -474,14 +505,15 @@ class SSIFastConnectProvider(MarketDataProvider):
         return await self.get_daily_stock_price(symbols)
 
     async def status(self) -> ProviderStatus:
-        """Compute the Phase 2 ``status_code`` for the dashboard.
+        """Compute the Phase 2.5 ``status_code`` for the dashboard.
 
         Priority (first match wins):
-            * CONFIG_MISSING — consumer ID/secret blank (also makes ``ready=False``)
+            * CONFIG_MISSING — consumer ID/secret blank
             * AUTH_FAILED    — last token refresh rejected (401/403)
-            * PROVIDER_ERROR — last call failed for a non-auth reason
+            * RATE_LIMITED   — provider returned 429 recently
+            * ERROR          — last call failed for a non-auth reason
             * STALE          — last call > 5 minutes ago (freshness threshold)
-            * READY          — credentials present, no recent error
+            * CONNECTED      — credentials present, no recent error
         """
         # CONFIG_MISSING short-circuits — `__init__` would have refused to
         # construct the provider, but defence-in-depth never hurts.
@@ -490,21 +522,42 @@ class SSIFastConnectProvider(MarketDataProvider):
                 name="ssi", ready=False, mock=False, token_cached=False,
                 last_call_ts=None, status_code="CONFIG_MISSING",
                 note="SSI_CONSUMER_ID or SSI_CONSUMER_SECRET is not configured",
+                mode="REAL",
+                last_successful_call_at=None,
+                last_failed_call_at=None,
+                last_error_sanitized=None,
+                token_status="MISSING",
+                production_ready=False,
             )
 
-        code: str = "READY"
-        if self._last_error_code in ("AUTH_FAILED", "PROVIDER_ERROR"):
+        code: str = "CONNECTED"
+        if self._last_error_code in ("AUTH_FAILED", "RATE_LIMITED", "ERROR"):
             code = self._last_error_code
         elif self._last_call_ts is not None:
             age = (datetime.now(timezone.utc) - self._last_call_ts).total_seconds()
             if age > 300:  # 5 min stale window
                 code = "STALE"
 
+        # Token status — computed from cache state + expiry window.
+        if self._token is None:
+            token_status: str = "MISSING"
+        elif time.time() >= self._token_expiry:
+            token_status = "EXPIRED"
+        else:
+            token_status = "VALID"
+
         return ProviderStatus(
             name="ssi",
-            ready=(code == "READY"),
+            ready=(code == "CONNECTED"),
             mock=False,
             token_cached=self._token is not None,
             last_call_ts=self._last_call_ts,
+            note=self._last_error_message,
             status_code=code,  # type: ignore[arg-type]
+            mode="REAL",
+            last_successful_call_at=self._last_call_ts,
+            last_failed_call_at=self._last_failed_call_ts,
+            last_error_sanitized=self._last_error_message,
+            token_status=token_status,  # type: ignore[arg-type]
+            production_ready=(code == "CONNECTED"),
         )

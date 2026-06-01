@@ -1,0 +1,25 @@
+name: Secret Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Why: the project documents (docs/mvp-v0.1-acceptance.md B3) that 5
+# secrets were pasted to chat history and must be rotated before
+# deploy. A CI-side gitleaks step catches any recurrence — including
+# Supabase service-role keys, SSI consumer secrets, JWT secrets,
+# and RSA private keys.
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .github/gitleaks.toml

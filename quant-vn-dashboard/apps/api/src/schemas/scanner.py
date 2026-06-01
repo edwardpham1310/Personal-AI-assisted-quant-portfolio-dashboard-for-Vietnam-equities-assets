@@ -33,12 +33,20 @@ class ScannerIndicators(BaseModel):
 
     ma20: float | None = None
     ma50: float | None = None
+    # Phase 2.B guardrail upgrade — long-trend insurance.
+    ma200: float | None = None
     rsi14: float | None = None
     atr14: float | None = None
     volume_ratio_20d: float | None = None
     high_20d: float | None = None
     high_55d: float | None = None
     avg_value_20d: float | None = None
+
+    # Phase 2.B guardrail upgrade — anti-manipulation indicators.
+    vol_cov_20d: float | None = None
+    consecutive_ceilings: int | None = None
+    price_above_ma200: bool | None = None
+    bars_count: int = 0
 
 
 class ScannerScores(BaseModel):

@@ -38,6 +38,38 @@ export type RecommendationScores = {
   ml_probability: number | null;
 };
 
+export type DataStatus =
+  | "FRESH"
+  | "STALE"
+  | "DATA_UNAVAILABLE"
+  | "PROVIDER_ERROR";
+
+export type ChartContext = {
+  timeframe: string;
+  last_candle_time: string | null;
+  trend: string;
+  ma20: number | null;
+  ma50: number | null;
+  rsi: number | null;
+  volume_ratio_20d: number | null;
+  atr14: number | null;
+};
+
+export type LatestQuotePayload = {
+  symbol: string;
+  price: number;
+  reference_price?: number | null;
+  change?: number | null;
+  change_pct?: number | null;
+  volume?: number | null;
+  ceiling_price?: number | null;
+  floor_price?: number | null;
+  value?: number | null;
+  ts: string;
+  stale: boolean;
+  source: string;
+};
+
 export type RecommendationResult = {
   symbol: string;
   profile: RecommendationProfile;
@@ -62,6 +94,11 @@ export type RecommendationResult = {
   warnings: string[];
   as_of: string;
   avg_value_20d: number | null;
+  // Phase 2 chart-context fields.
+  data_status: DataStatus;
+  latest_quote: LatestQuotePayload | null;
+  chart_context: ChartContext | null;
+  chart_url: string;
   disclaimer: string;
 };
 

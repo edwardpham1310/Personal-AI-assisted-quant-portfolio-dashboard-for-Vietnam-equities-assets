@@ -20,8 +20,11 @@ import math
 from datetime import UTC, datetime
 from typing import Any
 
+from schemas.fundamentals import Fundamentals
 from schemas.market import OHLCVBar, Quote
 from schemas.recommendation import (
+    ChartContext,
+    DataStatus,
     RecommendationAction,
     RecommendationHorizon,
     RecommendationProfile,
@@ -29,6 +32,11 @@ from schemas.recommendation import (
     RecommendationScores,
 )
 from services import scanner as scanner_service
+from services.guardrails_v2 import (
+    GuardrailEvidenceV2,
+    GuardrailMode,
+    evaluate as evaluate_v2,
+)
 
 
 # ── Constants ───────────────────────────────────────────────────────────────
@@ -61,10 +69,16 @@ PROFILE_WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 # Action thresholds applied AFTER final_score is computed.
-ACTION_BUY_THRESHOLD = 70           # >=70 + UPTREND + supporting signal => BUY_CANDIDATE
+# Phase 2.B: BUY threshold raised from 70 → 75 to align with the new
+# strict guardrail pipeline. Increases precision at the cost of recall.
+ACTION_BUY_THRESHOLD = 75           # >=75 + UPTREND + supporting signal => BUY_CANDIDATE
 ACTION_WATCH_THRESHOLD = 55         # >=55 in UPTREND/SIDEWAYS => WATCH
 ACTION_REDUCE_THRESHOLD = 40        # <40 while held => REDUCE
 ACTION_SELL_THRESHOLD = 30          # <30 while held + DOWNTREND => SELL_CANDIDATE
+
+# Phase 2.B: MA200 trend insurance + minimum history for BUY_CANDIDATE.
+REQUIRE_PRICE_ABOVE_MA200_FOR_BUY = True
+MIN_BARS_FOR_BUY_CANDIDATE = 250
 
 # Position sizing defaults — keep symmetric with risk_guardrails constants.
 BROKERAGE_RATE = 0.0015             # 15 bps SSI all-in
@@ -242,6 +256,10 @@ def derive_action(
     momentum_score: int,
     signals: list[str],
     portfolio_weight_pct: float | None,
+    *,
+    price_above_ma200: bool | None = None,
+    bars_count: int = 0,
+    strict_mode: bool = False,
 ) -> RecommendationAction:
     """Decision matrix — order matters.
 
@@ -267,11 +285,26 @@ def derive_action(
         or "PRICE_ABOVE_MA20" in signals
     )
 
+    # Phase 2.B trend insurance: a BUY_CANDIDATE must sit above MA200.
+    # When MA200 is unavailable AND strict mode is on, no BUY_CANDIDATE.
+    # In relaxed mode (default), unknown MA200 still allows the action
+    # because the route layer downgrades when bars_count < 250 (the
+    # caller decides — engine just honors what it's told).
+    ma200_ok = True
+    if REQUIRE_PRICE_ABOVE_MA200_FOR_BUY:
+        if price_above_ma200 is False:
+            ma200_ok = False
+        elif price_above_ma200 is None and strict_mode:
+            ma200_ok = False
+    if strict_mode and bars_count < MIN_BARS_FOR_BUY_CANDIDATE:
+        ma200_ok = False
+
     if (
         trend_label == "UPTREND"
         and final_score >= ACTION_BUY_THRESHOLD
         and momentum_score >= 55
         and supporting
+        and ma200_ok
     ):
         return "BUY_CANDIDATE"
 
@@ -474,8 +507,17 @@ def generate_recommendation(
     vnindex_bars: list[OHLCVBar] | None = None,
     portfolio_positions: list[Any] | None = None,
     total_equity: float | None = None,
+    *,
+    strict_mode: bool = False,
 ) -> RecommendationResult:
-    """End-to-end engine orchestration. Pure; guardrails applied separately."""
+    """End-to-end engine orchestration. Pure; guardrails applied separately.
+
+    ``strict_mode`` (Phase 2.B): when True, the engine refuses
+    BUY_CANDIDATE without MA200 evidence (bars_count >= 250 AND
+    price_above_ma200). The 3-layer guardrail pipeline is run by the
+    route layer via ``apply_v2_guardrails`` AFTER this function returns —
+    the engine doesn't read fundamentals.
+    """
 
     indicators = scanner_service.compute_indicators(bars)
     last_close = bars[-1].close if bars else None
@@ -515,6 +557,9 @@ def generate_recommendation(
         momentum_score=base_scores.momentum,
         signals=signals,
         portfolio_weight_pct=held_weight_pct,
+        price_above_ma200=indicators.price_above_ma200,
+        bars_count=indicators.bars_count,
+        strict_mode=strict_mode,
     )
 
     entry = compute_entry_zone(last_price, horizon)
@@ -547,6 +592,13 @@ def generate_recommendation(
         warnings.append("atr_unavailable_pct_stops_used")
     if latest_quote is not None and latest_quote.stale:
         warnings.append("stale_quote")
+    if indicators.ma200 is None:
+        warnings.append("insufficient_history_for_ma200")
+    if (
+        indicators.price_above_ma200 is False
+        and indicators.ma200 is not None
+    ):
+        warnings.append("price_below_ma200")
 
     if latest_quote is not None and isinstance(latest_quote.ts, datetime):
         as_of = latest_quote.ts
@@ -554,6 +606,38 @@ def generate_recommendation(
         as_of = bars[-1].ts
     else:
         as_of = datetime.now(UTC)
+
+    # Phase 2: compute data_status + chart_context so every recommendation
+    # carries enough info for the operator to verify the call inline.
+    data_status: DataStatus = "FRESH"
+    if not bars:
+        data_status = "DATA_UNAVAILABLE"
+    elif latest_quote is None:
+        data_status = "STALE"  # bars are real but no live quote
+    elif latest_quote.stale:
+        data_status = "STALE"
+
+    chart_ctx = ChartContext(
+        timeframe="1d",
+        last_candle_time=(
+            bars[-1].ts.isoformat()
+            if bars and isinstance(bars[-1].ts, datetime)
+            else None
+        ),
+        trend=trend_label,
+        ma20=indicators.ma20,
+        ma50=indicators.ma50,
+        rsi=indicators.rsi14,
+        volume_ratio_20d=indicators.volume_ratio_20d,
+        atr14=indicators.atr14,
+    )
+
+    # Serialise the latest quote for the UI. We use the existing Quote
+    # shape (with the optional ceiling/floor/value fields populated by
+    # the SSI parser since Phase 2A).
+    latest_quote_payload: dict | None = None
+    if latest_quote is not None:
+        latest_quote_payload = latest_quote.model_dump(mode="json")
 
     return RecommendationResult(
         symbol=symbol.upper(),
@@ -579,4 +663,130 @@ def generate_recommendation(
         warnings=warnings,
         as_of=as_of.isoformat() if isinstance(as_of, datetime) else str(as_of),
         avg_value_20d=indicators.avg_value_20d,
+        vol_cov_20d=indicators.vol_cov_20d,
+        consecutive_ceilings=indicators.consecutive_ceilings,
+        ma200=indicators.ma200,
+        price_above_ma200=indicators.price_above_ma200,
+        action_threshold_used=ACTION_BUY_THRESHOLD,
+        data_status=data_status,
+        latest_quote=latest_quote_payload,
+        chart_context=chart_ctx,
+        # chart_url is set by the route layer (frontend-aware base path).
+    )
+
+
+# ── Phase 2.B: 3-layer guardrail integration ────────────────────────────────
+
+
+def apply_v2_guardrails(
+    rec: RecommendationResult,
+    *,
+    fundamentals: Fundamentals | None,
+    mode: GuardrailMode = "strict",
+    min_price_threshold: float | None = None,
+) -> RecommendationResult:
+    """Run the 3-layer guardrail pipeline and downgrade ``rec`` in place
+    if any layer rejects.
+
+    Side effects on the returned result (copy of ``rec``):
+      * If REJECTED: ``action='REJECTED'``, ``status='REJECTED'``,
+        ``confidence=0.0``, rejection_reasons populated, warnings
+        extended, ``guardrail_status='REJECTED'``.
+      * If PASS: ``guardrail_status='PASS'`` and the layer breakdown is
+        still surfaced for operator visibility.
+
+    Also enforces strict-mode BUY_CANDIDATE downgrade when bars_count
+    is < 250 or price is not above MA200 — even if Layer 3 didn't
+    reject. This is the "MA200 trend insurance" rule.
+    """
+    latest_quote_payload = rec.latest_quote or {}
+    ceiling_price = latest_quote_payload.get("ceiling_price")
+    floor_price = latest_quote_payload.get("floor_price")
+    is_vn100 = fundamentals.is_vn100 if fundamentals is not None else None
+
+    # Derive market_cap if we have listed_share + last_price and the
+    # fundamentals provider didn't supply it directly.
+    derived_market_cap: float | None = None
+    if (
+        fundamentals is not None
+        and fundamentals.market_cap is None
+        and fundamentals.listed_share is not None
+        and rec.last_price is not None
+    ):
+        derived_market_cap = float(fundamentals.listed_share) * float(rec.last_price)
+    market_cap = (
+        fundamentals.market_cap
+        if (fundamentals is not None and fundamentals.market_cap is not None)
+        else derived_market_cap
+    )
+
+    ev = GuardrailEvidenceV2(
+        symbol=rec.symbol,
+        mode=mode,
+        avg_value_20d=rec.avg_value_20d,
+        market_cap=market_cap,
+        last_price=rec.last_price,
+        min_price_threshold=min_price_threshold,
+        fundamentals=fundamentals,
+        vol_cov_20d=rec.vol_cov_20d,
+        consecutive_ceilings=rec.consecutive_ceilings,
+        is_vn100=is_vn100,
+        ceiling_price=ceiling_price,
+        floor_price=floor_price,
+        ma200=rec.ma200,
+        # bars_count is consumed by ``derive_action`` upstream; the
+        # 3-layer pipeline only reads ``ma200`` for its WARN code so 0
+        # here is correct and harmless.
+        bars_count=0,
+    )
+
+    report = evaluate_v2(ev)
+
+    layer_payload = [
+        {
+            "layer": layer.layer,
+            "status": layer.status,
+            "rejection_reasons": list(layer.rejection_reasons),
+            "warnings": list(layer.warnings),
+        }
+        for layer in report.layers
+    ]
+
+    new_warnings = list(rec.warnings)
+    for w in report.warnings:
+        if w not in new_warnings:
+            new_warnings.append(w)
+
+    new_reasons = list(rec.reasons)
+    rejection_reasons = list(report.rejection_reasons)
+
+    if report.is_rejected():
+        for r in rejection_reasons:
+            tag = f"GUARDRAIL_REJECT_{r.upper()}"
+            if tag not in new_reasons:
+                new_reasons.append(tag)
+        return rec.model_copy(
+            update={
+                "action": "REJECTED",
+                "status": "REJECTED",
+                "confidence": 0.0,
+                "warnings": new_warnings,
+                "reasons": new_reasons,
+                "rejection_reasons": rejection_reasons,
+                "guardrail_status": "REJECTED",
+                "guardrail_layer_results": layer_payload,
+                "fundamental_data_status": report.fundamental_data_status,
+            }
+        )
+
+    # PASS — but the layer 3 warnings still appear in the output for
+    # operator visibility (e.g. "missing_consecutive_ceilings").
+    return rec.model_copy(
+        update={
+            "warnings": new_warnings,
+            "rejection_reasons": [],
+            "guardrail_status": "PASS",
+            "guardrail_layer_results": layer_payload,
+            "fundamental_data_status": report.fundamental_data_status,
+        }
     )

@@ -14,14 +14,17 @@ from fastapi.responses import JSONResponse
 from api.routes import (
     assets,
     auth,
+    auto_trade,
     health,
     market,
+    paper_trading,
     portfolio,
     recommendations,
     scanner,
     settings as settings_routes,
     stream,
     system,
+    trading,
     watchlist,
 )
 from core.config import get_settings
@@ -144,6 +147,9 @@ def create_app() -> FastAPI:
     )
     app.include_router(scanner.router, prefix="/scanner", tags=["scanner"])
     app.include_router(system.router, prefix="/system", tags=["system"])
+    app.include_router(trading.router, prefix="/trading", tags=["trading"])
+    app.include_router(auto_trade.router, prefix="/auto-trade", tags=["auto-trade"])
+    app.include_router(paper_trading.router, prefix="/paper", tags=["paper-trading"])
 
     return app
 

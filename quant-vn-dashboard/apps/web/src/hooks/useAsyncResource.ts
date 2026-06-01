@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { isProductionBuild } from "@/lib/env";
+
 export type AsyncState<T> = {
   data: T;
   isLoading: boolean;
@@ -19,6 +21,14 @@ type Options<T> = {
   alwaysMock?: boolean;
   /** Dependency list — bumping any value triggers a refetch. */
   deps?: unknown[];
+  /** Phase 2A: when true and the fetch fails, the hook leaves ``data`` at
+   *  the initial mockFallback (so the UI doesn't crash) but flips ``isMock``
+   *  to true AND surfaces ``error`` so callers can render an error banner
+   *  instead of silently displaying fake data. Defaults to true on
+   *  production builds (``NEXT_PUBLIC_APP_ENV=production``). Set to false
+   *  explicitly only for hooks whose fallback is intentionally
+   *  synthetic (e.g. ``usePortfolioMockSummary``). */
+  disableMockOnError?: boolean;
 };
 
 /**
@@ -31,6 +41,7 @@ export function useAsyncResource<T>({
   mockFallback,
   alwaysMock = false,
   deps = [],
+  disableMockOnError = isProductionBuild,
 }: Options<T>): AsyncState<T> {
   const [data, setData] = useState<T>(mockFallback);
   const [isLoading, setIsLoading] = useState<boolean>(!alwaysMock);
@@ -59,7 +70,13 @@ export function useAsyncResource<T>({
         if (cancelled) return;
         const detail = err instanceof Error ? err.message : "Request failed";
         setError(detail);
-        setData(mockFallback);
+        // Phase 2A: in production we MUST NOT silently substitute fake
+        // data for failed live calls. The error stays surfaced; data
+        // remains at the initial mockFallback (which the page-level
+        // ``error`` check should hide), and isMock=true so banners fire.
+        if (!disableMockOnError) {
+          setData(mockFallback);
+        }
         setIsMock(true);
       })
       .finally(() => {

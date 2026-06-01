@@ -114,7 +114,11 @@ def test_daily_ohlcv_rejects_future_end(client: TestClient, auth_headers) -> Non
 
 def test_daily_ohlcv_rejects_oversized_range(client: TestClient, auth_headers) -> None:
     headers, _ = auth_headers()
-    today = date.today()
+    # Use UTC date to match the route's own clock — local + UTC can diverge
+    # around midnight, which would trip the "end cannot be in the future"
+    # check before the max-days check we want to assert against.
+    from datetime import datetime as _dt, timezone as _tz
+    today = _dt.now(_tz.utc).date()
     r = client.get(
         f"/market/ohlcv/daily/FPT?start={(today - timedelta(days=500)).isoformat()}&end={today.isoformat()}",
         headers=headers,
@@ -144,3 +148,163 @@ def test_intraday_ohlcv_rejects_bad_interval(client: TestClient, auth_headers) -
         headers=headers,
     )
     assert r.status_code == 422  # FastAPI rejects via Literal type
+
+
+# ── Phase 2 chart module ────────────────────────────────────────────────────
+
+
+def test_candles_requires_auth(client: TestClient) -> None:
+    assert client.get("/market/candles/FPT").status_code == 401
+
+
+def test_candles_daily_returns_normalised_shape(
+    client: TestClient, auth_headers
+) -> None:
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/candles/FPT?timeframe=1d&range=1m", headers=headers
+    )
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    assert isinstance(rows, list)
+    if rows:
+        c = rows[0]
+        for key in (
+            "symbol",
+            "timeframe",
+            "timestamp",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "source",
+            "is_realtime",
+            "is_stale",
+        ):
+            assert key in c, f"missing key: {key}"
+        assert c["timeframe"] == "1d"
+        assert c["is_realtime"] is False
+        assert c["source"] in {"SSI", "MOCK"}
+
+
+def test_candles_intraday_15m(client: TestClient, auth_headers) -> None:
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/candles/FPT?timeframe=15m&range=5d", headers=headers
+    )
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    if rows:
+        assert rows[0]["timeframe"] == "15m"
+        assert rows[0]["is_realtime"] is True
+
+
+def test_candles_rejects_unsupported_timeframe(
+    client: TestClient, auth_headers
+) -> None:
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/candles/FPT?timeframe=7m&range=1m", headers=headers
+    )
+    assert r.status_code in (400, 422)
+
+
+def test_candles_rejects_unsupported_range(
+    client: TestClient, auth_headers
+) -> None:
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/candles/FPT?timeframe=1d&range=2y", headers=headers
+    )
+    assert r.status_code == 400
+
+
+def test_candles_rejects_bad_symbol(client: TestClient, auth_headers) -> None:
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/candles/INVALID!SYM?timeframe=1d&range=1m", headers=headers
+    )
+    assert r.status_code == 400
+
+
+def test_symbol_detail_requires_auth(client: TestClient) -> None:
+    assert client.get("/market/symbol-detail/FPT").status_code == 401
+
+
+def test_symbol_detail_returns_aggregator_shape(
+    client: TestClient, auth_headers
+) -> None:
+    headers, _ = auth_headers()
+    r = client.get("/market/symbol-detail/FPT", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    for key in (
+        "security",
+        "quote",
+        "intraday",
+        "daily",
+        "provider_status",
+        "freshness",
+        "warnings",
+        "disclaimer",
+    ):
+        assert key in body, f"missing key: {key}"
+    assert body["security"]["symbol"] == "FPT"
+    assert isinstance(body["intraday"], list)
+    assert isinstance(body["daily"], list)
+    # Provider status code must be one of the Phase 2 codes.
+    assert body["provider_status"]["status_code"] in {
+        "CONNECTED", "READY",  # CONNECTED preferred; READY kept for back-compat
+        "CONFIG_MISSING", "AUTH_FAILED", "RATE_LIMITED",
+        "ERROR", "PROVIDER_ERROR",  # ERROR preferred; PROVIDER_ERROR kept for back-compat
+        "STALE",
+    }
+    # Disclaimer must include the research-only language.
+    assert "research" in body["disclaimer"].lower()
+
+
+def test_symbol_detail_quote_carries_ceiling_floor_if_provided(
+    client: TestClient, auth_headers
+) -> None:
+    """The quote section of the aggregator must use the LatestQuote schema
+    which carries optional ceiling / floor / value fields."""
+    headers, _ = auth_headers()
+    r = client.get("/market/symbol-detail/FPT", headers=headers)
+    assert r.status_code == 200
+    body = r.json()
+    q = body.get("quote")
+    if q is not None:
+        # Fields must be present in the schema even if values are null.
+        for key in (
+            "last_price",
+            "change",
+            "change_pct",
+            "reference_price",
+            "ceiling_price",
+            "floor_price",
+            "volume",
+            "value",
+            "provider_timestamp",
+            "received_at",
+            "is_stale",
+            "source",
+        ):
+            assert key in q, f"missing quote key: {key}"
+        assert q["source"] in {"SSI", "MOCK"}
+
+
+def test_symbol_detail_unknown_symbol_still_returns_shape(
+    client: TestClient, auth_headers
+) -> None:
+    """Aggregator must be defensive — never raise on partial provider
+    failure. Unknown symbol → empty intraday/daily, warnings list grows.
+    """
+    headers, _ = auth_headers()
+    r = client.get("/market/symbol-detail/UNKNOWN", headers=headers)
+    # Even when ``security_details`` raises 404 inside, the aggregator
+    # catches and continues. So response is 200 with empty data + warnings.
+    assert r.status_code == 200
+    body = r.json()
+    assert body["security"]["symbol"] == "UNKNOWN"
+    assert isinstance(body["warnings"], list)

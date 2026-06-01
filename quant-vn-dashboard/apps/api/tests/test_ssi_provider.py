@@ -125,9 +125,13 @@ async def test_status_code_ready_when_creds_present_and_no_errors() -> None:
         max_retries=0,
     )
     s = await p.status()
-    assert s.status_code == "READY"
+    # Phase 2.5: renamed READY → CONNECTED.
+    assert s.status_code == "CONNECTED"
     assert s.ready is True
     assert s.mock is False
+    assert s.mode == "REAL"
+    assert s.token_status == "MISSING"
+    assert s.production_ready is True
 
 
 @pytest.mark.asyncio
@@ -215,8 +219,12 @@ async def test_status_code_provider_error_on_network_failure(
     with pytest.raises(ProviderError):
         await p.get_access_token()
     s = await p.status()
-    assert s.status_code == "PROVIDER_ERROR"
+    # Phase 2.5: renamed PROVIDER_ERROR → ERROR.
+    assert s.status_code == "ERROR"
     assert s.ready is False
+    assert s.last_failed_call_at is not None
+    assert s.last_error_sanitized == "ConnectError"
+    assert s.production_ready is False
 
 
 @pytest.mark.asyncio
@@ -260,3 +268,66 @@ def test_status_code_config_missing_via_status() -> None:
     s = asyncio.run(p.status())
     assert s.status_code == "CONFIG_MISSING"
     assert s.ready is False
+
+
+@pytest.mark.asyncio
+async def test_status_code_rate_limited_after_429(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A 429 from /AccessToken must surface as RATE_LIMITED on /status."""
+    import httpx
+    from providers.market_data.ssi_fastconnect import SSIFastConnectProvider
+    from providers.market_data.base import ProviderError
+
+    class _Resp:
+        def __init__(self, code: int) -> None:
+            self.status_code = code
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {}
+
+    class _Client:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        async def __aenter__(self) -> "_Client":
+            return self
+
+        async def __aexit__(self, *_a) -> None:
+            return None
+
+        async def post(self, *_a, **_kw) -> _Resp:
+            return _Resp(429)
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    p = SSIFastConnectProvider(
+        consumer_id="id",
+        consumer_secret="secret",
+        base_url="https://fc-data.ssi.com.vn",
+        timeout=5.0,
+        max_retries=0,
+    )
+    with pytest.raises(ProviderError):
+        await p.get_access_token()
+    s = await p.status()
+    assert s.status_code == "RATE_LIMITED"
+    assert s.ready is False
+    assert s.production_ready is False
+
+
+@pytest.mark.asyncio
+async def test_mock_provider_status_marks_mode_test_only() -> None:
+    """Mock provider must always report mode=MOCK_TEST_ONLY +
+    production_ready=False so the UI shows the critical banner if
+    somehow it lands in production."""
+    from providers.market_data.mock_provider import MockMarketDataProvider
+
+    p = MockMarketDataProvider()
+    s = await p.status()
+    assert s.mode == "MOCK_TEST_ONLY"
+    assert s.production_ready is False
+    assert s.status_code == "CONNECTED"

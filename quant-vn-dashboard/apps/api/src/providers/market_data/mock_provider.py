@@ -191,12 +191,22 @@ class MockMarketDataProvider(MarketDataProvider):
         return await self.get_daily_stock_price(symbols)
 
     async def status(self) -> ProviderStatus:
+        now = datetime.now(timezone.utc)
         return ProviderStatus(
             name="mock",
             ready=True,
             mock=True,
             token_cached=True,
-            last_call_ts=datetime.now(timezone.utc),
+            last_call_ts=now,
             note="Deterministic mock provider — set SSI_USE_MOCK=false for real SSI.",
-            status_code="READY",
+            status_code="CONNECTED",
+            mode="MOCK_TEST_ONLY",
+            last_successful_call_at=now,
+            last_failed_call_at=None,
+            last_error_sanitized=None,
+            token_status="UNKNOWN",
+            # Mock can never be production_ready by definition. The Phase 2A
+            # startup guard already refuses APP_ENV=production + mock, but
+            # this flag is what the UI banner reads.
+            production_ready=False,
         )

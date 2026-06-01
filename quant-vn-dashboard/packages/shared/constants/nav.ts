@@ -14,6 +14,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/portfolio", label: "Portfolio", order: 4 },
   { href: "/assets-pnl", label: "Assets & PnL", order: 5 },
   { href: "/recommendations", label: "Recommendations", order: 6 },
-  { href: "/data-quality", label: "Data Quality", order: 7 },
-  { href: "/settings", label: "Settings", order: 8 },
+  { href: "/trading-preview", label: "Trading Preview", order: 7 },
+  { href: "/auto-trade", label: "Auto-trade", order: 8 },
+  { href: "/paper-trading", label: "Paper Trading", order: 9 },
+  { href: "/trading/manual-confirm", label: "Manual Confirm", order: 10 },
+  { href: "/data-quality", label: "Data Quality", order: 11 },
+  { href: "/settings", label: "Settings", order: 12 },
 ] as const;

@@ -33,9 +33,13 @@ from services.supabase_db import SupabaseDB
 router = APIRouter()
 
 
-# How many calendar days of history to pull. ~80 covers the 55-day breakout
-# window plus enough business-day padding that holidays don't starve us.
-DAILY_HISTORY_DAYS = 80
+# Phase 2.B: calendar days of history to pull. Bumped from 80→365 to
+# guarantee ≥250 trading bars per symbol so MA200, the strict-mode
+# minimum, and the 55-day breakout window all have headroom around
+# Vietnamese market holidays. Preferred is 430 calendar days (≈300
+# trading bars). Operators with a slower ingest path can lower this
+# but the strict-mode guardrail layer then refuses BUY_CANDIDATE.
+DAILY_HISTORY_DAYS = 365
 
 # Concurrency cap for batch scans — prevents SSI rate-limit issues.
 SCAN_CONCURRENCY = 5

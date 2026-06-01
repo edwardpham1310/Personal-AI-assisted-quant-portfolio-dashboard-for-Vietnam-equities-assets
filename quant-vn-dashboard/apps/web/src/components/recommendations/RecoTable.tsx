@@ -3,11 +3,54 @@
 import { useMemo, useState } from "react";
 import {
   ACTION_ORDER,
+  type DataStatus,
   type RecommendationAction,
   type RecommendationResult,
 } from "@/hooks/useRecommendations";
 import { formatNumber } from "@/lib/format";
 import { ActionBadge, RecoStatusBadge } from "./ActionBadge";
+
+// Phase 2 data-status badge. Surfaces FRESH / STALE / DATA_UNAVAILABLE /
+// PROVIDER_ERROR right next to the symbol so the operator can tell at a
+// glance whether the recommendation is backed by real data.
+const DATA_STATUS_META: Record<
+  DataStatus,
+  { label: string; cls: string; title: string }
+> = {
+  FRESH: {
+    label: "FRESH",
+    cls: "bg-accent-up/15 text-accent-up border-accent-up/40",
+    title: "Live data from SSI; quote within freshness window.",
+  },
+  STALE: {
+    label: "STALE",
+    cls: "bg-amber-500/15 text-amber-400 border-amber-500/40",
+    title: "Data older than the freshness window. Reload to refresh.",
+  },
+  DATA_UNAVAILABLE: {
+    label: "NO DATA",
+    cls: "bg-accent-down/15 text-accent-down border-accent-down/40",
+    title: "Market data unavailable for this symbol — recommendation neutered.",
+  },
+  PROVIDER_ERROR: {
+    label: "PROVIDER ERR",
+    cls: "bg-accent-down/25 text-accent-down border-accent-down/60",
+    title: "Upstream SSI provider error. See /data-quality for detail.",
+  },
+};
+
+function DataStatusBadge({ status }: { status: DataStatus }) {
+  const meta = DATA_STATUS_META[status];
+  return (
+    <span
+      data-data-status={status}
+      title={meta.title}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-tight ${meta.cls}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
 
 type SortKey =
   | "symbol"
@@ -39,11 +82,15 @@ function compareValues(a: number | string | null, b: number | string | null): nu
 export function RecoTable({
   results,
   onSelect,
+  onSendToPaper,
   filterActions: filterActionsProp,
   setFilterActions: setFilterActionsProp,
 }: {
   results: RecommendationResult[];
   onSelect?: (rec: RecommendationResult) => void;
+  /** Phase 2.7 hook: opens a paper-trade confirmation flow for this rec.
+   *  Optional so existing call sites + tests keep working unchanged. */
+  onSendToPaper?: (rec: RecommendationResult) => void;
   filterActions?: Set<RecommendationAction>;
   setFilterActions?: (next: Set<RecommendationAction>) => void;
 }) {
@@ -153,6 +200,7 @@ export function RecoTable({
               <th className="px-2 py-2 text-right">Qty</th>
               <th className="px-2 py-2">Status</th>
               <th className="px-2 py-2">Warnings</th>
+              <th className="px-2 py-2">Chart</th>
             </tr>
           </thead>
           <tbody>
@@ -165,7 +213,12 @@ export function RecoTable({
                 className="cursor-pointer border-t border-border hover:bg-bg-subtle/40"
                 data-testid={`reco-row-${r.symbol}`}
               >
-                <td className="px-2 py-2 font-mono text-ink">{r.symbol}</td>
+                <td className="px-2 py-2 font-mono text-ink">
+                  <div className="flex items-center gap-1">
+                    <span>{r.symbol}</span>
+                    <DataStatusBadge status={r.data_status} />
+                  </div>
+                </td>
                 <td className="px-2 py-2">
                   <ActionBadge action={r.action} />
                 </td>
@@ -175,6 +228,18 @@ export function RecoTable({
                 <td className="px-2 py-2 font-mono">{r.final_score}</td>
                 <td className="px-2 py-2 font-mono">
                   {r.last_price != null ? formatNumber(r.last_price) : "—"}
+                  {r.latest_quote?.change_pct != null ? (
+                    <span
+                      className={`ml-1 text-[10px] ${
+                        r.latest_quote.change_pct >= 0
+                          ? "text-accent-up"
+                          : "text-accent-down"
+                      }`}
+                    >
+                      {r.latest_quote.change_pct >= 0 ? "+" : ""}
+                      {r.latest_quote.change_pct.toFixed(2)}%
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-2 py-2 font-mono text-xs">
                   {r.entry_zone_low != null && r.entry_zone_high != null
@@ -206,6 +271,32 @@ export function RecoTable({
                 </td>
                 <td className="px-2 py-2 text-xs text-amber-400">
                   {r.warnings.length > 0 ? `${r.warnings.length}` : "—"}
+                </td>
+                <td className="px-2 py-2 text-xs">
+                  <div className="flex gap-2 items-center">
+                    <a
+                      href={r.chart_url || `/market/${r.symbol}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-accent hover:underline"
+                      aria-label={`View chart for ${r.symbol}`}
+                    >
+                      View chart
+                    </a>
+                    {onSendToPaper ? (
+                      <button
+                        type="button"
+                        data-testid={`send-to-paper-${r.symbol}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSendToPaper(r);
+                        }}
+                        className="rounded border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] text-accent hover:bg-accent/20"
+                        aria-label={`Send ${r.symbol} to paper trading`}
+                      >
+                        Send to Paper Trade
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}

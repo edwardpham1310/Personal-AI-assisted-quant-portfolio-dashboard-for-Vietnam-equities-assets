@@ -20,5 +20,9 @@ export function usePortfolioMockSummary() {
   return useAsyncResource<PortfolioMockSummary>({
     fetcher: () => api<PortfolioMockSummary>("/portfolio/summary/legacy"),
     mockFallback: MOCK_PORTFOLIO_SUMMARY,
+    // Explicit opt-in to mock-on-error: this hook is the legacy mock-backed
+    // wrapper for the Dashboard Home KPI tile. Real-backed hooks live in
+    // ``usePortfolioSummary`` and ``useAssetsSummary``.
+    disableMockOnError: false,
   });
 }

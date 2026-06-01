@@ -1,6 +1,7 @@
 .PHONY: help install install-api install-web dev dev-api dev-web \
         test test-api test-web lint lint-api lint-web format format-api format-web \
         ci-backend ci-frontend ci-lint \
+        deploy-check \
         clean
 
 API_DIR := apps/api
@@ -23,6 +24,7 @@ help:
 	@echo "  ci-backend     Same pytest subset as GitHub Actions backend-tests.yml"
 	@echo "  ci-frontend    Same typecheck + build + vitest as frontend-build.yml"
 	@echo "  ci-lint        Same ruff + eslint + prettier --check as lint.yml"
+	@echo "  deploy-check   Post-deploy smoke vs API_BASE_URL using JWT (read-only)"
 
 install: install-api install-web
 
@@ -109,6 +111,30 @@ ci-lint:
 	cd $(API_DIR) && $(PY) -m ruff check src tests
 	cd $(WEB_DIR) && $(PNPM) lint
 	cd $(WEB_DIR) && $(PNPM) exec prettier --check "src/**/*.{ts,tsx,css,md}"
+
+# ── Post-deploy smoke ──────────────────────────────────────────────────────
+# Wraps scripts/production-smoke.sh with friendlier error messages.
+# Read-only by design: 4 GET calls, no write, never logs the JWT.
+#
+# Usage:
+#   make deploy-check API_BASE_URL=https://<host> JWT=<token>
+#
+# Optional:
+#   SMOKE_SYMBOLS=FPT,MWG,HPG   override the symbol list
+#   SMOKE_STRICT_QUOTES=1        also fail if any quote.stale=true
+deploy-check:
+	@if [ -z "$$API_BASE_URL" ]; then \
+		echo "ERROR: API_BASE_URL is required."; \
+		echo "Usage: make deploy-check API_BASE_URL=https://<host> JWT=<token>"; \
+		exit 1; \
+	fi
+	@if [ -z "$$JWT" ]; then \
+		echo "ERROR: JWT is required (paste a fresh Supabase access token)."; \
+		echo "Usage: make deploy-check API_BASE_URL=https://<host> JWT=<token>"; \
+		exit 1; \
+	fi
+	@echo "→ Running production smoke against $$API_BASE_URL"
+	@bash scripts/production-smoke.sh
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

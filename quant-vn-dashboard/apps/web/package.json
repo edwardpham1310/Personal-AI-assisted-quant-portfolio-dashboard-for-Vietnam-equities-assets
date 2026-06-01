@@ -10,7 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
+    "gitnexus:analyze": "cd ../../.. && node -e \"const fs=require('fs'); for (const p of ['.gitnexus','.gitnexus-cache']) fs.rmSync(p,{recursive:true,force:true})\" && npx gitnexus@latest analyze --index-only",
+    "gitnexus:analyze:force": "cd ../../.. && node -e \"const fs=require('fs'); for (const p of ['.gitnexus','.gitnexus-cache']) fs.rmSync(p,{recursive:true,force:true})\" && npx gitnexus@latest analyze --force --index-only",
+    "gitnexus:analyze:fast": "cd ../../.. && node -e \"const fs=require('fs'); for (const p of ['.gitnexus','.gitnexus-cache']) fs.rmSync(p,{recursive:true,force:true})\" && npx gitnexus@latest analyze --index-only --drop-embeddings",
+    "gitnexus:mcp": "cd ../../.. && npx -y gitnexus@latest mcp",
+    "gitnexus:serve": "cd ../../.. && npx gitnexus@latest serve"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

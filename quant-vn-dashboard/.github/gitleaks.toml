@@ -1,0 +1,63 @@
+title = "Quant VN Dashboard secret scan"
+
+# Extends gitleaks' default ruleset (which already catches generic
+# JWT, AWS, GCP, Slack, etc.) with project-specific patterns.
+
+[extend]
+useDefault = true
+
+# ── Project-specific rules ──────────────────────────────────────────────────
+
+[[rules]]
+id = "supabase-new-format-secret-key"
+description = "Supabase `sb_secret_*` service-role key (post-2025 format)"
+regex = '''sb_secret_[A-Za-z0-9_]{20,}'''
+tags = ["key", "supabase"]
+
+[[rules]]
+id = "supabase-publishable-key-literal"
+description = "Supabase `sb_publishable_*` key embedded outside an env file"
+regex = '''sb_publishable_[A-Za-z0-9_]{20,}'''
+tags = ["key", "supabase"]
+
+[[rules]]
+id = "ssi-fcdata-or-trading-consumer-secret-shape"
+description = "SSI FCData/FCtrading consumer secret (32-char hex)"
+regex = '''(?i)(ssi[_-]?(consumer|trading)[_-]?secret['"\s:=]+)([a-f0-9]{32})'''
+tags = ["key", "ssi"]
+
+[[rules]]
+id = "jwt-hs256-blob"
+description = "JWT HS256 token literal (3-segment, base64url)"
+regex = '''eyJhbGciOiJIUzI1NiI[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}'''
+tags = ["key", "jwt"]
+
+[[rules]]
+id = "rsa-private-key-block"
+description = "Inline RSA / EC / PKCS8 private key"
+regex = '''-----BEGIN ((RSA|EC|OPENSSH|DSA|PGP) )?PRIVATE KEY-----'''
+tags = ["key", "private"]
+
+# ── Allow-lists ─────────────────────────────────────────────────────────────
+#
+# These patterns appear legitimately in tests, docs, and the example
+# env file — they describe the secret shapes rather than expose
+# real values.
+
+[allowlist]
+description = "Documentation, test fixtures, and .env.example"
+paths = [
+    '''\.env\.example$''',
+    '''docs/.*''',
+    '''apps/api/tests/.*''',
+    '''apps/web/src/app/\(dash\)/.*\.test\.tsx?$''',
+    '''\.github/gitleaks\.toml$''',
+    '''\.github/workflows/.*''',
+]
+regexes = [
+    # Generic placeholder values used in tests / examples
+    '''xxxx+''',
+    '''ci-anon-key-placeholder''',
+    '''placeholder''',
+    '''example''',
+]
