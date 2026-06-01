@@ -166,7 +166,10 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
 
 vi.mock("@/lib/api", () => ({
   ApiError: class extends Error {
-    constructor(public status: number, public detail: string) {
+    constructor(
+      public status: number,
+      public detail: string,
+    ) {
       super(detail);
     }
   },
@@ -201,11 +204,9 @@ describe("PaperTradingPage", () => {
     apiCalls.length = 0;
     fireEvent.submit(screen.getByTestId("create-account-form"));
     await waitFor(() =>
-      expect(
-        apiCalls.some(
-          (c) => c.path === "/paper/accounts" && c.init?.method === "POST",
-        ),
-      ).toBe(true),
+      expect(apiCalls.some((c) => c.path === "/paper/accounts" && c.init?.method === "POST")).toBe(
+        true,
+      ),
     );
     const createCall = apiCalls.find(
       (c) => c.path === "/paper/accounts" && c.init?.method === "POST",
@@ -227,9 +228,7 @@ describe("PaperTradingPage", () => {
     await waitFor(() => screen.getByTestId("paper-order-form"));
     fireEvent.submit(screen.getByTestId("paper-order-form"));
     await waitFor(() => screen.getByTestId("paper-order-result"));
-    expect(screen.getByTestId("paper-order-result").textContent).toContain(
-      "FILLED",
-    );
+    expect(screen.getByTestId("paper-order-result").textContent).toContain("FILLED");
   });
 
   it("renders rejection reason on lot violation", async () => {
@@ -238,9 +237,7 @@ describe("PaperTradingPage", () => {
     await waitFor(() => screen.getByTestId("paper-order-form"));
     fireEvent.submit(screen.getByTestId("paper-order-form"));
     await waitFor(() => screen.getByTestId("paper-order-result"));
-    expect(screen.getByTestId("paper-order-result").textContent).toContain(
-      "LOT_SIZE_VIOLATION",
-    );
+    expect(screen.getByTestId("paper-order-result").textContent).toContain("LOT_SIZE_VIOLATION");
   });
 
   it("renders the equity chart container when curve has points", async () => {

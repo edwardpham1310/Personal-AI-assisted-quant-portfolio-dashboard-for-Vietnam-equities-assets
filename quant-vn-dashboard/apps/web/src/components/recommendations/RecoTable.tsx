@@ -13,10 +13,7 @@ import { ActionBadge, RecoStatusBadge } from "./ActionBadge";
 // Phase 2 data-status badge. Surfaces FRESH / STALE / DATA_UNAVAILABLE /
 // PROVIDER_ERROR right next to the symbol so the operator can tell at a
 // glance whether the recommendation is backed by real data.
-const DATA_STATUS_META: Record<
-  DataStatus,
-  { label: string; cls: string; title: string }
-> = {
+const DATA_STATUS_META: Record<DataStatus, { label: string; cls: string; title: string }> = {
   FRESH: {
     label: "FRESH",
     cls: "bg-accent-up/15 text-accent-up border-accent-up/40",
@@ -52,12 +49,7 @@ function DataStatusBadge({ status }: { status: DataStatus }) {
   );
 }
 
-type SortKey =
-  | "symbol"
-  | "action"
-  | "confidence"
-  | "final_score"
-  | "last_price";
+type SortKey = "symbol" | "action" | "confidence" | "final_score" | "last_price";
 
 type SortDir = "asc" | "desc";
 
@@ -96,9 +88,7 @@ export function RecoTable({
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("confidence");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [internalFilter, setInternalFilter] = useState<
-    Set<RecommendationAction>
-  >(new Set());
+  const [internalFilter, setInternalFilter] = useState<Set<RecommendationAction>>(new Set());
   const filterActions = filterActionsProp ?? internalFilter;
   const setFilterActions = setFilterActionsProp ?? setInternalFilter;
 
@@ -149,11 +139,7 @@ export function RecoTable({
 
   return (
     <div className="space-y-3">
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Filter by action"
-      >
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by action">
         {ALL_ACTIONS.map((action) => {
           const active = filterActions.has(action);
           return (
@@ -184,13 +170,25 @@ export function RecoTable({
               <Th onClick={() => toggleSort("action")} active={sortKey === "action"} dir={sortDir}>
                 Action
               </Th>
-              <Th onClick={() => toggleSort("confidence")} active={sortKey === "confidence"} dir={sortDir}>
+              <Th
+                onClick={() => toggleSort("confidence")}
+                active={sortKey === "confidence"}
+                dir={sortDir}
+              >
                 Confidence
               </Th>
-              <Th onClick={() => toggleSort("final_score")} active={sortKey === "final_score"} dir={sortDir}>
+              <Th
+                onClick={() => toggleSort("final_score")}
+                active={sortKey === "final_score"}
+                dir={sortDir}
+              >
                 Score
               </Th>
-              <Th onClick={() => toggleSort("last_price")} active={sortKey === "last_price"} dir={sortDir}>
+              <Th
+                onClick={() => toggleSort("last_price")}
+                active={sortKey === "last_price"}
+                dir={sortDir}
+              >
                 Last
               </Th>
               <th className="px-2 py-2">Entry</th>
@@ -222,18 +220,14 @@ export function RecoTable({
                 <td className="px-2 py-2">
                   <ActionBadge action={r.action} />
                 </td>
-                <td className="px-2 py-2 font-mono">
-                  {(r.confidence * 100).toFixed(0)}%
-                </td>
+                <td className="px-2 py-2 font-mono">{(r.confidence * 100).toFixed(0)}%</td>
                 <td className="px-2 py-2 font-mono">{r.final_score}</td>
                 <td className="px-2 py-2 font-mono">
                   {r.last_price != null ? formatNumber(r.last_price) : "—"}
                   {r.latest_quote?.change_pct != null ? (
                     <span
                       className={`ml-1 text-[10px] ${
-                        r.latest_quote.change_pct >= 0
-                          ? "text-accent-up"
-                          : "text-accent-down"
+                        r.latest_quote.change_pct >= 0 ? "text-accent-up" : "text-accent-down"
                       }`}
                     >
                       {r.latest_quote.change_pct >= 0 ? "+" : ""}
@@ -243,9 +237,7 @@ export function RecoTable({
                 </td>
                 <td className="px-2 py-2 font-mono text-xs">
                   {r.entry_zone_low != null && r.entry_zone_high != null
-                    ? `${formatNumber(r.entry_zone_low)}–${formatNumber(
-                        r.entry_zone_high,
-                      )}`
+                    ? `${formatNumber(r.entry_zone_low)}–${formatNumber(r.entry_zone_high)}`
                     : "—"}
                 </td>
                 <td className="px-2 py-2 font-mono text-xs">
@@ -257,14 +249,10 @@ export function RecoTable({
                     : "—"}
                 </td>
                 <td className="px-2 py-2 text-right font-mono">
-                  {r.position_size_vnd != null
-                    ? formatNumber(r.position_size_vnd)
-                    : "—"}
+                  {r.position_size_vnd != null ? formatNumber(r.position_size_vnd) : "—"}
                 </td>
                 <td className="px-2 py-2 text-right font-mono">
-                  {r.estimated_quantity != null
-                    ? formatNumber(r.estimated_quantity)
-                    : "—"}
+                  {r.estimated_quantity != null ? formatNumber(r.estimated_quantity) : "—"}
                 </td>
                 <td className="px-2 py-2">
                   <RecoStatusBadge status={r.status} />
@@ -326,15 +314,11 @@ function Th({
       <button
         type="button"
         onClick={onClick}
-        className={`flex items-center gap-1 hover:text-ink ${
-          active ? "text-ink" : ""
-        }`}
+        className={`flex items-center gap-1 hover:text-ink ${active ? "text-ink" : ""}`}
         aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
       >
         {children}
-        {active ? (
-          <span className="text-[10px]">{dir === "asc" ? "▲" : "▼"}</span>
-        ) : null}
+        {active ? <span className="text-[10px]">{dir === "asc" ? "▲" : "▼"}</span> : null}
       </button>
     </th>
   );

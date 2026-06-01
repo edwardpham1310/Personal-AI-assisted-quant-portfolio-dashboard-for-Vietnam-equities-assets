@@ -44,9 +44,7 @@ describe("PortfolioPage", () => {
     apiMock.mockResolvedValueOnce({ accounts: [] });
     render(<PortfolioPage />);
     expect(screen.getByRole("heading", { name: "Portfolio" })).toBeDefined();
-    expect(
-      screen.getByText(/Research dashboard · Manual entry · No orders placed/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Research dashboard · Manual entry · No orders placed/i)).toBeDefined();
     // Drain the resolved /portfolio/manual promise so the post-fetch state
     // update lands inside the test (silences React act() warnings).
     await waitFor(() => expect(apiMock).toHaveBeenCalled());

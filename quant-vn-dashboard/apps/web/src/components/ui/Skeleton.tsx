@@ -20,7 +20,11 @@ export function SkeletonRows({ rows = 3, columns = 4 }: { rows?: number; columns
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+        <div
+          key={i}
+          className="grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+        >
           {Array.from({ length: columns }, (_, j) => (
             <Skeleton key={j} />
           ))}

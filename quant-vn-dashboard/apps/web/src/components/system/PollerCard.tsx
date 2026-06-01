@@ -29,8 +29,8 @@ export function PollerCard({ poller }: { poller: PollerHealth }) {
       </dl>
       {!poller.enabled ? (
         <p className="mt-2 text-[11px] text-ink-dim">
-          Set <code className="font-mono text-ink">ENABLE_MARKET_POLLER=true</code>{" "}
-          to start filling the cache automatically.
+          Set <code className="font-mono text-ink">ENABLE_MARKET_POLLER=true</code> to start filling
+          the cache automatically.
         </p>
       ) : null}
     </Card>

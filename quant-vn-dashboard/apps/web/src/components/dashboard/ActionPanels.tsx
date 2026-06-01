@@ -21,9 +21,7 @@ function CandidateList({ rows, action }: { rows: Candidate[]; action: "BUY" | "S
           <div className="flex-1">
             <div className="flex items-baseline justify-between">
               <span className="font-mono text-ink">{c.symbol}</span>
-              <span className="font-mono text-xs text-ink-dim">
-                {(c.score * 100).toFixed(0)}
-              </span>
+              <span className="font-mono text-xs text-ink-dim">{(c.score * 100).toFixed(0)}</span>
             </div>
             <p className="text-xs text-ink-muted">{c.reason}</p>
           </div>
@@ -45,7 +43,11 @@ export function ActionPanels() {
         title={
           <>
             Top Buy Candidates
-            {candidates.isMock ? <span className="ml-2"><Badge tone="mock">Mock</Badge></span> : null}
+            {candidates.isMock ? (
+              <span className="ml-2">
+                <Badge tone="mock">Mock</Badge>
+              </span>
+            ) : null}
           </>
         }
         hint="Rule engine — research signal only, not advice"
@@ -57,7 +59,11 @@ export function ActionPanels() {
         title={
           <>
             Top Sell / Reduce Candidates
-            {candidates.isMock ? <span className="ml-2"><Badge tone="mock">Mock</Badge></span> : null}
+            {candidates.isMock ? (
+              <span className="ml-2">
+                <Badge tone="mock">Mock</Badge>
+              </span>
+            ) : null}
           </>
         }
       >
@@ -68,7 +74,11 @@ export function ActionPanels() {
         title={
           <>
             Risk Alerts
-            {risk.isMock ? <span className="ml-2"><Badge tone="mock">Mock</Badge></span> : null}
+            {risk.isMock ? (
+              <span className="ml-2">
+                <Badge tone="mock">Mock</Badge>
+              </span>
+            ) : null}
           </>
         }
       >
@@ -80,11 +90,7 @@ export function ActionPanels() {
               <li key={i} className="flex items-start gap-2">
                 <Badge
                   tone={
-                    a.severity === "error"
-                      ? "down"
-                      : a.severity === "warning"
-                        ? "warning"
-                        : "info"
+                    a.severity === "error" ? "down" : a.severity === "warning" ? "warning" : "info"
                   }
                 >
                   {a.severity}
@@ -100,7 +106,11 @@ export function ActionPanels() {
         title={
           <>
             Settlement Alerts
-            {settle.isMock ? <span className="ml-2"><Badge tone="mock">Mock</Badge></span> : null}
+            {settle.isMock ? (
+              <span className="ml-2">
+                <Badge tone="mock">Mock</Badge>
+              </span>
+            ) : null}
           </>
         }
         hint="Pending T+2 cash and share settlements"
@@ -122,20 +132,18 @@ export function ActionPanels() {
         title={
           <>
             Data Quality
-            {dq.isMock ? <span className="ml-2"><Badge tone="mock">Mock</Badge></span> : null}
+            {dq.isMock ? (
+              <span className="ml-2">
+                <Badge tone="mock">Mock</Badge>
+              </span>
+            ) : null}
           </>
         }
         hint={dq.data.note}
       >
         <div className="flex items-baseline gap-3">
           <Badge
-            tone={
-              dq.data.status === "OK"
-                ? "up"
-                : dq.data.status === "WARN"
-                  ? "warning"
-                  : "down"
-            }
+            tone={dq.data.status === "OK" ? "up" : dq.data.status === "WARN" ? "warning" : "down"}
           >
             {dq.data.status}
           </Badge>

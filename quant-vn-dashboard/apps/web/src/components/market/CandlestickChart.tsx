@@ -96,11 +96,7 @@ const TIMEFRAMES: { label: string; days: number }[] = [
   { label: "6M", days: 180 },
 ];
 
-export function CandlestickChart({
-  initialSymbol = "FPT",
-}: {
-  initialSymbol?: string;
-}) {
+export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: string }) {
   const [symbol, setSymbol] = useState(initialSymbol);
   const [days, setDays] = useState(90);
   const { data, isLoading, error, isMock, refetch } = useDailyOhlcv(symbol, days);
@@ -167,7 +163,11 @@ export function CandlestickChart({
                   tickFormatter={(v: number) => formatNumber(v)}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#0b0d10", border: "1px solid #21262d", fontSize: 12 }}
+                  contentStyle={{
+                    background: "#0b0d10",
+                    border: "1px solid #21262d",
+                    fontSize: 12,
+                  }}
                   labelStyle={{ color: "#e6edf3" }}
                   formatter={(v: number | string, name: string) => {
                     if (name === "range" || Array.isArray(v)) return [null, null];
@@ -229,7 +229,11 @@ export function CandlestickChart({
                   tickFormatter={(v: number) => formatNumber(v)}
                 />
                 <Tooltip
-                  contentStyle={{ background: "#0b0d10", border: "1px solid #21262d", fontSize: 11 }}
+                  contentStyle={{
+                    background: "#0b0d10",
+                    border: "1px solid #21262d",
+                    fontSize: 11,
+                  }}
                   formatter={(v: number) => formatNumber(v)}
                 />
                 <Bar dataKey="volume" fill="#4f8bf066" isAnimationActive={false} />

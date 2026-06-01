@@ -27,11 +27,7 @@ function compareNullable(a: number | null, b: number | null): number {
   return a - b;
 }
 
-function sortRows(
-  rows: EnrichedPosition[],
-  key: SortKey,
-  dir: SortDir,
-): EnrichedPosition[] {
+function sortRows(rows: EnrichedPosition[], key: SortKey, dir: SortDir): EnrichedPosition[] {
   const mul = dir === "asc" ? 1 : -1;
   const copy = [...rows];
   copy.sort((a, b) => {
@@ -48,13 +44,7 @@ function pnlClass(value: number | null): string {
   return "text-ink-muted";
 }
 
-function NullableNumberCell({
-  value,
-  warning,
-}: {
-  value: number | null;
-  warning?: string;
-}) {
+function NullableNumberCell({ value, warning }: { value: number | null; warning?: string }) {
   if (value == null) {
     return (
       <span
@@ -126,17 +116,10 @@ export function PositionTable({ rows, onEdit, onDelete }: PositionTableProps) {
     }
   }
 
-  const visible = useMemo(
-    () => sortRows(rows, sortKey, sortDir),
-    [rows, sortKey, sortDir],
-  );
+  const visible = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir]);
 
   if (rows.length === 0) {
-    return (
-      <EmptyState>
-        No positions yet. Add one to start tracking your portfolio.
-      </EmptyState>
-    );
+    return <EmptyState>No positions yet. Add one to start tracking your portfolio.</EmptyState>;
   }
 
   return (
@@ -226,9 +209,7 @@ export function PositionTable({ rows, onEdit, onDelete }: PositionTableProps) {
             />
             <th className="py-1 text-left">Strategy</th>
             <th className="py-1 text-left">Note</th>
-            {onEdit || onDelete ? (
-              <th className="py-1 text-right">Actions</th>
-            ) : null}
+            {onEdit || onDelete ? <th className="py-1 text-right">Actions</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -253,20 +234,12 @@ export function PositionTable({ rows, onEdit, onDelete }: PositionTableProps) {
                   ) : null}
                 </td>
                 <td className="py-2 text-xs text-ink-muted">{row.exchange}</td>
-                <td className="py-2 text-right font-mono">
-                  {formatNumber(row.quantity)}
-                </td>
-                <td className="py-2 text-right font-mono">
-                  {formatNumber(row.sellable_quantity)}
-                </td>
+                <td className="py-2 text-right font-mono">{formatNumber(row.quantity)}</td>
+                <td className="py-2 text-right font-mono">{formatNumber(row.sellable_quantity)}</td>
                 <td className="py-2 text-right font-mono text-ink-dim">
-                  {row.pending_quantity > 0
-                    ? formatNumber(row.pending_quantity)
-                    : "—"}
+                  {row.pending_quantity > 0 ? formatNumber(row.pending_quantity) : "—"}
                 </td>
-                <td className="py-2 text-right font-mono">
-                  {formatNumber(row.avg_cost)}
-                </td>
+                <td className="py-2 text-right font-mono">{formatNumber(row.avg_cost)}</td>
                 <td className="py-2 text-right">
                   <NullableNumberCell value={row.market_price} warning={warning} />
                 </td>
@@ -286,10 +259,11 @@ export function PositionTable({ rows, onEdit, onDelete }: PositionTableProps) {
                 <td className="py-2 text-right font-mono text-ink-dim">
                   {row.weight == null ? "—" : `${row.weight.toFixed(2)}%`}
                 </td>
-                <td className="py-2 text-xs text-ink-muted">
-                  {row.strategy_tag ?? "—"}
-                </td>
-                <td className="py-2 text-xs text-ink-dim max-w-[160px] truncate" title={row.note ?? undefined}>
+                <td className="py-2 text-xs text-ink-muted">{row.strategy_tag ?? "—"}</td>
+                <td
+                  className="py-2 text-xs text-ink-dim max-w-[160px] truncate"
+                  title={row.note ?? undefined}
+                >
                   {row.note ?? "—"}
                 </td>
                 {onEdit || onDelete ? (

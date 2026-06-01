@@ -16,9 +16,7 @@ export function RejectedRecsSection({
   return (
     <section className="rounded border border-border bg-bg-panel p-4 opacity-90">
       <header className="mb-2">
-        <h3 className="text-sm font-medium text-ink">
-          Rejected recommendations
-        </h3>
+        <h3 className="text-sm font-medium text-ink">Rejected recommendations</h3>
         <p className="text-[10px] text-ink-dim">
           A guardrail rejected these. Listed for audit only — not actionable.
         </p>
@@ -40,9 +38,7 @@ export function RejectedRecsSection({
                 {r.warnings.slice(0, 2).join(", ") || "guardrail"}
               </span>
             </button>
-            <span className="font-mono text-ink-dim">
-              score {r.final_score}
-            </span>
+            <span className="font-mono text-ink-dim">score {r.final_score}</span>
           </li>
         ))}
       </ul>

@@ -79,7 +79,10 @@ function SortableTh({
   const alignClass =
     align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
   return (
-    <th className={`py-1 ${alignClass}`} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+    <th
+      className={`py-1 ${alignClass}`}
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
       <button
         type="button"
         onClick={() => onSort(sortKey)}
@@ -119,9 +122,7 @@ export function ScannerTable({
 
   const visible = useMemo(() => {
     const filtered =
-      filters.length === 0
-        ? rows
-        : rows.filter((r) => filters.every((f) => r.signals.includes(f)));
+      filters.length === 0 ? rows : rows.filter((r) => filters.every((f) => r.signals.includes(f)));
     return sortRows(filtered, sortKey, sortDir);
   }, [rows, filters, sortKey, sortDir]);
 
@@ -137,10 +138,7 @@ export function ScannerTable({
         <EmptyState>No symbols match the current filters.</EmptyState>
       ) : (
         <div className="overflow-x-auto">
-          <table
-            className="w-full min-w-[980px] text-sm"
-            aria-label="Scanner results"
-          >
+          <table className="w-full min-w-[980px] text-sm" aria-label="Scanner results">
             <thead>
               <tr className="border-b border-border text-xs text-ink-dim">
                 <SortableTh
@@ -228,10 +226,7 @@ function ScannerRowView({
   const trendClass = TREND_TONE[row.trend];
 
   return (
-    <tr
-      data-testid={`scanner-row-${row.symbol}`}
-      className="border-b border-border align-top"
-    >
+    <tr data-testid={`scanner-row-${row.symbol}`} className="border-b border-border align-top">
       <td className="py-2 font-mono text-ink">{row.symbol}</td>
       <td className="py-2 text-right font-mono text-ink">
         {lastPrice != null ? formatNumber(lastPrice) : "—"}

@@ -38,11 +38,7 @@ export type RecommendationScores = {
   ml_probability: number | null;
 };
 
-export type DataStatus =
-  | "FRESH"
-  | "STALE"
-  | "DATA_UNAVAILABLE"
-  | "PROVIDER_ERROR";
+export type DataStatus = "FRESH" | "STALE" | "DATA_UNAVAILABLE" | "PROVIDER_ERROR";
 
 export type ChartContext = {
   timeframe: string;
@@ -109,11 +105,7 @@ export const SHORT_HORIZONS: RecommendationHorizon[] = [
   "SHORT_1M",
 ];
 
-export const LONG_HORIZONS: RecommendationHorizon[] = [
-  "LONG_3M",
-  "LONG_6M",
-  "LONG_12M",
-];
+export const LONG_HORIZONS: RecommendationHorizon[] = ["LONG_3M", "LONG_6M", "LONG_12M"];
 
 export const HORIZON_LABEL: Record<RecommendationHorizon, string> = {
   SHORT_T3: "T+3",
@@ -135,9 +127,7 @@ export const ACTION_ORDER: Record<RecommendationAction, number> = {
   REJECTED: 6,
 };
 
-export function horizonsForProfile(
-  profile: RecommendationProfile,
-): RecommendationHorizon[] {
+export function horizonsForProfile(profile: RecommendationProfile): RecommendationHorizon[] {
   return profile === "short_aggressive" ? SHORT_HORIZONS : LONG_HORIZONS;
 }
 
@@ -154,9 +144,7 @@ export function useWatchlistRecommendations(
     );
   }, [api, watchlistId, profile, horizon]);
 
-  const { data, loading, error, refresh } = usePollingResource<
-    RecommendationResult[]
-  >({
+  const { data, loading, error, refresh } = usePollingResource<RecommendationResult[]>({
     fetcher,
     intervalMs: 60_000,
     enabled: !!watchlistId,
@@ -184,13 +172,12 @@ export function useSymbolRecommendation(
     );
   }, [api, symbol, profile, horizon]);
 
-  const { data, loading, error, refresh } =
-    usePollingResource<RecommendationResult | null>({
-      fetcher,
-      intervalMs: 60_000,
-      enabled: !!symbol,
-      deps: [symbol, profile, horizon],
-    });
+  const { data, loading, error, refresh } = usePollingResource<RecommendationResult | null>({
+    fetcher,
+    intervalMs: 60_000,
+    enabled: !!symbol,
+    deps: [symbol, profile, horizon],
+  });
 
   return { result: data, loading, error, refresh };
 }

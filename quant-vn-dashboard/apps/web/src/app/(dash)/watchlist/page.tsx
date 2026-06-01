@@ -6,10 +6,7 @@ import { EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useApi } from "@/lib/api";
 import { useWatchlistScanner } from "@/hooks/useScanner";
 import { useWatchlistStream } from "@/hooks/useWatchlistStream";
-import {
-  ScannerTable,
-  type ScannerRow,
-} from "@/components/scanner/ScannerTable";
+import { ScannerTable, type ScannerRow } from "@/components/scanner/ScannerTable";
 import { VN_EXCHANGES, type VnExchange } from "@quant-shared/constants/markets";
 
 type WatchlistItem = {
@@ -149,9 +146,7 @@ export default function WatchlistPage() {
             </Card>
           ) : null}
 
-          {selected ? (
-            <WatchlistCard watchlist={selected} reload={load} />
-          ) : null}
+          {selected ? <WatchlistCard watchlist={selected} reload={load} /> : null}
         </>
       )}
     </div>
@@ -174,9 +169,7 @@ function WatchlistCard({
   const stream = useWatchlistStream(watchlist.id);
 
   const rows: ScannerRow[] = useMemo(() => {
-    const liveBySymbol = new Map(
-      stream.quotes.map((q) => [q.symbol.toUpperCase(), q]),
-    );
+    const liveBySymbol = new Map(stream.quotes.map((q) => [q.symbol.toUpperCase(), q]));
     return scanner.results.map((r) => {
       const live = liveBySymbol.get(r.symbol.toUpperCase());
       return {
@@ -213,9 +206,7 @@ function WatchlistCard({
   }
 
   async function removeBySymbol(sym: string) {
-    const match = watchlist.items.find(
-      (it) => it.symbol.toUpperCase() === sym.toUpperCase(),
-    );
+    const match = watchlist.items.find((it) => it.symbol.toUpperCase() === sym.toUpperCase());
     if (!match) return;
     await removeItem(match.id);
   }
@@ -287,9 +278,7 @@ function WatchlistCard({
               </div>
               <div className="flex items-center gap-3 text-[11px] text-ink-dim">
                 {stream.connected ? (
-                  <span className="rounded bg-accent-up/15 px-1.5 py-0.5 text-accent-up">
-                    Live
-                  </span>
+                  <span className="rounded bg-accent-up/15 px-1.5 py-0.5 text-accent-up">Live</span>
                 ) : (
                   <span className="rounded bg-bg-subtle px-1.5 py-0.5 text-ink-muted">
                     Snapshot

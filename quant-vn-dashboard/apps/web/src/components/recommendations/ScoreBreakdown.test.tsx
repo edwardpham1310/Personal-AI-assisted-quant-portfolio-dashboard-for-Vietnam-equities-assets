@@ -43,11 +43,7 @@ describe("ScoreBreakdown", () => {
   });
 
   it("renders the chart (no Phase-2 note) when ml_probability is provided", () => {
-    render(
-      <ScoreBreakdown
-        scores={{ ...FULL_SCORES, ml_probability: 0.7 }}
-      />,
-    );
+    render(<ScoreBreakdown scores={{ ...FULL_SCORES, ml_probability: 0.7 }} />);
     expect(screen.getByTestId("score-breakdown-chart")).toBeDefined();
     expect(screen.queryByText(/Phase 2/)).toBeNull();
   });

@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { VN_EXCHANGES, type VnExchange } from "@quant-shared/constants/markets";
-import type {
-  EnrichedPosition,
-  PositionCreate,
-  PositionUpdate,
-} from "@/hooks/portfolio-types";
+import type { EnrichedPosition, PositionCreate, PositionUpdate } from "@/hooks/portfolio-types";
 
 export type PositionFormProps = {
   /** Existing position when editing; null/undefined when creating. */
@@ -21,23 +17,12 @@ export type PositionFormProps = {
   busy?: boolean;
 };
 
-export function PositionForm({
-  initial,
-  onSubmit,
-  onCancel,
-  busy,
-}: PositionFormProps) {
+export function PositionForm({ initial, onSubmit, onCancel, busy }: PositionFormProps) {
   const mode: "create" | "update" = initial ? "update" : "create";
   const [symbol, setSymbol] = useState(initial?.symbol ?? "");
-  const [exchange, setExchange] = useState<VnExchange>(
-    initial?.exchange ?? "HOSE",
-  );
-  const [quantity, setQuantity] = useState(
-    initial ? String(initial.quantity) : "",
-  );
-  const [avgCost, setAvgCost] = useState(
-    initial ? String(initial.avg_cost) : "",
-  );
+  const [exchange, setExchange] = useState<VnExchange>(initial?.exchange ?? "HOSE");
+  const [quantity, setQuantity] = useState(initial ? String(initial.quantity) : "");
+  const [avgCost, setAvgCost] = useState(initial ? String(initial.avg_cost) : "");
   const [tag, setTag] = useState(initial?.strategy_tag ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState<string | null>(null);

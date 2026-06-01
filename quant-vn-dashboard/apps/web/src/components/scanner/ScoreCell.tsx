@@ -16,12 +16,7 @@ export function ScoreCell({
     return <span className="text-[11px] text-ink-dim">—</span>;
   }
   const clamped = Math.max(0, Math.min(100, value));
-  const tone =
-    clamped >= 70
-      ? "bg-accent-up"
-      : clamped >= 40
-        ? "bg-amber-400"
-        : "bg-accent-down";
+  const tone = clamped >= 70 ? "bg-accent-up" : clamped >= 40 ? "bg-amber-400" : "bg-accent-down";
 
   return (
     <span
@@ -30,10 +25,7 @@ export function ScoreCell({
     >
       <span className="font-mono text-xs text-ink">{clamped.toFixed(0)}</span>
       <span className="block h-1 w-12 overflow-hidden rounded bg-bg-subtle">
-        <span
-          className={`block h-full ${tone}`}
-          style={{ width: `${clamped}%` }}
-        />
+        <span className={`block h-full ${tone}`} style={{ width: `${clamped}%` }} />
       </span>
     </span>
   );

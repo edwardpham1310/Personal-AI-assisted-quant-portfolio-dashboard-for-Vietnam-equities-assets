@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  MOCK_BUY_CANDIDATES,
-  MOCK_SELL_CANDIDATES,
-  type Candidate,
-} from "@/lib/mock/portfolio";
+import { MOCK_BUY_CANDIDATES, MOCK_SELL_CANDIDATES, type Candidate } from "@/lib/mock/portfolio";
 import { useAsyncResource } from "./useAsyncResource";
 
 export type Candidates = { buy: Candidate[]; sell: Candidate[] };

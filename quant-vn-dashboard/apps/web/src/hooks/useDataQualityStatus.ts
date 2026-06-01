@@ -25,19 +25,15 @@ export function useDataQualityStatus() {
     fetcher: async () => {
       const status = await api<LiveStatus>("/market/live/status");
       const lag = status.last_poll
-        ? Math.max(
-            0,
-            Math.round((Date.now() - new Date(status.last_poll.ts).getTime()) / 60_000),
-          )
+        ? Math.max(0, Math.round((Date.now() - new Date(status.last_poll.ts).getTime()) / 60_000))
         : 999;
-      const tag: DataQualityStatus["status"] =
-        !status.poller_enabled
-          ? "WARN"
-          : status.last_poll?.ok === false
-            ? "ERROR"
-            : lag > 5
-              ? "WARN"
-              : "OK";
+      const tag: DataQualityStatus["status"] = !status.poller_enabled
+        ? "WARN"
+        : status.last_poll?.ok === false
+          ? "ERROR"
+          : lag > 5
+            ? "WARN"
+            : "OK";
       return {
         status: tag,
         ingest_lag_minutes: lag,

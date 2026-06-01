@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { RecommendationScores } from "@/hooks/useRecommendations";
 
 const SCORE_LABELS: Record<keyof RecommendationScores, string> = {
@@ -38,30 +30,28 @@ const COLORS: Record<string, string> = {
 type Row = { name: string; key: string; value: number; isMl: boolean };
 
 export function ScoreBreakdown({ scores }: { scores: RecommendationScores }) {
-  const data: Row[] = (
-    Object.keys(SCORE_LABELS) as Array<keyof RecommendationScores>
-  ).map((key) => {
-    if (key === "ml_probability") {
-      const v = scores.ml_probability;
+  const data: Row[] = (Object.keys(SCORE_LABELS) as Array<keyof RecommendationScores>).map(
+    (key) => {
+      if (key === "ml_probability") {
+        const v = scores.ml_probability;
+        return {
+          name: SCORE_LABELS[key],
+          key,
+          value: v == null ? 0 : Math.round(v * 100),
+          isMl: true,
+        };
+      }
       return {
         name: SCORE_LABELS[key],
         key,
-        value: v == null ? 0 : Math.round(v * 100),
-        isMl: true,
+        value: Number(scores[key] ?? 0),
+        isMl: false,
       };
-    }
-    return {
-      name: SCORE_LABELS[key],
-      key,
-      value: Number(scores[key] ?? 0),
-      isMl: false,
-    };
-  });
+    },
+  );
 
   if (data.filter((d) => !d.isMl).every((d) => d.value === 0)) {
-    return (
-      <div className="text-xs text-ink-dim">No score data available yet.</div>
-    );
+    return <div className="text-xs text-ink-dim">No score data available yet.</div>;
   }
 
   return (
@@ -90,8 +80,8 @@ export function ScoreBreakdown({ scores }: { scores: RecommendationScores }) {
       </div>
       {scores.ml_probability == null ? (
         <p className="text-[10px] text-ink-dim">
-          ML probability: <span className="font-medium">Phase 2</span> — not
-          included in Phase 1 final score.
+          ML probability: <span className="font-medium">Phase 2</span> — not included in Phase 1
+          final score.
         </p>
       ) : null}
     </div>

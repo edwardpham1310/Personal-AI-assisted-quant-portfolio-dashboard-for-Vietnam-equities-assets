@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ActionBadge, RecoStatusBadge } from "./ActionBadge";
-import type {
-  RecommendationAction,
-  RecommendationStatus,
-} from "@/hooks/useRecommendations";
+import type { RecommendationAction, RecommendationStatus } from "@/hooks/useRecommendations";
 
 const ALL_ACTIONS: RecommendationAction[] = [
   "BUY_CANDIDATE",
@@ -24,12 +21,8 @@ describe("ActionBadge", () => {
       const { container, unmount } = render(<ActionBadge action={action} />);
       const badge = container.querySelector(`[data-action="${action}"]`);
       expect(badge).not.toBeNull();
-      expect(badge?.getAttribute("aria-label")).toMatch(
-        /research signal, not financial advice/i,
-      );
-      expect(
-        container.textContent?.toLowerCase(),
-      ).toContain("research signal · not advice");
+      expect(badge?.getAttribute("aria-label")).toMatch(/research signal, not financial advice/i);
+      expect(container.textContent?.toLowerCase()).toContain("research signal · not advice");
       unmount();
     }
   });

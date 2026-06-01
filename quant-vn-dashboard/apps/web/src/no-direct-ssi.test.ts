@@ -9,13 +9,7 @@ const FORBIDDEN_PATTERNS = [
   /consumerSecret/i,
 ];
 
-const SOURCE_ROOTS = [
-  "src/app",
-  "src/components",
-  "src/hooks",
-  "src/lib",
-  "src/features",
-];
+const SOURCE_ROOTS = ["src/app", "src/components", "src/hooks", "src/lib", "src/features"];
 
 const ROOT = path.resolve(__dirname, "..");
 

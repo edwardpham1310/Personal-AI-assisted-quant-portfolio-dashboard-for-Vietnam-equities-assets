@@ -19,10 +19,7 @@ export class ApiError extends Error {
  * throws `ApiError` carrying the FastAPI `detail` payload.
  */
 export function useApi() {
-  return useCallback(async <T = unknown,>(
-    path: string,
-    init: RequestInit = {},
-  ): Promise<T> => {
+  return useCallback(async <T = unknown>(path: string, init: RequestInit = {}): Promise<T> => {
     const supabase = createClient();
     const {
       data: { session },

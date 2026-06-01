@@ -1,6 +1,15 @@
 "use client";
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import { Card } from "@/components/ui/Card";
 import { makeMockIndexComparison } from "@/lib/mock/market";
 
@@ -21,8 +30,22 @@ export function IndexComparisonChart() {
               formatter={(v: number) => v.toFixed(2)}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="vnindex" name="VNINDEX" stroke="#4f8bf0" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="vn30" name="VN30" stroke="#22c55e" strokeWidth={2} dot={false} />
+            <Line
+              type="monotone"
+              dataKey="vnindex"
+              name="VNINDEX"
+              stroke="#4f8bf0"
+              strokeWidth={2}
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="vn30"
+              name="VN30"
+              stroke="#22c55e"
+              strokeWidth={2}
+              dot={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

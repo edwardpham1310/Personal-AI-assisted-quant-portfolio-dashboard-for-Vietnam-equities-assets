@@ -23,8 +23,7 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
         account_id: "acc-1",
         mode: "PAPER_ONLY",
         strategy_id: "default",
-        status: path.includes("/stop") ? "STOPPED"
-          : path.includes("/pause") ? "PAUSED" : "RUNNING",
+        status: path.includes("/stop") ? "STOPPED" : path.includes("/pause") ? "PAUSED" : "RUNNING",
         started_at: "2026-05-31T00:00:00Z",
         stopped_at: null,
         metadata: {},
@@ -118,9 +117,7 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
         account_id: "acc-1",
         mode: "OFF",
         validation_status: "REJECTED",
-        rejection_reasons: [
-          "REAUTH_REQUIRED: please re-enter your password",
-        ],
+        rejection_reasons: ["REAUTH_REQUIRED: please re-enter your password"],
         is_live_execution_enabled: false,
         last_reauth_at: null,
         risk_acknowledged_at: null,
@@ -169,10 +166,7 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
       account_id: "acc-1",
       mode: "OFF",
       validation_status: "REJECTED",
-      rejection_reasons: [
-        "MAX_CAPITAL_VND_REQUIRED",
-        "ALLOWED_STRATEGIES_REQUIRED",
-      ],
+      rejection_reasons: ["MAX_CAPITAL_VND_REQUIRED", "ALLOWED_STRATEGIES_REQUIRED"],
       is_live_execution_enabled: false,
       last_reauth_at: null,
       risk_acknowledged_at: null,
@@ -244,7 +238,10 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
 
 vi.mock("@/lib/api", () => ({
   ApiError: class extends Error {
-    constructor(public status: number, public detail: string) {
+    constructor(
+      public status: number,
+      public detail: string,
+    ) {
       super(detail);
     }
   },
@@ -289,9 +286,7 @@ describe("AutoTradePage", () => {
     await waitFor(() => screen.getByTestId("btn-paper"));
     fireEvent.click(screen.getByTestId("btn-paper"));
     await waitFor(() => {
-      expect(screen.getByTestId("current-mode").textContent).toBe(
-        "Paper only",
-      );
+      expect(screen.getByTestId("current-mode").textContent).toBe("Paper only");
     });
   });
 
@@ -313,9 +308,7 @@ describe("AutoTradePage", () => {
     await waitFor(() => screen.getByTestId("btn-live-auto"));
     fireEvent.click(screen.getByTestId("btn-live-auto"));
     await waitFor(() => screen.getByTestId("rejection-list"));
-    expect(screen.getByTestId("rejection-list").textContent).toContain(
-      "MAX_CAPITAL_VND_REQUIRED",
-    );
+    expect(screen.getByTestId("rejection-list").textContent).toContain("MAX_CAPITAL_VND_REQUIRED");
   });
 
   it("confirms Live auto when the box is checked and the API returns VALID", async () => {
@@ -326,9 +319,7 @@ describe("AutoTradePage", () => {
     fireEvent.click(screen.getByTestId("risk-ack-checkbox"));
     fireEvent.click(screen.getByTestId("risk-ack-confirm"));
     await waitFor(() => {
-      expect(screen.getByTestId("current-mode").textContent).toBe(
-        "Live auto",
-      );
+      expect(screen.getByTestId("current-mode").textContent).toBe("Live auto");
     });
   });
 
@@ -358,9 +349,7 @@ describe("AutoTradePage", () => {
   it("renders the audit log table with at least one row", async () => {
     render(<AutoTradePage />);
     await waitFor(() => screen.getByTestId("audit-log-table"));
-    expect(screen.getByTestId("audit-log-table").textContent).toContain(
-      "AUTO_TRADE_ENABLE_PAPER",
-    );
+    expect(screen.getByTestId("audit-log-table").textContent).toContain("AUTO_TRADE_ENABLE_PAPER");
   });
 
   it("never renders a 'submit live order' affordance", async () => {
@@ -409,13 +398,9 @@ describe("AutoTradePage", () => {
     apiCalls.length = 0;
     fireEvent.click(screen.getByTestId("stop-confirm"));
     await waitFor(() => {
-      expect(
-        apiCalls.some((c) => c.path === "/auto-trade/emergency-stop"),
-      ).toBe(true);
+      expect(apiCalls.some((c) => c.path === "/auto-trade/emergency-stop")).toBe(true);
     });
-    const stopCall = apiCalls.find(
-      (c) => c.path === "/auto-trade/emergency-stop",
-    );
+    const stopCall = apiCalls.find((c) => c.path === "/auto-trade/emergency-stop");
     const body = JSON.parse(stopCall!.init!.body as string);
     expect(body.reason).toBeDefined();
     expect(body.account_id).toBe("acc-1");
@@ -426,9 +411,7 @@ describe("AutoTradePage", () => {
   it("renders the Phase 2.9 engine warning + engine controls", async () => {
     render(<AutoTradePage />);
     await waitFor(() => screen.getByTestId("phase-2-9-engine-warning"));
-    expect(screen.getByTestId("engine-run-status").textContent).toContain(
-      "NO RUN",
-    );
+    expect(screen.getByTestId("engine-run-status").textContent).toContain("NO RUN");
     // Start button enabled (no active run); Pause/Stop disabled.
     const start = screen.getByTestId("engine-start") as HTMLButtonElement;
     const pause = screen.getByTestId("engine-pause") as HTMLButtonElement;
@@ -445,11 +428,7 @@ describe("AutoTradePage", () => {
     fireEvent.click(screen.getByTestId("engine-start"));
     await waitFor(() =>
       expect(
-        apiCalls.some(
-          (c) =>
-            c.path === "/auto-trade/runs/start" &&
-            c.init?.method === "POST",
-        ),
+        apiCalls.some((c) => c.path === "/auto-trade/runs/start" && c.init?.method === "POST"),
       ).toBe(true),
     );
     const call = apiCalls.find(

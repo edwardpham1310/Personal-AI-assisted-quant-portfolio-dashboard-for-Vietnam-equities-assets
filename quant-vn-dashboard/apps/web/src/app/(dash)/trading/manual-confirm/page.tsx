@@ -37,9 +37,7 @@ export default function ManualConfirmPage() {
   const [quantity, setQuantity] = useState(100);
   const [limitPrice, setLimitPrice] = useState("86000");
 
-  const [activeIntent, setActiveIntent] = useState<LiveOrderIntent | null>(
-    null,
-  );
+  const [activeIntent, setActiveIntent] = useState<LiveOrderIntent | null>(null);
   const [reauthOpen, setReauthOpen] = useState(false);
   const [reauthEmail, setReauthEmail] = useState("");
   const [reauthPassword, setReauthPassword] = useState("");
@@ -131,12 +129,9 @@ export default function ManualConfirmPage() {
   return (
     <div className="space-y-6" data-testid="manual-confirm-page">
       <header>
-        <h1 className="text-xl font-semibold text-ink">
-          Manual confirm live order
-        </h1>
+        <h1 className="text-xl font-semibold text-ink">Manual confirm live order</h1>
         <p className="text-sm text-ink-dim mt-1">
-          Step-by-step gated submission. No one-click trade. No hidden
-          submit. No background path.
+          Step-by-step gated submission. No one-click trade. No hidden submit. No background path.
         </p>
       </header>
 
@@ -147,8 +142,8 @@ export default function ManualConfirmPage() {
           data-testid="live-warning-banner"
           className="rounded border border-accent-down/60 bg-accent-down/10 px-3 py-2 text-xs text-accent-down font-semibold"
         >
-          ⚠ This will submit a REAL order to SSI. The submit button below
-          is the last chance to cancel.
+          ⚠ This will submit a REAL order to SSI. The submit button below is the last chance to
+          cancel.
         </div>
       ) : (
         <div
@@ -156,12 +151,9 @@ export default function ManualConfirmPage() {
           data-testid="dry-run-banner"
           className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
         >
-          DRY RUN — no real order will be submitted. To enable live
-          submission, all 5 environment flags must align (currently
-          {gate
-            ? ` ${Object.values(gate).filter(Boolean).length}/5`
-            : ""}{" "}
-          open).
+          DRY RUN — no real order will be submitted. To enable live submission, all 5 environment
+          flags must align (currently
+          {gate ? ` ${Object.values(gate).filter(Boolean).length}/5` : ""} open).
         </div>
       )}
 
@@ -182,10 +174,7 @@ export default function ManualConfirmPage() {
       </Card>
 
       {/* Step 1 — create intent */}
-      <Card
-        title="Step 1 — create intent"
-        hint="Define the order. Nothing is sent yet."
-      >
+      <Card title="Step 1 — create intent" hint="Define the order. Nothing is sent yet.">
         <form
           onSubmit={onCreate}
           data-testid="create-intent-form"
@@ -238,26 +227,20 @@ export default function ManualConfirmPage() {
 
       {/* Active intent steps */}
       {activeIntent ? (
-        <Card
-          title="Active intent"
-          hint={`Status: ${activeIntent.status}`}
-        >
+        <Card title="Active intent" hint={`Status: ${activeIntent.status}`}>
           <div className="flex items-center gap-3 flex-wrap text-xs">
             <Badge tone="info">{activeIntent.symbol}</Badge>
             <Badge tone="neutral">{activeIntent.side}</Badge>
             <span className="text-ink">
               qty {activeIntent.quantity}
-              {activeIntent.limit_price
-                ? ` @ ${formatVnd(activeIntent.limit_price)}`
-                : ""}
+              {activeIntent.limit_price ? ` @ ${formatVnd(activeIntent.limit_price)}` : ""}
             </span>
             <span data-testid="active-intent-status">
               <Badge
                 tone={
                   activeIntent.status === "SUBMITTED"
                     ? "up"
-                    : activeIntent.status === "REJECTED" ||
-                        activeIntent.status === "FAILED"
+                    : activeIntent.status === "REJECTED" || activeIntent.status === "FAILED"
                       ? "down"
                       : "info"
                 }
@@ -272,10 +255,7 @@ export default function ManualConfirmPage() {
               data-testid="step-preview"
               type="button"
               onClick={onPreview}
-              disabled={
-                actions.busy ||
-                !["DRAFT", "PREVIEWED"].includes(activeIntent.status)
-              }
+              disabled={actions.busy || !["DRAFT", "PREVIEWED"].includes(activeIntent.status)}
               className="rounded border border-border bg-bg-panel px-3 py-1 text-ink disabled:opacity-50"
             >
               Step 2 — preview
@@ -285,7 +265,8 @@ export default function ManualConfirmPage() {
               type="button"
               onClick={onRequestConfirmation}
               disabled={
-                actions.busy || activeIntent.status !== "PREVIEWED" ||
+                actions.busy ||
+                activeIntent.status !== "PREVIEWED" ||
                 activeIntent.rejection_reasons.length > 0
               }
               className="rounded border border-amber-500/60 bg-amber-500/10 px-3 py-1 text-amber-200 disabled:opacity-50"
@@ -304,12 +285,9 @@ export default function ManualConfirmPage() {
             <button
               type="button"
               onClick={onCancel}
-              disabled={[
-                "SUBMITTED",
-                "REJECTED",
-                "CANCELLED",
-                "FAILED",
-              ].includes(activeIntent.status)}
+              disabled={["SUBMITTED", "REJECTED", "CANCELLED", "FAILED"].includes(
+                activeIntent.status,
+              )}
               className="rounded border border-border bg-bg-panel px-3 py-1 text-ink disabled:opacity-50"
             >
               Cancel intent
@@ -321,9 +299,7 @@ export default function ManualConfirmPage() {
               data-testid="rejection-list"
               className="mt-3 rounded border border-accent-down/40 bg-accent-down/10 px-3 py-2"
             >
-              <strong className="text-accent-down text-xs">
-                Cannot proceed:
-              </strong>
+              <strong className="text-accent-down text-xs">Cannot proceed:</strong>
               <ul className="list-disc list-inside text-accent-down text-xs mt-1">
                 {result.rejection_reasons.map((r, i) => (
                   <li key={i}>{r}</li>
@@ -373,9 +349,8 @@ export default function ManualConfirmPage() {
       {reauthOpen ? (
         <Modal title="Re-authenticate" onClose={() => setReauthOpen(false)}>
           <p className="text-xs text-ink-dim mb-3">
-            Enter your password to confirm this live order. The password
-            is sent only to Supabase — the dashboard never sees or
-            stores it.
+            Enter your password to confirm this live order. The password is sent only to Supabase —
+            the dashboard never sees or stores it.
           </p>
           <input
             data-testid="reauth-email"
@@ -393,9 +368,7 @@ export default function ManualConfirmPage() {
             onChange={(e) => setReauthPassword(e.target.value)}
             className="w-full rounded border border-border bg-bg px-2 py-1 text-xs text-ink mb-3"
           />
-          {reauthError ? (
-            <p className="text-accent-down text-xs mb-2">{reauthError}</p>
-          ) : null}
+          {reauthError ? <p className="text-accent-down text-xs mb-2">{reauthError}</p> : null}
           <button
             data-testid="reauth-submit"
             type="button"
@@ -409,13 +382,10 @@ export default function ManualConfirmPage() {
 
       {/* Risk-ack modal (step 4b) */}
       {riskAckOpen ? (
-        <Modal
-          title="Risk acknowledgement"
-          onClose={() => setRiskAckOpen(false)}
-        >
+        <Modal title="Risk acknowledgement" onClose={() => setRiskAckOpen(false)}>
           <p className="text-xs text-accent-down mb-3 font-semibold">
-            You are about to submit a real-money order. Markets can move
-            against you. You must monitor your account yourself.
+            You are about to submit a real-money order. Markets can move against you. You must
+            monitor your account yourself.
           </p>
           <label className="flex items-center gap-2 text-xs text-ink mb-3">
             <input
@@ -440,21 +410,14 @@ export default function ManualConfirmPage() {
 
       {/* Final submit modal (step 5) — only after CONFIRMED */}
       {submitOpen && activeIntent?.status === "CONFIRMED" ? (
-        <Modal
-          title="Final submit"
-          onClose={() => setSubmitOpen(false)}
-        >
+        <Modal title="Final submit" onClose={() => setSubmitOpen(false)}>
           <p className="text-xs text-ink mb-3">
             {dryRun ? (
               <span data-testid="modal-dry-run-label">
-                DRY RUN — clicking will simulate a broker submission. No
-                real order will be sent.
+                DRY RUN — clicking will simulate a broker submission. No real order will be sent.
               </span>
             ) : (
-              <span
-                data-testid="modal-live-warning"
-                className="text-accent-down font-semibold"
-              >
+              <span data-testid="modal-live-warning" className="text-accent-down font-semibold">
                 LIVE SUBMISSION — clicking will send a real order to SSI.
               </span>
             )}
@@ -468,9 +431,7 @@ export default function ManualConfirmPage() {
             <dd className="text-right text-ink">{activeIntent.quantity}</dd>
             <dt className="text-ink-dim">Limit price</dt>
             <dd className="text-right text-ink">
-              {activeIntent.limit_price
-                ? formatVnd(activeIntent.limit_price)
-                : "—"}
+              {activeIntent.limit_price ? formatVnd(activeIntent.limit_price) : "—"}
             </dd>
             <dt className="text-ink-dim">Account</dt>
             <dd className="text-right text-ink font-mono">

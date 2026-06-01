@@ -10,10 +10,38 @@ export type IndexSnapshot = {
 };
 
 export const MOCK_INDICES: IndexSnapshot[] = [
-  { code: "VNINDEX", name: "VN Index", close: 1280.5, change: 6.2, change_pct: 0.0049, volume: 720_000_000 },
-  { code: "VN30", name: "VN30 Index", close: 1322.1, change: 8.4, change_pct: 0.0064, volume: 410_000_000 },
-  { code: "HNXINDEX", name: "HNX Index", close: 240.7, change: -0.5, change_pct: -0.0021, volume: 95_000_000 },
-  { code: "UPCOMINDEX", name: "UPCoM Index", close: 92.4, change: 0.1, change_pct: 0.0011, volume: 38_000_000 },
+  {
+    code: "VNINDEX",
+    name: "VN Index",
+    close: 1280.5,
+    change: 6.2,
+    change_pct: 0.0049,
+    volume: 720_000_000,
+  },
+  {
+    code: "VN30",
+    name: "VN30 Index",
+    close: 1322.1,
+    change: 8.4,
+    change_pct: 0.0064,
+    volume: 410_000_000,
+  },
+  {
+    code: "HNXINDEX",
+    name: "HNX Index",
+    close: 240.7,
+    change: -0.5,
+    change_pct: -0.0021,
+    volume: 95_000_000,
+  },
+  {
+    code: "UPCOMINDEX",
+    name: "UPCoM Index",
+    close: 92.4,
+    change: 0.1,
+    change_pct: 0.0011,
+    volume: 38_000_000,
+  },
 ];
 
 export type MarketBreadth = {
@@ -55,18 +83,18 @@ export const MOCK_TOP_MOVERS: TopMovers = {
     { symbol: "VRE", price: 28_150, change_pct: 0.0175, volume: 2_800_000 },
   ],
   losers: [
-    { symbol: "HPG", price: 24_850, change_pct: -0.0220, volume: 5_400_000 },
-    { symbol: "STB", price: 28_900, change_pct: -0.0180, volume: 4_100_000 },
-    { symbol: "VRE", price: 28_150, change_pct: -0.0160, volume: 2_800_000 },
+    { symbol: "HPG", price: 24_850, change_pct: -0.022, volume: 5_400_000 },
+    { symbol: "STB", price: 28_900, change_pct: -0.018, volume: 4_100_000 },
+    { symbol: "VRE", price: 28_150, change_pct: -0.016, volume: 2_800_000 },
   ],
   by_value: [
-    { symbol: "VCB", price: 89_000, change_pct: 0.0080, volume: 1_700_000, value: 151_300_000_000 },
+    { symbol: "VCB", price: 89_000, change_pct: 0.008, volume: 1_700_000, value: 151_300_000_000 },
     { symbol: "FPT", price: 87_200, change_pct: 0.0234, volume: 4_200_000, value: 366_240_000_000 },
     { symbol: "MWG", price: 42_850, change_pct: 0.0202, volume: 3_900_000, value: 167_115_000_000 },
   ],
   by_volume_spike: [
-    { symbol: "DGC", price: 68_400, change_pct: 0.0150, volume: 8_400_000, spike_pct: 3.0 },
-    { symbol: "GVR", price: 32_200, change_pct: -0.0070, volume: 6_200_000, spike_pct: 1.48 },
+    { symbol: "DGC", price: 68_400, change_pct: 0.015, volume: 8_400_000, spike_pct: 3.0 },
+    { symbol: "GVR", price: 32_200, change_pct: -0.007, volume: 6_200_000, spike_pct: 1.48 },
   ],
 };
 
@@ -133,7 +161,9 @@ export function makeMockOhlcv(symbol: string, days = 180): OHLCV[] {
 }
 
 /** Equal-length comparison series of VNINDEX vs. VN30 (rebased to 100). */
-export function makeMockIndexComparison(days = 90): { ts: string; vnindex: number; vn30: number }[] {
+export function makeMockIndexComparison(
+  days = 90,
+): { ts: string; vnindex: number; vn30: number }[] {
   const vni = makeMockOhlcv("VNINDEX", days);
   const vn30 = makeMockOhlcv("VN30", days);
   const v0 = vni[0]?.close ?? 1;

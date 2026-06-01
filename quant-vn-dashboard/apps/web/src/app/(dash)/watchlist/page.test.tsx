@@ -10,9 +10,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/hooks/useScanner", async () => {
-  const actual = await vi.importActual<typeof import("@/hooks/useScanner")>(
-    "@/hooks/useScanner",
-  );
+  const actual = await vi.importActual<typeof import("@/hooks/useScanner")>("@/hooks/useScanner");
   return {
     ...actual,
     useWatchlistScanner: () => ({
@@ -46,9 +44,7 @@ describe("WatchlistPage", () => {
 
     expect(screen.getByRole("heading", { name: "Watchlist" })).toBeDefined();
     await waitFor(() => {
-      expect(
-        screen.getByText(/Research signals · not financial advice/i),
-      ).toBeDefined();
+      expect(screen.getByText(/Research signals · not financial advice/i)).toBeDefined();
     });
   });
 
@@ -99,9 +95,7 @@ describe("WatchlistPage", () => {
     render(<WatchlistPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("combobox", { name: /Select watchlist/i }),
-      ).toBeDefined();
+      expect(screen.getByRole("combobox", { name: /Select watchlist/i })).toBeDefined();
     });
   });
 });

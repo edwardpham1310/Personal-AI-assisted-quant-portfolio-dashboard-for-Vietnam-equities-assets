@@ -39,11 +39,7 @@ export function PnlBySymbolBar({ positions }: { positions: EnrichedPosition[] })
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="#21262d" vertical={false} />
-              <XAxis
-                dataKey="symbol"
-                tick={{ fill: "#8b949e", fontSize: 11 }}
-                interval={0}
-              />
+              <XAxis dataKey="symbol" tick={{ fill: "#8b949e", fontSize: 11 }} interval={0} />
               <YAxis
                 tick={{ fill: "#8b949e", fontSize: 10 }}
                 width={70}

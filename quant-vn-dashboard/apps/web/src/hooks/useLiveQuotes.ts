@@ -49,18 +49,13 @@ export function useLiveQuotes(symbols: string[]) {
     [symbols],
   );
 
-  const handleMessage = useCallback(
-    (_event: string, payload: QuoteUpdate) => {
-      setQuotes(payload.data);
-      setLastUpdate(payload.timestamp);
-    },
-    [],
-  );
+  const handleMessage = useCallback((_event: string, payload: QuoteUpdate) => {
+    setQuotes(payload.data);
+    setLastUpdate(payload.timestamp);
+  }, []);
 
   const { connected, error: streamError } = useEventStream<QuoteUpdate>({
-    path: symbolKey
-      ? `/api/stream/quotes?symbols=${encodeURIComponent(symbolKey)}`
-      : "",
+    path: symbolKey ? `/api/stream/quotes?symbols=${encodeURIComponent(symbolKey)}` : "",
     eventTypes: ["quote_update"],
     onMessage: handleMessage,
     enabled: symbolKey.length > 0,

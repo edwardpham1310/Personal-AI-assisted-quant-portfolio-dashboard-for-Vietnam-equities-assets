@@ -51,9 +51,7 @@ describe("AllocationDonut", () => {
     // Recharts can't measure the container in jsdom and skips drawing the
     // SVG cells, but the ResponsiveContainer wrapper does mount. That's
     // enough to prove the data path didn't fall back to the empty state.
-    expect(
-      container.querySelector(".recharts-responsive-container"),
-    ).not.toBeNull();
+    expect(container.querySelector(".recharts-responsive-container")).not.toBeNull();
     expect(screen.queryByText(/No allocation yet/i)).toBeNull();
   });
 });

@@ -13,11 +13,7 @@ export type RunStatus =
   | "EMERGENCY_STOPPED"
   | "FAILED";
 
-export type AutoTradeMode =
-  | "OFF"
-  | "PAPER_ONLY"
-  | "LIVE_MANUAL_CONFIRM"
-  | "LIVE_AUTO";
+export type AutoTradeMode = "OFF" | "PAPER_ONLY" | "LIVE_MANUAL_CONFIRM" | "LIVE_AUTO";
 
 export type AutoTradeRun = {
   id: string;
@@ -109,10 +105,7 @@ export function useAutoTradeRuns(accountId: string | null) {
   return { data, loading, refresh };
 }
 
-export function useAutoTradeDecisions(
-  runId: string | null,
-  accountId: string | null,
-) {
+export function useAutoTradeDecisions(runId: string | null, accountId: string | null) {
   const api = useApi();
   const [data, setData] = useState<AutoTradeDecision[]>([]);
 
@@ -121,9 +114,7 @@ export function useAutoTradeDecisions(
     if (runId) params.set("run_id", runId);
     if (accountId) params.set("account_id", accountId);
     const qs = params.toString() ? `?${params.toString()}` : "";
-    const rows = await api<AutoTradeDecision[]>(
-      `/auto-trade/decisions${qs}`,
-    );
+    const rows = await api<AutoTradeDecision[]>(`/auto-trade/decisions${qs}`);
     setData(rows);
   }, [api, runId, accountId]);
 
@@ -134,10 +125,7 @@ export function useAutoTradeDecisions(
   return { data, refresh };
 }
 
-export function useAutoTradeEngineOrders(
-  runId: string | null,
-  accountId: string | null,
-) {
+export function useAutoTradeEngineOrders(runId: string | null, accountId: string | null) {
   const api = useApi();
   const [data, setData] = useState<AutoTradeOrder[]>([]);
 
@@ -163,9 +151,7 @@ export function useAutoTradeRiskCounters(accountId: string | null) {
 
   const refresh = useCallback(async () => {
     const qs = accountId ? `?account_id=${accountId}` : "";
-    const rows = await api<AutoTradeRiskCounter[]>(
-      `/auto-trade/risk-counters${qs}`,
-    );
+    const rows = await api<AutoTradeRiskCounter[]>(`/auto-trade/risk-counters${qs}`);
     setData(rows);
   }, [api, accountId]);
 
@@ -194,9 +180,7 @@ export function useAutoTradeRunActions(accountId: string | null) {
   }
 
   const startRun = useCallback(
-    async (
-      strategy_id = "default",
-    ): Promise<AutoTradeRun | null> => {
+    async (strategy_id = "default"): Promise<AutoTradeRun | null> => {
       if (!accountId) return null;
       setBusy(true);
       setError(null);
@@ -223,10 +207,10 @@ export function useAutoTradeRunActions(accountId: string | null) {
       setBusy(true);
       setError(null);
       try {
-        return await api<AutoTradeRun>(
-          `/auto-trade/runs/stop?run_id=${run_id}`,
-          { method: "POST", body: JSON.stringify({}) },
-        );
+        return await api<AutoTradeRun>(`/auto-trade/runs/stop?run_id=${run_id}`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
       } catch (e) {
         _err(e);
         return null;
@@ -242,10 +226,10 @@ export function useAutoTradeRunActions(accountId: string | null) {
       setBusy(true);
       setError(null);
       try {
-        return await api<AutoTradeRun>(
-          `/auto-trade/runs/pause?run_id=${run_id}`,
-          { method: "POST", body: JSON.stringify({}) },
-        );
+        return await api<AutoTradeRun>(`/auto-trade/runs/pause?run_id=${run_id}`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
       } catch (e) {
         _err(e);
         return null;

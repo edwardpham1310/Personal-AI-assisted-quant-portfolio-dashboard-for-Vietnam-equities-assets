@@ -55,8 +55,8 @@ describe("PositionTable", () => {
     fireEvent.click(screen.getByRole("button", { name: /Symbol/ }));
 
     const bodyRows = screen.getByRole("table").querySelectorAll("tbody tr");
-    const order = Array.from(bodyRows).map(
-      (r) => r.getAttribute("data-testid")?.replace("position-row-", ""),
+    const order = Array.from(bodyRows).map((r) =>
+      r.getAttribute("data-testid")?.replace("position-row-", ""),
     );
     expect(order).toEqual(["ACB", "FPT", "HPG"]);
   });

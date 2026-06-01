@@ -96,9 +96,7 @@ export function useTradingAccounts() {
   }, [api]);
 
   const create = useCallback(
-    async (
-      payload: { account_number: string; account_alias?: string; broker?: string },
-    ) => {
+    async (payload: { account_number: string; account_alias?: string; broker?: string }) => {
       const row = await api<TradingAccount>("/trading/accounts", {
         method: "POST",
         body: JSON.stringify({ broker: "SSI", ...payload }),
@@ -154,9 +152,7 @@ export function useStockPositions(accountId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const rows = await api<StockPosition[]>(
-        `/trading/positions?account_id=${accountId}`,
-      );
+      const rows = await api<StockPosition[]>(`/trading/positions?account_id=${accountId}`);
       setData(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load positions.");

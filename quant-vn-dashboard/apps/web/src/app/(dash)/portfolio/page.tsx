@@ -14,11 +14,7 @@ import { StrategyAllocationDonut } from "@/components/portfolio/StrategyAllocati
 import { PnlBySymbolBar } from "@/components/portfolio/PnlBySymbolBar";
 import { PortfolioVsVnindexPlaceholder } from "@/components/portfolio/PortfolioVsVnindexPlaceholder";
 import { formatVnd, formatNumber } from "@/lib/format";
-import type {
-  EnrichedPosition,
-  PositionCreate,
-  PositionUpdate,
-} from "@/hooks/portfolio-types";
+import type { EnrichedPosition, PositionCreate, PositionUpdate } from "@/hooks/portfolio-types";
 
 type Account = {
   id: string;
@@ -164,8 +160,8 @@ export default function PortfolioPage() {
           </p>
         ) : accounts.length === 1 ? (
           <p className="text-xs text-ink-muted">
-            Default account · <span className="text-ink">{accounts[0].name}</span>{" "}
-            ({accounts[0].broker} · {accounts[0].currency})
+            Default account · <span className="text-ink">{accounts[0].name}</span> (
+            {accounts[0].broker} · {accounts[0].currency})
           </p>
         ) : (
           <div className="flex flex-col gap-1 text-xs">
@@ -278,9 +274,7 @@ export default function PortfolioPage() {
           >
             {showAddForm ? "Close form" : "Add position"}
           </button>
-          {positions.loading ? (
-            <span className="text-[11px] text-ink-dim">Refreshing…</span>
-          ) : null}
+          {positions.loading ? <span className="text-[11px] text-ink-dim">Refreshing…</span> : null}
         </div>
 
         {showAddForm ? (
@@ -315,11 +309,7 @@ export default function PortfolioPage() {
         ) : positions.loading && positions.positions.length === 0 ? (
           <EmptyState>Loading positions…</EmptyState>
         ) : (
-          <PositionTable
-            rows={positions.positions}
-            onEdit={setEditing}
-            onDelete={deletePosition}
-          />
+          <PositionTable rows={positions.positions} onEdit={setEditing} onDelete={deletePosition} />
         )}
       </Card>
 

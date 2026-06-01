@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 // ── Types mirror backend Pydantic ────────────────────────────────────────
 
-export type AutoTradeMode =
-  | "OFF"
-  | "PAPER_ONLY"
-  | "LIVE_MANUAL_CONFIRM"
-  | "LIVE_AUTO";
+export type AutoTradeMode = "OFF" | "PAPER_ONLY" | "LIVE_MANUAL_CONFIRM" | "LIVE_AUTO";
 
 export type ValidationStatus = "VALID" | "REJECTED";
 
@@ -100,9 +96,7 @@ export function useAutoTradeSettings(accountId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const row = await api<AutoTradeSettings>(
-        `/auto-trade/settings?account_id=${accountId}`,
-      );
+      const row = await api<AutoTradeSettings>(`/auto-trade/settings?account_id=${accountId}`);
       setData(row);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings.");
@@ -114,10 +108,10 @@ export function useAutoTradeSettings(accountId: string | null) {
   const save = useCallback(
     async (patch: AutoTradeSettingsUpdate) => {
       if (!accountId) return null;
-      const updated = await api<AutoTradeSettings>(
-        `/auto-trade/settings?account_id=${accountId}`,
-        { method: "PUT", body: JSON.stringify(patch) },
-      );
+      const updated = await api<AutoTradeSettings>(`/auto-trade/settings?account_id=${accountId}`, {
+        method: "PUT",
+        body: JSON.stringify(patch),
+      });
       setData(updated);
       return updated;
     },
@@ -142,9 +136,7 @@ export function useAutoTradeState(accountId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const row = await api<AutoTradeState>(
-        `/auto-trade/state?account_id=${accountId}`,
-      );
+      const row = await api<AutoTradeState>(`/auto-trade/state?account_id=${accountId}`);
       setData(row);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load state.");
@@ -190,13 +182,13 @@ export function useAutoTradeAuditLogs(accountId: string | null) {
 export function useAutoTradeActions(accountId: string | null) {
   const api = useApi();
   const [busy, setBusy] = useState(false);
-  const [lastResult, setLastResult] = useState<
-    ModeTransitionResult | LiveAutoRequestResult | null
-  >(null);
+  const [lastResult, setLastResult] = useState<ModeTransitionResult | LiveAutoRequestResult | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const post = useCallback(
-    async <T,>(path: string, body: object) => {
+    async <T>(path: string, body: object) => {
       if (!accountId) return null;
       setBusy(true);
       setError(null);
@@ -229,31 +221,27 @@ export function useAutoTradeActions(accountId: string | null) {
   }, [post]);
 
   const enableManualConfirm = useCallback(async () => {
-    const r = await post<ModeTransitionResult>(
-      "/auto-trade/enable-manual-confirm",
-      {},
-    );
+    const r = await post<ModeTransitionResult>("/auto-trade/enable-manual-confirm", {});
     if (r) setLastResult(r);
     return r;
   }, [post]);
 
   const requestLiveAuto = useCallback(async () => {
-    const r = await post<LiveAutoRequestResult>(
-      "/auto-trade/request-live-auto-enable",
-      {},
-    );
+    const r = await post<LiveAutoRequestResult>("/auto-trade/request-live-auto-enable", {});
     if (r) setLastResult(r);
     return r;
   }, [post]);
 
-  const confirmLiveAuto = useCallback(async (risk_acknowledged: boolean) => {
-    const r = await post<ModeTransitionResult>(
-      "/auto-trade/confirm-live-auto-enable",
-      { risk_acknowledged },
-    );
-    if (r) setLastResult(r);
-    return r;
-  }, [post]);
+  const confirmLiveAuto = useCallback(
+    async (risk_acknowledged: boolean) => {
+      const r = await post<ModeTransitionResult>("/auto-trade/confirm-live-auto-enable", {
+        risk_acknowledged,
+      });
+      if (r) setLastResult(r);
+      return r;
+    },
+    [post],
+  );
 
   const disable = useCallback(async () => {
     const r = await post<ModeTransitionResult>("/auto-trade/disable", {});
@@ -261,14 +249,14 @@ export function useAutoTradeActions(accountId: string | null) {
     return r;
   }, [post]);
 
-  const emergencyStop = useCallback(async (reason: string) => {
-    const r = await post<ModeTransitionResult>(
-      "/auto-trade/emergency-stop",
-      { reason },
-    );
-    if (r) setLastResult(r);
-    return r;
-  }, [post]);
+  const emergencyStop = useCallback(
+    async (reason: string) => {
+      const r = await post<ModeTransitionResult>("/auto-trade/emergency-stop", { reason });
+      if (r) setLastResult(r);
+      return r;
+    },
+    [post],
+  );
 
   return {
     busy,
@@ -285,9 +273,7 @@ export function useAutoTradeActions(accountId: string | null) {
 
 // ── Re-auth (Supabase signInWithPassword + backend stamp) ────────────────
 
-export type ReauthOutcome =
-  | { ok: true; last_reauth_at: string }
-  | { ok: false; error: string };
+export type ReauthOutcome = { ok: true; last_reauth_at: string } | { ok: false; error: string };
 
 export function useAutoTradeReauth(accountId: string | null) {
   const api = useApi();

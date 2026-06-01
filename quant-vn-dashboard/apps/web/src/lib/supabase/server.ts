@@ -19,9 +19,7 @@ export async function createClient() {
       },
       setAll(cookiesToSet: CookieRecord[]) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         } catch {
           // Server Components cannot set cookies; the middleware handles it.
         }

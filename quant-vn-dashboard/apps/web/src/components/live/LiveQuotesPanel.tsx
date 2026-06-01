@@ -48,9 +48,7 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
     >
       {quotes.length === 0 ? (
         <p className="text-xs text-ink-dim">
-          {error
-            ? error
-            : "Cache is cold — quotes will appear when the poller writes them."}
+          {error ? error : "Cache is cold — quotes will appear when the poller writes them."}
         </p>
       ) : (
         <table className="w-full text-sm">
@@ -66,9 +64,7 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
             {quotes.map((q) => (
               <tr key={q.symbol} className="border-t border-border">
                 <td className="py-1 font-mono">{q.symbol}</td>
-                <td className="py-1 text-right font-mono">
-                  {q.price.toLocaleString()}
-                </td>
+                <td className="py-1 text-right font-mono">{q.price.toLocaleString()}</td>
                 <td
                   className={`py-1 text-right font-mono ${
                     q.change && q.change > 0

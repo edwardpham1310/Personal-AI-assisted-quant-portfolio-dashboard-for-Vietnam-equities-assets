@@ -38,9 +38,7 @@ export function ProfileHorizonSwitcher({
               if (!next.includes(horizon)) onHorizonChange(next[0]);
             }}
             className={`px-3 py-1 text-xs font-medium ${
-              profile === p
-                ? "bg-accent/15 text-accent"
-                : "text-ink-dim hover:text-ink"
+              profile === p ? "bg-accent/15 text-accent" : "text-ink-dim hover:text-ink"
             }`}
           >
             {p === "short_aggressive" ? "Short / aggressive" : "Long / conservative"}

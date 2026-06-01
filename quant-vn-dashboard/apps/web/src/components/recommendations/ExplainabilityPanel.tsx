@@ -36,11 +36,7 @@ export function WarningList({ warnings }: { warnings: string[] }) {
   );
 }
 
-export function ExplainabilityPanel({
-  rec,
-}: {
-  rec: RecommendationResult | null;
-}) {
+export function ExplainabilityPanel({ rec }: { rec: RecommendationResult | null }) {
   if (!rec) {
     return (
       <div className="rounded border border-border bg-bg-panel p-4">
@@ -54,9 +50,7 @@ export function ExplainabilityPanel({
   return (
     <div className="space-y-4 rounded border border-border bg-bg-panel p-4">
       <header>
-        <h3 className="text-sm font-medium text-ink">
-          Explainability · {rec.symbol}
-        </h3>
+        <h3 className="text-sm font-medium text-ink">Explainability · {rec.symbol}</h3>
         <p className="text-[10px] text-ink-dim">
           research signal · not financial advice · no orders placed
         </p>
@@ -65,9 +59,7 @@ export function ExplainabilityPanel({
           drawer with daily candles + MA overlay + data-freshness context.
           The chart pulls real OHLCV via the backend gateway. */}
       <section>
-        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">
-          Daily chart
-        </h4>
+        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">Daily chart</h4>
         {/* ``key`` forces a remount when the selected symbol changes, so
             the internal ``useState(initialSymbol)`` picks up the new value. */}
         <CandlestickChart key={rec.symbol} initialSymbol={rec.symbol} />
@@ -78,21 +70,15 @@ export function ExplainabilityPanel({
         ) : null}
       </section>
       <section>
-        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">
-          Scores
-        </h4>
+        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">Scores</h4>
         <ScoreBreakdown scores={rec.scores} />
       </section>
       <section>
-        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">
-          Reasons
-        </h4>
+        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">Reasons</h4>
         <ReasonList reasons={rec.reasons} />
       </section>
       <section>
-        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">
-          Warnings
-        </h4>
+        <h4 className="mb-2 text-xs uppercase tracking-wide text-ink-dim">Warnings</h4>
         <WarningList warnings={rec.warnings} />
       </section>
     </div>

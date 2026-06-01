@@ -70,11 +70,7 @@ export default function PaperTradingPage() {
       limit_price: lp,
     });
     if (r) {
-      await Promise.all([
-        summary.refresh(),
-        ordersFills.refresh(),
-        equity.refresh(),
-      ]);
+      await Promise.all([summary.refresh(), ordersFills.refresh(), equity.refresh()]);
     }
   }
 
@@ -89,8 +85,7 @@ export default function PaperTradingPage() {
       <header>
         <h1 className="text-xl font-semibold text-ink">Paper Trading</h1>
         <p className="text-sm text-ink-dim mt-1">
-          Simulated trades using real SSI market data. No real broker
-          orders are placed.
+          Simulated trades using real SSI market data. No real broker orders are placed.
         </p>
       </header>
 
@@ -99,18 +94,15 @@ export default function PaperTradingPage() {
         data-testid="phase-2-7-banner"
         className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
       >
-        <strong className="font-semibold">Paper only</strong> — every
-        order on this page is simulated. Live execution is disabled.
-        Fees, taxes, T+2 settlement, and slippage are modelled but the
-        broker is never contacted.
+        <strong className="font-semibold">Paper only</strong> — every order on this page is
+        simulated. Live execution is disabled. Fees, taxes, T+2 settlement, and slippage are
+        modelled but the broker is never contacted.
       </div>
 
       {/* ── Account selector + create ──────────────────────────── */}
       <Card title="Paper account" hint="Each account has its own cash + positions">
         {accounts.data.length === 0 ? (
-          <p className="text-ink-muted text-xs">
-            No paper account yet. Create one below.
-          </p>
+          <p className="text-ink-muted text-xs">No paper account yet. Create one below.</p>
         ) : (
           <select
             data-testid="paper-account-selector"
@@ -168,10 +160,7 @@ export default function PaperTradingPage() {
             value={formatVnd(summary.data.pending_cash)}
             tone="warning"
           />
-          <KpiBlock
-            label="Stock value"
-            value={formatVnd(summary.data.stock_value)}
-          />
+          <KpiBlock label="Stock value" value={formatVnd(summary.data.stock_value)} />
           <KpiBlock
             label="Total equity"
             value={formatVnd(summary.data.total_equity)}
@@ -185,22 +174,12 @@ export default function PaperTradingPage() {
         <Card title="Settlement pending" hint="T+2 simulation status">
           <dl className="grid grid-cols-2 gap-2 text-xs">
             <dt className="text-ink-dim">Pending cash</dt>
-            <dd
-              data-testid="pending-cash"
-              className="text-right text-amber-200"
-            >
+            <dd data-testid="pending-cash" className="text-right text-amber-200">
               {formatVnd(summary.data.pending_cash)}
             </dd>
             <dt className="text-ink-dim">Data status</dt>
-            <dd
-              data-testid="data-status"
-              className="text-right text-ink"
-            >
-              <Badge
-                tone={
-                  summary.data.data_status === "FRESH" ? "up" : "down"
-                }
-              >
+            <dd data-testid="data-status" className="text-right text-ink">
+              <Badge tone={summary.data.data_status === "FRESH" ? "up" : "down"}>
                 {summary.data.data_status}
               </Badge>
             </dd>
@@ -214,10 +193,7 @@ export default function PaperTradingPage() {
           {summary.data.positions.length === 0 ? (
             <p className="text-ink-muted text-xs">No positions yet.</p>
           ) : (
-            <table
-              data-testid="positions-table"
-              className="w-full text-xs"
-            >
+            <table data-testid="positions-table" className="w-full text-xs">
               <thead className="text-ink-dim">
                 <tr>
                   <th className="text-left">Symbol</th>
@@ -234,9 +210,7 @@ export default function PaperTradingPage() {
                   <tr key={p.symbol} className="text-ink">
                     <td>{p.symbol}</td>
                     <td className="text-right">{formatNumber(p.quantity)}</td>
-                    <td className="text-right">
-                      {formatNumber(p.sellable_quantity)}
-                    </td>
+                    <td className="text-right">{formatNumber(p.sellable_quantity)}</td>
                     <td className="text-right text-amber-200">
                       {formatNumber(p.pending_quantity)}
                     </td>
@@ -245,9 +219,7 @@ export default function PaperTradingPage() {
                       {p.market_price ? formatVnd(p.market_price) : "—"}
                     </td>
                     <td className="text-right">
-                      {p.unrealized_pnl != null
-                        ? formatVnd(p.unrealized_pnl)
-                        : "—"}
+                      {p.unrealized_pnl != null ? formatVnd(p.unrealized_pnl) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -316,17 +288,11 @@ export default function PaperTradingPage() {
               data-testid="paper-order-result"
               className="mt-3 rounded border border-border bg-bg px-3 py-2 text-xs"
             >
-              <Badge
-                tone={
-                  actions.lastResult.rejection_reason ? "down" : "up"
-                }
-              >
+              <Badge tone={actions.lastResult.rejection_reason ? "down" : "up"}>
                 {actions.lastResult.order.status}
               </Badge>
               {actions.lastResult.rejection_reason ? (
-                <span className="ml-2 text-accent-down">
-                  {actions.lastResult.rejection_reason}
-                </span>
+                <span className="ml-2 text-accent-down">{actions.lastResult.rejection_reason}</span>
               ) : actions.lastResult.fill ? (
                 <span className="ml-2 text-ink">
                   Filled {actions.lastResult.fill.quantity} {actions.lastResult.order.symbol} @{" "}
@@ -393,9 +359,7 @@ export default function PaperTradingPage() {
                       <td>{f.side}</td>
                       <td className="text-right">{f.quantity}</td>
                       <td className="text-right">{formatVnd(f.fill_price)}</td>
-                      <td className="text-right">
-                        {formatVnd(f.net_cash_impact)}
-                      </td>
+                      <td className="text-right">{formatVnd(f.net_cash_impact)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -411,10 +375,7 @@ export default function PaperTradingPage() {
           {equityChartData.length === 0 ? (
             <p className="text-ink-muted text-xs">No snapshots yet.</p>
           ) : (
-            <div
-              data-testid="equity-chart"
-              style={{ width: "100%", height: 240 }}
-            >
+            <div data-testid="equity-chart" style={{ width: "100%", height: 240 }}>
               <ResponsiveContainer>
                 <LineChart data={equityChartData}>
                   <CartesianGrid stroke="#222" strokeDasharray="3 3" />
@@ -425,12 +386,7 @@ export default function PaperTradingPage() {
                     labelStyle={{ color: "#999" }}
                     contentStyle={{ background: "#111", border: "1px solid #333" }}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="equity"
-                    stroke="#4ade80"
-                    dot={false}
-                  />
+                  <Line type="monotone" dataKey="equity" stroke="#4ade80" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

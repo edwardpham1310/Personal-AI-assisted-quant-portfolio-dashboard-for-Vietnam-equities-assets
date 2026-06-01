@@ -36,8 +36,8 @@ export default function DataQualityPage() {
         <div>
           <h1 className="text-xl font-semibold text-ink">Data Quality</h1>
           <p className="text-sm text-ink-dim mt-1">
-            Cache freshness, provider health, and pipeline observability for
-            the SSI gateway. Research dashboard — no orders placed.
+            Cache freshness, provider health, and pipeline observability for the SSI gateway.
+            Research dashboard — no orders placed.
           </p>
         </div>
         <button
@@ -54,24 +54,22 @@ export default function DataQualityPage() {
       </header>
 
       <div className="rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
-        Research dashboard — operational data only. Every error string is
-        redacted on the API side before it reaches this view.
+        Research dashboard — operational data only. Every error string is redacted on the API side
+        before it reaches this view.
       </div>
 
       {/* Phase 2.5 critical banner: production must never serve mock data. */}
-      {status.data?.app_env === "production" &&
-      status.data?.provider?.mode === "MOCK_TEST_ONLY" ? (
+      {status.data?.app_env === "production" && status.data?.provider?.mode === "MOCK_TEST_ONLY" ? (
         <div
           role="alert"
           className="rounded border border-accent-down/60 bg-accent-down/10 px-3 py-2 text-xs text-accent-down"
           data-testid="production-mock-banner"
         >
-          <strong className="font-semibold">CRITICAL:</strong> Production is
-          serving MOCK_TEST_ONLY market data. The backend startup guard
-          should have prevented this — investigate immediately and set
-          <code className="ml-1 font-mono">SSI_USE_MOCK=false</code> +
-          populate SSI credentials. Recommendations and quotes shown on
-          the dashboard are NOT backed by real SSI.
+          <strong className="font-semibold">CRITICAL:</strong> Production is serving MOCK_TEST_ONLY
+          market data. The backend startup guard should have prevented this — investigate
+          immediately and set
+          <code className="ml-1 font-mono">SSI_USE_MOCK=false</code> + populate SSI credentials.
+          Recommendations and quotes shown on the dashboard are NOT backed by real SSI.
         </div>
       ) : null}
 
@@ -84,9 +82,7 @@ export default function DataQualityPage() {
           data-testid="production-not-ready-banner"
         >
           Provider is in REAL mode but not production-ready —{" "}
-          <code className="font-mono">
-            {status.data.provider.status_code ?? "UNKNOWN"}
-          </code>
+          <code className="font-mono">{status.data.provider.status_code ?? "UNKNOWN"}</code>
           {status.data.provider.last_error_sanitized ? (
             <span> — last error: {status.data.provider.last_error_sanitized}</span>
           ) : null}
@@ -106,18 +102,14 @@ export default function DataQualityPage() {
           label="Stale quotes"
           value={dq.data?.stale_quote_count ?? "—"}
           hint="Older than freshness threshold"
-          tone={
-            dq.data && dq.data.stale_quote_count > 0 ? "down" : "neutral"
-          }
+          tone={dq.data && dq.data.stale_quote_count > 0 ? "down" : "neutral"}
           loading={dq.loading && !dq.data}
         />
         <KpiCard
           label="Cache misses"
           value={dq.data?.cache_misses ?? "—"}
           hint="Symbols with no cached quote"
-          tone={
-            dq.data && (dq.data.cache_misses ?? 0) > 0 ? "down" : "neutral"
-          }
+          tone={dq.data && (dq.data.cache_misses ?? 0) > 0 ? "down" : "neutral"}
           loading={dq.loading && !dq.data}
         />
         <KpiCard
@@ -150,20 +142,14 @@ export default function DataQualityPage() {
         </div>
       ) : (
         <Card title="Loading system status…">
-          <p className="text-ink-dim text-xs">
-            Fetching cache, provider, and poller health.
-          </p>
+          <p className="text-ink-dim text-xs">Fetching cache, provider, and poller health.</p>
         </Card>
       )}
 
       {/* ── Tables ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <StaleQuotesTable
-          rows={(dq.data?.stale_quote_rows ?? []).filter((r) => r.stale)}
-        />
-        <FailedSymbolsTable
-          symbols={dq.data?.symbols_without_quote ?? []}
-        />
+        <StaleQuotesTable rows={(dq.data?.stale_quote_rows ?? []).filter((r) => r.stale)} />
+        <FailedSymbolsTable symbols={dq.data?.symbols_without_quote ?? []} />
       </div>
 
       {dq.data?.notes && dq.data.notes.length > 0 ? (

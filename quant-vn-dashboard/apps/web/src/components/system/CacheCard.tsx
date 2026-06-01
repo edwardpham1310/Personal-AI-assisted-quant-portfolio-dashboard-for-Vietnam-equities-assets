@@ -41,9 +41,7 @@ export function CacheCard({ cache }: { cache: CacheHealth }) {
         {cache.last_poll_error ? (
           <>
             <dt className="text-ink-dim">Poll error</dt>
-            <dd className="text-accent-down font-mono break-all">
-              {cache.last_poll_error}
-            </dd>
+            <dd className="text-accent-down font-mono break-all">{cache.last_poll_error}</dd>
           </>
         ) : null}
       </dl>

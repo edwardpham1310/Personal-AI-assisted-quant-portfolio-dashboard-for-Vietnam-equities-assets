@@ -10,11 +10,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
   ssi_consumer_secret: "SSI consumer secret",
 };
 
-export function EnvironmentChecklist({
-  missingSecrets,
-}: {
-  missingSecrets: string[];
-}) {
+export function EnvironmentChecklist({ missingSecrets }: { missingSecrets: string[] }) {
   const allConfigured = missingSecrets.length === 0;
   return (
     <Card
@@ -32,8 +28,7 @@ export function EnvironmentChecklist({
     >
       {allConfigured ? (
         <p className="text-ink-dim text-xs">
-          All required secrets are present. The API will boot without
-          placeholders.
+          All required secrets are present. The API will boot without placeholders.
         </p>
       ) : (
         <ul className="space-y-1.5 text-xs">

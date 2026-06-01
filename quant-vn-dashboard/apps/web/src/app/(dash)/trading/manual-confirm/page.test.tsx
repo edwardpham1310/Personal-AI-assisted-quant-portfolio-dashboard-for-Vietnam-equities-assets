@@ -4,12 +4,7 @@ import ManualConfirmPage from "./page";
 
 const apiCalls: Array<{ path: string; init?: RequestInit }> = [];
 
-type IntentStatus =
-  | "DRAFT"
-  | "PREVIEWED"
-  | "CONFIRM_REQUIRED"
-  | "CONFIRMED"
-  | "SUBMITTED";
+type IntentStatus = "DRAFT" | "PREVIEWED" | "CONFIRM_REQUIRED" | "CONFIRMED" | "SUBMITTED";
 
 const mockState: { status: IntentStatus; gateOpen: boolean; dryRun: boolean } = {
   status: "DRAFT",
@@ -158,7 +153,10 @@ const stableApiFn = async (path: string, init?: RequestInit) => {
 
 vi.mock("@/lib/api", () => ({
   ApiError: class extends Error {
-    constructor(public status: number, public detail: string) {
+    constructor(
+      public status: number,
+      public detail: string,
+    ) {
       super(detail);
     }
   },
@@ -195,9 +193,7 @@ describe("ManualConfirmPage", () => {
     await waitFor(() => screen.getByTestId("loi-create"));
     fireEvent.submit(screen.getByTestId("create-intent-form"));
     await waitFor(() => screen.getByTestId("step-preview"));
-    expect(
-      (screen.getByTestId("step-preview") as HTMLButtonElement).disabled,
-    ).toBe(false);
+    expect((screen.getByTestId("step-preview") as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("step-submit is disabled until status === CONFIRMED", async () => {
@@ -216,9 +212,7 @@ describe("ManualConfirmPage", () => {
     await waitFor(() => screen.getByTestId("step-preview"));
     fireEvent.click(screen.getByTestId("step-preview"));
     await waitFor(() =>
-      expect(screen.getByTestId("active-intent-status").textContent).toBe(
-        "PREVIEWED",
-      ),
+      expect(screen.getByTestId("active-intent-status").textContent).toBe("PREVIEWED"),
     );
     fireEvent.click(screen.getByTestId("step-request-confirmation"));
     await waitFor(() => screen.getByTestId("reauth-submit"));
@@ -243,9 +237,7 @@ describe("ManualConfirmPage", () => {
     expect(screen.getByTestId("modal-dry-run-label")).toBeDefined();
     fireEvent.click(screen.getByTestId("final-submit"));
     await waitFor(() => {
-      expect(screen.getByTestId("active-intent-status").textContent).toBe(
-        "SUBMITTED",
-      );
+      expect(screen.getByTestId("active-intent-status").textContent).toBe("SUBMITTED");
     });
   });
 
@@ -256,9 +248,7 @@ describe("ManualConfirmPage", () => {
     await waitFor(() => screen.getByTestId("step-preview"));
     fireEvent.click(screen.getByTestId("step-preview"));
     await waitFor(() =>
-      expect(screen.getByTestId("active-intent-status").textContent).toBe(
-        "PREVIEWED",
-      ),
+      expect(screen.getByTestId("active-intent-status").textContent).toBe("PREVIEWED"),
     );
     fireEvent.click(screen.getByTestId("step-request-confirmation"));
     await waitFor(() => screen.getByTestId("reauth-submit"));

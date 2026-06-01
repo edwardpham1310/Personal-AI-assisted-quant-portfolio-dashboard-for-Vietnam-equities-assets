@@ -6,17 +6,11 @@ describe("EnvironmentChecklist", () => {
   it("renders an OK pill when no secrets are missing", () => {
     render(<EnvironmentChecklist missingSecrets={[]} />);
     expect(screen.getByText("OK")).toBeDefined();
-    expect(
-      screen.getByText(/All required secrets are present/i),
-    ).toBeDefined();
+    expect(screen.getByText(/All required secrets are present/i)).toBeDefined();
   });
 
   it("renders the friendly name for each missing secret", () => {
-    render(
-      <EnvironmentChecklist
-        missingSecrets={["supabase_url", "ssi_consumer_id"]}
-      />,
-    );
+    render(<EnvironmentChecklist missingSecrets={["supabase_url", "ssi_consumer_id"]} />);
     expect(screen.getByText("2 missing")).toBeDefined();
     expect(screen.getByText(/Supabase URL/)).toBeDefined();
     expect(screen.getByText(/SSI consumer ID/)).toBeDefined();

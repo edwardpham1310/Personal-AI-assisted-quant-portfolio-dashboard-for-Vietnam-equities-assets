@@ -25,8 +25,7 @@ export default function DashboardHomePage() {
           <p className="text-sm text-ink-dim mt-1">
             Portfolio summary, market context, and recommendation surface.
             <span className="ml-2 text-ink-dim">
-              Phase 1 is{" "}
-              <span className="text-ink">recommend-only</span> — no orders are placed.
+              Phase 1 is <span className="text-ink">recommend-only</span> — no orders are placed.
             </span>
           </p>
         </div>

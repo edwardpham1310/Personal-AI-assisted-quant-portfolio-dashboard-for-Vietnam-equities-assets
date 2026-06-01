@@ -5,10 +5,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     <div className="rounded border border-accent-down/30 bg-accent-down/5 px-3 py-2 text-xs text-accent-down">
       <p>{message}</p>
       {onRetry ? (
-        <button
-          onClick={onRetry}
-          className="mt-1 text-[11px] underline hover:no-underline"
-        >
+        <button onClick={onRetry} className="mt-1 text-[11px] underline hover:no-underline">
           Retry
         </button>
       ) : null}

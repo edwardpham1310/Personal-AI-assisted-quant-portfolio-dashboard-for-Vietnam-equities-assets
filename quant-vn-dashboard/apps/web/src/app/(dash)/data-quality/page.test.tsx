@@ -1,9 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type {
-  DataQualitySnapshot,
-  SystemStatus,
-} from "@/hooks/useSystemStatus";
+import type { DataQualitySnapshot, SystemStatus } from "@/hooks/useSystemStatus";
 
 const apiMock = vi.fn();
 
@@ -23,9 +20,7 @@ let mockDqError: string | null = null;
 
 vi.mock("@/hooks/useSystemStatus", async () => {
   const actual =
-    await vi.importActual<typeof import("@/hooks/useSystemStatus")>(
-      "@/hooks/useSystemStatus",
-    );
+    await vi.importActual<typeof import("@/hooks/useSystemStatus")>("@/hooks/useSystemStatus");
   return {
     ...actual,
     useSystemStatus: () => ({
@@ -130,12 +125,8 @@ describe("DataQualityPage", () => {
     mockStatus = STATUS_OK;
     mockDq = DQ_EMPTY;
     render(<DataQualityPage />);
-    expect(
-      screen.getByText(/No stale quotes/i),
-    ).toBeDefined();
-    expect(
-      screen.getByText(/Every tracked symbol has a cached quote/i),
-    ).toBeDefined();
+    expect(screen.getByText(/No stale quotes/i)).toBeDefined();
+    expect(screen.getByText(/Every tracked symbol has a cached quote/i)).toBeDefined();
   });
 
   it("renders the provider, cache, and poller cards", () => {

@@ -68,8 +68,8 @@ export default function TradingPreviewPage() {
       <header>
         <h1 className="text-xl font-semibold text-ink">Trading Preview</h1>
         <p className="text-sm text-ink-dim mt-1">
-          Read-only broker view + order preview calculator. No real order
-          is ever submitted from this page.
+          Read-only broker view + order preview calculator. No real order is ever submitted from
+          this page.
         </p>
       </header>
 
@@ -79,10 +79,9 @@ export default function TradingPreviewPage() {
         data-testid="phase-2-5-banner"
         className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
       >
-        <strong className="font-semibold">Preview only</strong> — no real
-        order will be submitted. Live trading is disabled in Phase 2.5.
-        Fees, taxes, and settlement are research estimates, not the
-        broker&apos;s official ticket.
+        <strong className="font-semibold">Preview only</strong> — no real order will be submitted.
+        Live trading is disabled in Phase 2.5. Fees, taxes, and settlement are research estimates,
+        not the broker&apos;s official ticket.
       </div>
 
       {/* ── Account selector + registration ─────────────────────────── */}
@@ -93,9 +92,7 @@ export default function TradingPreviewPage() {
         {accounts.error ? (
           <p className="text-accent-down text-xs">{accounts.error}</p>
         ) : accounts.data.length === 0 ? (
-          <p className="text-ink-muted text-xs">
-            No trading account registered. Add one below.
-          </p>
+          <p className="text-ink-muted text-xs">No trading account registered. Add one below.</p>
         ) : (
           <div className="flex items-center gap-3 flex-wrap">
             <label className="text-xs text-ink-dim">Account:</label>
@@ -115,10 +112,7 @@ export default function TradingPreviewPage() {
           </div>
         )}
 
-        <form
-          onSubmit={onCreateAccount}
-          className="mt-3 flex gap-2 flex-wrap items-end text-xs"
-        >
+        <form onSubmit={onCreateAccount} className="mt-3 flex gap-2 flex-wrap items-end text-xs">
           <div>
             <label className="block text-ink-dim mb-1">Account number</label>
             <input
@@ -156,24 +150,15 @@ export default function TradingPreviewPage() {
             ) : cash.data ? (
               <dl className="grid grid-cols-2 gap-2 text-xs">
                 <dt className="text-ink-dim">Buying power</dt>
-                <dd
-                  data-testid="cash-buying-power"
-                  className="text-right text-ink"
-                >
+                <dd data-testid="cash-buying-power" className="text-right text-ink">
                   {formatVnd(cash.data.buying_power)}
                 </dd>
                 <dt className="text-ink-dim">Cash balance</dt>
-                <dd className="text-right text-ink">
-                  {formatVnd(cash.data.cash_balance)}
-                </dd>
+                <dd className="text-right text-ink">{formatVnd(cash.data.cash_balance)}</dd>
                 <dt className="text-ink-dim">Withdrawable</dt>
-                <dd className="text-right text-ink">
-                  {formatVnd(cash.data.withdrawable_cash)}
-                </dd>
+                <dd className="text-right text-ink">{formatVnd(cash.data.withdrawable_cash)}</dd>
                 <dt className="text-ink-dim">Pending (T+2)</dt>
-                <dd className="text-right text-amber-200">
-                  {formatVnd(cash.data.pending_cash)}
-                </dd>
+                <dd className="text-right text-amber-200">{formatVnd(cash.data.pending_cash)}</dd>
               </dl>
             ) : cash.loading ? (
               <p className="text-ink-muted text-xs">Loading…</p>
@@ -186,10 +171,7 @@ export default function TradingPreviewPage() {
             {positions.error ? (
               <p className="text-accent-down text-xs">{positions.error}</p>
             ) : positions.data.length > 0 ? (
-              <table
-                data-testid="positions-table"
-                className="w-full text-xs"
-              >
+              <table data-testid="positions-table" className="w-full text-xs">
                 <thead className="text-ink-dim">
                   <tr>
                     <th className="text-left">Symbol</th>
@@ -204,9 +186,7 @@ export default function TradingPreviewPage() {
                     <tr key={p.symbol} className="text-ink">
                       <td>{p.symbol}</td>
                       <td className="text-right">{formatNumber(p.quantity)}</td>
-                      <td className="text-right">
-                        {formatNumber(p.sellable_quantity)}
-                      </td>
+                      <td className="text-right">{formatNumber(p.sellable_quantity)}</td>
                       <td className="text-right">{formatVnd(p.avg_cost)}</td>
                       <td className="text-right">
                         {p.market_price ? formatVnd(p.market_price) : "—"}
@@ -313,9 +293,7 @@ export default function TradingPreviewPage() {
               >
                 Submit real order (disabled)
               </button>
-              <span className="text-ink-dim">
-                Preview only — no real order will be submitted.
-              </span>
+              <span className="text-ink-dim">Preview only — no real order will be submitted.</span>
             </div>
           </form>
         </Card>
@@ -375,9 +353,7 @@ export default function TradingPreviewPage() {
               </dd>
               {preview.result.total_cash_required !== null ? (
                 <>
-                  <dt className="text-ink-dim font-semibold">
-                    Total cash required
-                  </dt>
+                  <dt className="text-ink-dim font-semibold">Total cash required</dt>
                   <dd
                     data-testid="result-total-cash"
                     className="text-right text-ink font-semibold lg:col-span-2"
@@ -388,9 +364,7 @@ export default function TradingPreviewPage() {
               ) : null}
               {preview.result.net_sell_proceeds !== null ? (
                 <>
-                  <dt className="text-ink-dim font-semibold">
-                    Net sell proceeds
-                  </dt>
+                  <dt className="text-ink-dim font-semibold">Net sell proceeds</dt>
                   <dd
                     data-testid="result-net-proceeds"
                     className="text-right text-ink font-semibold lg:col-span-2"
@@ -422,9 +396,7 @@ export default function TradingPreviewPage() {
 
             {preview.result.rejection_reasons.length > 0 ? (
               <div data-testid="result-rejections">
-                <h3 className="text-ink-dim font-semibold mb-1">
-                  Rejection reasons
-                </h3>
+                <h3 className="text-ink-dim font-semibold mb-1">Rejection reasons</h3>
                 <ul className="list-disc list-inside text-accent-down space-y-0.5">
                   {preview.result.rejection_reasons.map((r, idx) => (
                     <li key={idx}>{r}</li>
@@ -434,8 +406,8 @@ export default function TradingPreviewPage() {
             ) : null}
 
             <p className="text-ink-dim italic">
-              Research-only estimate. The broker&apos;s official ticket may
-              differ. Live submission disabled
+              Research-only estimate. The broker&apos;s official ticket may differ. Live submission
+              disabled
               {": is_live_order_submission_enabled="}
               {String(preview.result.is_live_order_submission_enabled)}.
             </p>

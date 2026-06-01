@@ -52,9 +52,7 @@ function LoginForm() {
       } else {
         const { error: e2 } = await supabase.auth.signUp({ email, password });
         if (e2) throw e2;
-        setInfo(
-          "Check your email to confirm the account, then sign in below.",
-        );
+        setInfo("Check your email to confirm the account, then sign in below.");
         setMode("signin");
       }
     } catch (e) {
@@ -110,11 +108,7 @@ function LoginForm() {
           disabled={loading}
           className="w-full rounded bg-accent px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
         >
-          {loading
-            ? "Working…"
-            : mode === "signin"
-              ? "Sign in"
-              : "Create account"}
+          {loading ? "Working…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
 
         <button

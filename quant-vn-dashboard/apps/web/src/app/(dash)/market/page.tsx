@@ -23,8 +23,8 @@ export default function MarketOverviewPage() {
         <div>
           <h1 className="text-xl font-semibold text-ink">Market Overview</h1>
           <p className="text-sm text-ink-dim mt-1">
-            VN indices, breadth, top movers, and an interactive candlestick. Data
-            sourced from the FastAPI gateway — never from SSI directly.
+            VN indices, breadth, top movers, and an interactive candlestick. Data sourced from the
+            FastAPI gateway — never from SSI directly.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-ink-dim">
@@ -41,17 +41,11 @@ export default function MarketOverviewPage() {
       ) : null}
 
       {breadth.error ? (
-        <ErrorState
-          message={`Market breadth error: ${breadth.error}.`}
-          onRetry={breadth.refetch}
-        />
+        <ErrorState message={`Market breadth error: ${breadth.error}.`} onRetry={breadth.refetch} />
       ) : null}
 
       {movers.error ? (
-        <ErrorState
-          message={`Top movers error: ${movers.error}.`}
-          onRetry={movers.refetch}
-        />
+        <ErrorState message={`Top movers error: ${movers.error}.`} onRetry={movers.refetch} />
       ) : null}
 
       <IndexCardGrid indices={indices.data} loading={indices.isLoading} />

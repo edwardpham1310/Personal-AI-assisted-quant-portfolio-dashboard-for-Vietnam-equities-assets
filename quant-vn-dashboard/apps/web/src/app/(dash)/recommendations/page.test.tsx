@@ -1,8 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import type {
-  RecommendationResult,
-} from "@/hooks/useRecommendations";
+import type { RecommendationResult } from "@/hooks/useRecommendations";
 
 const apiMock = vi.fn();
 
@@ -17,10 +15,9 @@ let mockLoading = false;
 let mockError: string | null = null;
 
 vi.mock("@/hooks/useRecommendations", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/hooks/useRecommendations")>(
-      "@/hooks/useRecommendations",
-    );
+  const actual = await vi.importActual<typeof import("@/hooks/useRecommendations")>(
+    "@/hooks/useRecommendations",
+  );
   return {
     ...actual,
     useWatchlistRecommendations: () => ({
@@ -87,23 +84,17 @@ describe("RecommendationsPage", () => {
   it("shows the research-only disclaimer in the header", async () => {
     apiMock.mockResolvedValue([]);
     render(<RecommendationsPage />);
-    expect(
-      screen.getByText(/Research signals · Rule-based · Not financial advice/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Research signals · Rule-based · Not financial advice/i)).toBeDefined();
   });
 
   it("prompts the user to pick a watchlist when none is selected", async () => {
     apiMock.mockResolvedValue([]);
     render(<RecommendationsPage />);
-    await waitFor(() =>
-      expect(screen.getByText(/Pick a watchlist/i)).toBeDefined(),
-    );
+    await waitFor(() => expect(screen.getByText(/Pick a watchlist/i)).toBeDefined());
   });
 
   it("renders the table when a watchlist is selected and results arrive", async () => {
-    apiMock.mockResolvedValue([
-      { id: "wl-1", name: "Main" },
-    ]);
+    apiMock.mockResolvedValue([{ id: "wl-1", name: "Main" }]);
     mockResults = [FPT_REC];
     render(<RecommendationsPage />);
     await waitFor(() => {

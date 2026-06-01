@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  RecommendationAction,
-  RecommendationStatus,
-} from "@/hooks/useRecommendations";
+import type { RecommendationAction, RecommendationStatus } from "@/hooks/useRecommendations";
 
 type ActionMeta = {
   label: string;
@@ -30,14 +27,12 @@ export const ACTION_META: Record<RecommendationAction, ActionMeta> = {
   REDUCE: {
     label: "Reduce",
     className: "bg-amber-500/15 text-amber-400 border-amber-500/40",
-    description:
-      "Score weakened while holding — research-only suggestion to lighten exposure.",
+    description: "Score weakened while holding — research-only suggestion to lighten exposure.",
   },
   SELL_CANDIDATE: {
     label: "Sell candidate",
     className: "bg-accent-down/15 text-accent-down border-accent-down/40",
-    description:
-      "Downtrend confirmed while held — research-only suggestion to exit.",
+    description: "Downtrend confirmed while held — research-only suggestion to exit.",
   },
   AVOID: {
     label: "Avoid",
@@ -46,8 +41,7 @@ export const ACTION_META: Record<RecommendationAction, ActionMeta> = {
   },
   REJECTED: {
     label: "Rejected",
-    className:
-      "bg-accent-down/25 text-accent-down border-accent-down/60 line-through",
+    className: "bg-accent-down/25 text-accent-down border-accent-down/60 line-through",
     description: "A guardrail rejected this candidate. Not actionable.",
   },
 };
@@ -71,21 +65,20 @@ export function ActionBadge({ action }: { action: RecommendationAction }) {
   );
 }
 
-const STATUS_META: Record<RecommendationStatus, { label: string; cls: string }> =
-  {
-    VALID: {
-      label: "Valid",
-      cls: "bg-accent-up/15 text-accent-up border-accent-up/40",
-    },
-    WARNING: {
-      label: "Warning",
-      cls: "bg-amber-500/15 text-amber-400 border-amber-500/40",
-    },
-    REJECTED: {
-      label: "Rejected",
-      cls: "bg-accent-down/25 text-accent-down border-accent-down/60",
-    },
-  };
+const STATUS_META: Record<RecommendationStatus, { label: string; cls: string }> = {
+  VALID: {
+    label: "Valid",
+    cls: "bg-accent-up/15 text-accent-up border-accent-up/40",
+  },
+  WARNING: {
+    label: "Warning",
+    cls: "bg-amber-500/15 text-amber-400 border-amber-500/40",
+  },
+  REJECTED: {
+    label: "Rejected",
+    cls: "bg-accent-down/25 text-accent-down border-accent-down/60",
+  },
+};
 
 export function RecoStatusBadge({ status }: { status: RecommendationStatus }) {
   const meta = STATUS_META[status];

@@ -8,9 +8,7 @@ const FALLBACK = { kind: "mock" } as const;
 describe("useAsyncResource", () => {
   it("returns live data on success and isMock=false", async () => {
     const fetcher = vi.fn().mockResolvedValue({ kind: "live" });
-    const { result } = renderHook(() =>
-      useAsyncResource({ fetcher, mockFallback: FALLBACK }),
-    );
+    const { result } = renderHook(() => useAsyncResource({ fetcher, mockFallback: FALLBACK }));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({ kind: "live" });
     expect(result.current.isMock).toBe(false);

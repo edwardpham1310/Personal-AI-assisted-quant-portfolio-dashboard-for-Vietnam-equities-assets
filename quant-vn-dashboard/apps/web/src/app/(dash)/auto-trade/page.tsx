@@ -170,17 +170,15 @@ export default function AutoTradePage() {
   }
 
   const currentMode: AutoTradeMode = settings.data?.mode ?? "OFF";
-  const liveExecutionEnabled =
-    actions.lastResult?.is_live_execution_enabled ?? false;
+  const liveExecutionEnabled = actions.lastResult?.is_live_execution_enabled ?? false;
 
   return (
     <div className="space-y-6" data-testid="auto-trade-page">
       <header>
         <h1 className="text-xl font-semibold text-ink">Auto-trade</h1>
         <p className="text-sm text-ink-dim mt-1">
-          Configure auto-trade modes and risk limits. No real orders are
-          placed in this phase — execution stays disabled at the
-          environment level.
+          Configure auto-trade modes and risk limits. No real orders are placed in this phase —
+          execution stays disabled at the environment level.
         </p>
       </header>
 
@@ -189,10 +187,9 @@ export default function AutoTradePage() {
         data-testid="phase-2-6-banner"
         className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
       >
-        <strong className="font-semibold">Research dashboard</strong> —
-        auto trading can lose money. This is not a guaranteed-profit
-        system; you must monitor recommendations and decisions yourself.
-        Live execution is currently disabled.
+        <strong className="font-semibold">Research dashboard</strong> — auto trading can lose money.
+        This is not a guaranteed-profit system; you must monitor recommendations and decisions
+        yourself. Live execution is currently disabled.
       </div>
 
       {/* ── Account selector ─────────────────────────────────────── */}
@@ -231,11 +228,7 @@ export default function AutoTradePage() {
             <div className="flex items-center gap-3 flex-wrap">
               <Badge
                 tone={
-                  currentMode === "OFF"
-                    ? "neutral"
-                    : currentMode === "LIVE_AUTO"
-                      ? "down"
-                      : "info"
+                  currentMode === "OFF" ? "neutral" : currentMode === "LIVE_AUTO" ? "down" : "info"
                 }
               >
                 <span data-testid="current-mode">{MODE_LABEL[currentMode]}</span>
@@ -250,10 +243,7 @@ export default function AutoTradePage() {
               ) : null}
             </div>
             {actions.error ? (
-              <p
-                data-testid="actions-error"
-                className="text-accent-down text-xs mt-2"
-              >
+              <p data-testid="actions-error" className="text-accent-down text-xs mt-2">
                 {actions.error}
               </p>
             ) : null}
@@ -331,65 +321,47 @@ export default function AutoTradePage() {
                 label="Max order value (VND)"
                 testid="input-max-order-value"
                 value={form.max_order_value_vnd}
-                onChange={(v) =>
-                  setForm({ ...form, max_order_value_vnd: v })
-                }
+                onChange={(v) => setForm({ ...form, max_order_value_vnd: v })}
               />
               <Field
                 label="Max orders per day"
                 testid="input-max-orders"
                 value={form.max_orders_per_day}
-                onChange={(v) =>
-                  setForm({ ...form, max_orders_per_day: v })
-                }
+                onChange={(v) => setForm({ ...form, max_orders_per_day: v })}
               />
               <Field
                 label="Max daily loss (VND)"
                 testid="input-max-loss"
                 value={form.max_daily_loss_vnd}
-                onChange={(v) =>
-                  setForm({ ...form, max_daily_loss_vnd: v })
-                }
+                onChange={(v) => setForm({ ...form, max_daily_loss_vnd: v })}
               />
               <Field
                 label="Max position weight (0–1)"
                 testid="input-max-position"
                 value={form.max_position_weight}
-                onChange={(v) =>
-                  setForm({ ...form, max_position_weight: v })
-                }
+                onChange={(v) => setForm({ ...form, max_position_weight: v })}
               />
               <Field
                 label="Max sector weight (0–1)"
                 testid="input-max-sector"
                 value={form.max_sector_weight}
-                onChange={(v) =>
-                  setForm({ ...form, max_sector_weight: v })
-                }
+                onChange={(v) => setForm({ ...form, max_sector_weight: v })}
               />
               <label className="col-span-2 lg:col-span-3 flex flex-col gap-1">
-                <span className="text-ink-dim">
-                  Allowed strategies (comma-separated)
-                </span>
+                <span className="text-ink-dim">Allowed strategies (comma-separated)</span>
                 <input
                   data-testid="input-strategies"
                   value={form.allowed_strategies}
-                  onChange={(e) =>
-                    setForm({ ...form, allowed_strategies: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, allowed_strategies: e.target.value })}
                   className="rounded border border-border bg-bg px-2 py-1 text-ink"
                 />
               </label>
               <label className="col-span-2 lg:col-span-3 flex flex-col gap-1">
-                <span className="text-ink-dim">
-                  Allowed symbols (comma-separated)
-                </span>
+                <span className="text-ink-dim">Allowed symbols (comma-separated)</span>
                 <input
                   data-testid="input-symbols"
                   value={form.allowed_symbols}
-                  onChange={(e) =>
-                    setForm({ ...form, allowed_symbols: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, allowed_symbols: e.target.value })}
                   className="rounded border border-border bg-bg px-2 py-1 text-ink"
                 />
               </label>
@@ -434,9 +406,7 @@ export default function AutoTradePage() {
                 <tbody>
                   {audit.data.slice(0, 20).map((row) => (
                     <tr key={row.id} className="text-ink">
-                      <td className="font-mono">
-                        {new Date(row.created_at).toLocaleString()}
-                      </td>
+                      <td className="font-mono">{new Date(row.created_at).toLocaleString()}</td>
                       <td>{row.action}</td>
                     </tr>
                   ))}
@@ -453,9 +423,8 @@ export default function AutoTradePage() {
       {reauthOpen ? (
         <Modal title="Re-authenticate" onClose={() => setReauthOpen(false)}>
           <p className="text-xs text-ink-dim mb-3">
-            Please re-enter your password to enable a live mode. Your
-            password is sent only to Supabase — the dashboard never sees
-            or stores it.
+            Please re-enter your password to enable a live mode. Your password is sent only to
+            Supabase — the dashboard never sees or stores it.
           </p>
           <input
             data-testid="reauth-email"
@@ -474,10 +443,7 @@ export default function AutoTradePage() {
             className="w-full rounded border border-border bg-bg px-2 py-1 text-xs text-ink mb-3"
           />
           {reauthError ? (
-            <p
-              data-testid="reauth-error"
-              className="text-accent-down text-xs mb-2"
-            >
+            <p data-testid="reauth-error" className="text-accent-down text-xs mb-2">
               {reauthError}
             </p>
           ) : null}
@@ -503,14 +469,10 @@ export default function AutoTradePage() {
 
       {/* ── Risk acknowledgement modal ─────────────────────────── */}
       {riskAckOpen ? (
-        <Modal
-          title="Risk acknowledgement"
-          onClose={() => setRiskAckOpen(false)}
-        >
+        <Modal title="Risk acknowledgement" onClose={() => setRiskAckOpen(false)}>
           <p className="text-xs text-accent-down mb-3 font-semibold">
-            Auto trading can lose money. This is a research system, not a
-            guaranteed-profit signal. You must monitor your account
-            yourself.
+            Auto trading can lose money. This is a research system, not a guaranteed-profit signal.
+            You must monitor your account yourself.
           </p>
           <label className="flex items-center gap-2 text-xs text-ink mb-3">
             <input
@@ -546,8 +508,7 @@ export default function AutoTradePage() {
       {stopOpen ? (
         <Modal title="Emergency stop" onClose={() => setStopOpen(false)}>
           <p className="text-xs text-accent-down mb-3 font-semibold">
-            This will set the mode to OFF and disable any running
-            auto-trade flag for this account.
+            This will set the mode to OFF and disable any running auto-trade flag for this account.
           </p>
           <input
             value={stopReason}
@@ -670,10 +631,9 @@ function Phase29EngineSection({ accountId }: { accountId: string }) {
           data-testid="phase-2-9-engine-warning"
           className="rounded border border-accent-down/40 bg-accent-down/10 px-3 py-2 text-xs text-accent-down mb-3"
         >
-          <strong className="font-semibold">⚠ High risk.</strong> Live auto
-          can lose money fast. You must monitor your account. This is a
-          research system — not financial advice, not a guaranteed-profit
-          signal.
+          <strong className="font-semibold">⚠ High risk.</strong> Live auto can lose money fast. You
+          must monitor your account. This is a research system — not financial advice, not a
+          guaranteed-profit signal.
         </div>
         <div className="flex gap-2 items-center flex-wrap">
           <span data-testid="engine-run-status">
@@ -690,9 +650,7 @@ function Phase29EngineSection({ accountId }: { accountId: string }) {
             </Badge>
           </span>
           {activeRun ? (
-            <span className="text-xs text-ink">
-              run {activeRun.id.slice(0, 8)}…
-            </span>
+            <span className="text-xs text-ink">run {activeRun.id.slice(0, 8)}…</span>
           ) : null}
         </div>
         <div className="mt-3 flex gap-2 flex-wrap text-xs">
@@ -725,10 +683,7 @@ function Phase29EngineSection({ accountId }: { accountId: string }) {
           </button>
         </div>
         {runActions.error ? (
-          <p
-            data-testid="engine-error"
-            className="mt-2 text-accent-down text-xs"
-          >
+          <p data-testid="engine-error" className="mt-2 text-accent-down text-xs">
             {runActions.error}
           </p>
         ) : null}
@@ -736,18 +691,11 @@ function Phase29EngineSection({ accountId }: { accountId: string }) {
 
       <Card title="Today's risk counters">
         {todayCounter ? (
-          <dl
-            data-testid="risk-counters"
-            className="grid grid-cols-2 gap-2 text-xs"
-          >
+          <dl data-testid="risk-counters" className="grid grid-cols-2 gap-2 text-xs">
             <dt className="text-ink-dim">Orders today</dt>
-            <dd className="text-right text-ink">
-              {todayCounter.orders_count}
-            </dd>
+            <dd className="text-right text-ink">{todayCounter.orders_count}</dd>
             <dt className="text-ink-dim">Gross order value</dt>
-            <dd className="text-right text-ink">
-              {formatVnd(todayCounter.gross_order_value)}
-            </dd>
+            <dd className="text-right text-ink">{formatVnd(todayCounter.gross_order_value)}</dd>
           </dl>
         ) : (
           <p className="text-ink-muted text-xs">No orders today.</p>
@@ -775,9 +723,7 @@ function Phase29EngineSection({ accountId }: { accountId: string }) {
                   <td>{d.action}</td>
                   <td
                     className={
-                      d.decision.startsWith("DISPATCHED")
-                        ? "text-accent"
-                        : "text-amber-200"
+                      d.decision.startsWith("DISPATCHED") ? "text-accent" : "text-amber-200"
                     }
                   >
                     {d.decision}

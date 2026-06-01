@@ -1,14 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { formatNumber } from "@/lib/format";
@@ -31,11 +24,7 @@ type Slice = { name: string; value: number };
  * Donut chart of allocation grouped by strategy tag — driven by the
  * ``by_strategy_tag`` map from ``PortfolioSummary``.
  */
-export function StrategyAllocationDonut({
-  summary,
-}: {
-  summary: PortfolioSummary | null;
-}) {
+export function StrategyAllocationDonut({ summary }: { summary: PortfolioSummary | null }) {
   const data = useMemo<Slice[]>(() => {
     if (!summary) return [];
     return Object.entries(summary.by_strategy_tag)

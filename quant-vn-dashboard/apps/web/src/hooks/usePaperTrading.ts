@@ -152,9 +152,7 @@ export function usePaperSummary(accountId: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const row = await api<PaperAccountSummary>(
-        `/paper/accounts/${accountId}/summary`,
-      );
+      const row = await api<PaperAccountSummary>(`/paper/accounts/${accountId}/summary`);
       setData(row);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load summary.");
@@ -198,9 +196,7 @@ export function usePaperEquityCurve(accountId: string | null) {
 
   const refresh = useCallback(async () => {
     if (!accountId) return;
-    const rows = await api<PaperEquityPoint[]>(
-      `/paper/accounts/${accountId}/equity-curve`,
-    );
+    const rows = await api<PaperEquityPoint[]>(`/paper/accounts/${accountId}/equity-curve`);
     setData(rows);
   }, [api, accountId]);
 
@@ -229,10 +225,10 @@ export function usePaperOrderActions(accountId: string | null) {
       setBusy(true);
       setError(null);
       try {
-        const r = await api<PaperOrderResult>(
-          `/paper/accounts/${accountId}/orders`,
-          { method: "POST", body: JSON.stringify(payload) },
-        );
+        const r = await api<PaperOrderResult>(`/paper/accounts/${accountId}/orders`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
         setLastResult(r);
         return r;
       } catch (e) {
@@ -263,10 +259,10 @@ export function usePaperOrderActions(accountId: string | null) {
       setBusy(true);
       setError(null);
       try {
-        const r = await api<PaperOrderResult>(
-          `/paper/accounts/${accountId}/run-recommendation`,
-          { method: "POST", body: JSON.stringify(payload) },
-        );
+        const r = await api<PaperOrderResult>(`/paper/accounts/${accountId}/run-recommendation`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
         setLastResult(r);
         return r;
       } catch (e) {

@@ -4,19 +4,12 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import type { PortfolioSummary } from "@/lib/mock/portfolio";
 import { formatPct, formatVnd, signedColor } from "@/lib/format";
 
-export function KpiGrid({
-  summary,
-  loading,
-}: {
-  summary: PortfolioSummary;
-  loading: boolean;
-}) {
-  const regimeTone =
-    summary.market_regime.toLowerCase().includes("bull")
-      ? "up"
-      : summary.market_regime.toLowerCase().includes("bear")
-        ? "down"
-        : "neutral";
+export function KpiGrid({ summary, loading }: { summary: PortfolioSummary; loading: boolean }) {
+  const regimeTone = summary.market_regime.toLowerCase().includes("bull")
+    ? "up"
+    : summary.market_regime.toLowerCase().includes("bear")
+      ? "down"
+      : "neutral";
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
@@ -60,13 +53,7 @@ export function KpiGrid({
         label="Risk Score"
         value={formatPct(summary.risk_score, 0)}
         hint="composite, 0 = calm, 1 = elevated"
-        tone={
-          summary.risk_score > 0.7
-            ? "down"
-            : summary.risk_score < 0.3
-              ? "up"
-              : "neutral"
-        }
+        tone={summary.risk_score > 0.7 ? "down" : summary.risk_score < 0.3 ? "up" : "neutral"}
         loading={loading}
       />
       <KpiCard

@@ -133,9 +133,7 @@ describe("TradingPreviewPage", () => {
     render(<TradingPreviewPage />);
     expect(screen.getByTestId("trading-preview-page")).toBeDefined();
     expect(screen.getByTestId("phase-2-5-banner")).toBeDefined();
-    await waitFor(() =>
-      expect(screen.getByTestId("account-selector")).toBeDefined(),
-    );
+    await waitFor(() => expect(screen.getByTestId("account-selector")).toBeDefined());
   });
 
   it("renders cash + positions after account load", async () => {
@@ -165,9 +163,7 @@ describe("TradingPreviewPage", () => {
     apiCalls.length = 0;
     fireEvent.submit(screen.getByTestId("preview-form"));
     await waitFor(() =>
-      expect(
-        apiCalls.some((c) => c.path === "/trading/order-preview"),
-      ).toBe(true),
+      expect(apiCalls.some((c) => c.path === "/trading/order-preview")).toBe(true),
     );
     const previewCall = apiCalls.find((c) => c.path === "/trading/order-preview");
     expect(previewCall).toBeDefined();
@@ -207,8 +203,6 @@ describe("TradingPreviewPage", () => {
     fireEvent.change(sideSelect, { target: { value: "SELL" } });
     fireEvent.submit(screen.getByTestId("preview-form"));
     await waitFor(() => screen.getByTestId("result-warnings"));
-    expect(screen.getByTestId("result-warnings").textContent).toContain(
-      "T+2_SETTLEMENT",
-    );
+    expect(screen.getByTestId("result-warnings").textContent).toContain("T+2_SETTLEMENT");
   });
 });

@@ -30,11 +30,7 @@ export function RealizedVsUnrealizedChart({ pnl }: { pnl: AssetsPnl | null }) {
   return (
     <Card
       title="Realized vs Unrealized PnL"
-      hint={
-        pnl
-          ? `Total ${formatVnd(pnl.total, { compact: true })}`
-          : "Awaiting data"
-      }
+      hint={pnl ? `Total ${formatVnd(pnl.total, { compact: true })}` : "Awaiting data"}
     >
       {data.length === 0 ? (
         <EmptyState>No PnL data yet.</EmptyState>

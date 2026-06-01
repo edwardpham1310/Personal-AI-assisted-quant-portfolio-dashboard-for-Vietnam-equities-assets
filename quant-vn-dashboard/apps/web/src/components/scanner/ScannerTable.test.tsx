@@ -71,8 +71,8 @@ describe("ScannerTable", () => {
     fireEvent.click(trendHeaders[trendHeaders.length - 1]);
 
     const bodyRows = screen.getByRole("table").querySelectorAll("tbody tr");
-    const order = Array.from(bodyRows).map(
-      (r) => r.getAttribute("data-testid")?.replace("scanner-row-", ""),
+    const order = Array.from(bodyRows).map((r) =>
+      r.getAttribute("data-testid")?.replace("scanner-row-", ""),
     );
     // Default direction for score columns is desc: highest first.
     expect(order).toEqual(["HIGH", "MID", "LOW"]);
@@ -117,9 +117,7 @@ describe("ScannerTable", () => {
   it("calls onRemove with the row symbol when the remove button is clicked", () => {
     const rows: ScannerRow[] = [makeResult({ symbol: "FPT" })];
     const removed: string[] = [];
-    render(
-      <ScannerTable rows={rows} onRemove={(s) => removed.push(s)} />,
-    );
+    render(<ScannerTable rows={rows} onRemove={(s) => removed.push(s)} />);
     fireEvent.click(screen.getByRole("button", { name: /Remove FPT/ }));
     expect(removed).toEqual(["FPT"]);
   });

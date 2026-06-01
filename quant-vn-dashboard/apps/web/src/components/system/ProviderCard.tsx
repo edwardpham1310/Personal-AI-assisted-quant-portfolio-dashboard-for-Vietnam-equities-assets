@@ -55,9 +55,7 @@ export function ProviderCard({ provider }: { provider: ProviderHealth }) {
         {provider.error ? (
           <>
             <dt className="text-ink-dim">Error</dt>
-            <dd className="text-accent-down font-mono break-all">
-              {provider.error}
-            </dd>
+            <dd className="text-accent-down font-mono break-all">{provider.error}</dd>
           </>
         ) : null}
       </dl>

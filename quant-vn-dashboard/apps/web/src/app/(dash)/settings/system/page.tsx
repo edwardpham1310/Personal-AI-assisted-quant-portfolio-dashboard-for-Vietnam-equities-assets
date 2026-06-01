@@ -47,8 +47,8 @@ export default function SystemSettingsPage() {
       <header>
         <h1 className="text-xl font-semibold text-ink">System settings</h1>
         <p className="text-sm text-ink-dim mt-1">
-          Environment + readiness checks for the API. Run-time secrets are never
-          surfaced — only their configured/missing state.
+          Environment + readiness checks for the API. Run-time secrets are never surfaced — only
+          their configured/missing state.
         </p>
       </header>
 
@@ -69,9 +69,7 @@ export default function SystemSettingsPage() {
           ) : null}
         </div>
 
-        {healthError ? (
-          <p className="mt-3 text-xs text-accent-down">{healthError}</p>
-        ) : null}
+        {healthError ? <p className="mt-3 text-xs text-accent-down">{healthError}</p> : null}
 
         {health ? (
           <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs">
@@ -84,17 +82,13 @@ export default function SystemSettingsPage() {
             {health.app_uptime_seconds != null ? (
               <>
                 <dt className="text-ink-dim">Uptime</dt>
-                <dd className="font-mono text-ink">
-                  {Math.round(health.app_uptime_seconds)}s
-                </dd>
+                <dd className="font-mono text-ink">{Math.round(health.app_uptime_seconds)}s</dd>
               </>
             ) : null}
             {typeof health.cache_reachable === "boolean" ? (
               <>
                 <dt className="text-ink-dim">Cache reachable</dt>
-                <dd className="font-mono text-ink">
-                  {health.cache_reachable ? "yes" : "no"}
-                </dd>
+                <dd className="font-mono text-ink">{health.cache_reachable ? "yes" : "no"}</dd>
               </>
             ) : null}
             {health.checked_at ? (

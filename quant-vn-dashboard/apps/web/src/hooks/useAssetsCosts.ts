@@ -13,8 +13,7 @@ const POLL_MS = 60_000;
 export function useAssetsCosts(period: CostPeriod) {
   const api = useApi();
   const resource = usePollingResource<CostBreakdown>({
-    fetcher: () =>
-      api<CostBreakdown>(`/assets/costs?period=${encodeURIComponent(period)}`),
+    fetcher: () => api<CostBreakdown>(`/assets/costs?period=${encodeURIComponent(period)}`),
     intervalMs: POLL_MS,
     deps: [period],
   });

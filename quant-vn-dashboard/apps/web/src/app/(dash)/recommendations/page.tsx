@@ -23,10 +23,8 @@ export default function RecommendationsPage() {
   const api = useApi();
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [watchlistId, setWatchlistId] = useState<string | null>(null);
-  const [profile, setProfile] =
-    useState<RecommendationProfile>("short_aggressive");
-  const [horizon, setHorizon] =
-    useState<RecommendationHorizon>("SHORT_2W");
+  const [profile, setProfile] = useState<RecommendationProfile>("short_aggressive");
+  const [horizon, setHorizon] = useState<RecommendationHorizon>("SHORT_2W");
   const [selected, setSelected] = useState<RecommendationResult | null>(null);
   const [watchlistsError, setWatchlistsError] = useState<string | null>(null);
 
@@ -36,13 +34,9 @@ export default function RecommendationsPage() {
       const lists = await api<Watchlist[]>("/watchlists");
       if (!Array.isArray(lists)) return;
       setWatchlists(lists);
-      setWatchlistId((prev) =>
-        prev == null && lists.length > 0 ? lists[0].id : prev,
-      );
+      setWatchlistId((prev) => (prev == null && lists.length > 0 ? lists[0].id : prev));
     } catch (e) {
-      setWatchlistsError(
-        e instanceof Error ? e.message : "Failed to load watchlists.",
-      );
+      setWatchlistsError(e instanceof Error ? e.message : "Failed to load watchlists.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -57,13 +51,9 @@ export default function RecommendationsPage() {
     horizon,
   );
 
-  const validResults = useMemo(
-    () => results.filter((r) => r.status !== "REJECTED"),
-    [results],
-  );
+  const validResults = useMemo(() => results.filter((r) => r.status !== "REJECTED"), [results]);
 
-  const profileLabel =
-    profile === "short_aggressive" ? "Short-term" : "Long-term";
+  const profileLabel = profile === "short_aggressive" ? "Short-term" : "Long-term";
 
   return (
     <div className="space-y-6">
@@ -120,16 +110,13 @@ export default function RecommendationsPage() {
       {!watchlistId ? (
         <Card title="Pick a watchlist">
           <p className="text-sm text-ink-dim">
-            Create or select a watchlist to see recommendations. Manage
-            watchlists on the Watchlist page.
+            Create or select a watchlist to see recommendations. Manage watchlists on the Watchlist
+            page.
           </p>
         </Card>
       ) : error ? (
         <Card title="Could not load recommendations" hint={error}>
-          <button
-            onClick={() => void refresh()}
-            className="text-xs text-accent hover:underline"
-          >
+          <button onClick={() => void refresh()} className="text-xs text-accent hover:underline">
             Retry
           </button>
         </Card>
@@ -139,10 +126,7 @@ export default function RecommendationsPage() {
             <Card title={`${profileLabel} recommendations`}>
               <RecoTable results={validResults} onSelect={setSelected} />
             </Card>
-            <RejectedRecsSection
-              results={results}
-              onSelect={setSelected}
-            />
+            <RejectedRecsSection results={results} onSelect={setSelected} />
           </div>
           <div>
             <ExplainabilityPanel rec={selected} />

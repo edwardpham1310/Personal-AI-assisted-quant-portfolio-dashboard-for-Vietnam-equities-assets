@@ -17,10 +17,7 @@ export function IndexCardGrid({
       {indices.map((idx) => {
         const tone = signedColor(idx.change);
         return (
-          <div
-            key={idx.code}
-            className="rounded-lg border border-border bg-bg-panel px-4 py-3"
-          >
+          <div key={idx.code} className="rounded-lg border border-border bg-bg-panel px-4 py-3">
             <div className="flex items-baseline justify-between">
               <p className="text-sm font-medium text-ink">{idx.code}</p>
               <Badge tone={tone}>{formatPct(idx.change_pct)}</Badge>

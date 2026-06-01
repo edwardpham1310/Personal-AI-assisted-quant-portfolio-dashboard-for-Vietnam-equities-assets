@@ -15,11 +15,7 @@ export type SignalCode =
 
 export type ScannerTrend = "UPTREND" | "DOWNTREND" | "SIDEWAYS" | "UNKNOWN";
 
-export type ScannerStatus =
-  | "BUY_CANDIDATE"
-  | "WATCH"
-  | "HOLD"
-  | "AVOID";
+export type ScannerStatus = "BUY_CANDIDATE" | "WATCH" | "HOLD" | "AVOID";
 
 export type ScannerScores = {
   trend: number;
@@ -161,9 +157,7 @@ function useScannerFetch(path: string | null): ScannerState<ScannerResult[]> {
  * when ``watchlistId`` is null so callers can leave it unset until the user
  * picks a list.
  */
-export function useWatchlistScanner(
-  watchlistId: string | null,
-): ScannerState<ScannerResult[]> {
+export function useWatchlistScanner(watchlistId: string | null): ScannerState<ScannerResult[]> {
   return useScannerFetch(watchlistId ? `/scanner/watchlist/${watchlistId}` : null);
 }
 

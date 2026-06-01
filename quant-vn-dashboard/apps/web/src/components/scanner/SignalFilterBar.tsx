@@ -30,14 +30,8 @@ export function SignalFilterBar({
   }
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-2"
-      role="group"
-      aria-label="Filter by signal"
-    >
-      <span className="text-[11px] uppercase tracking-wide text-ink-dim">
-        Filter
-      </span>
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by signal">
+      <span className="text-[11px] uppercase tracking-wide text-ink-dim">Filter</span>
       {ALL_SIGNALS.map((code) => {
         const active = selected.includes(code);
         return (

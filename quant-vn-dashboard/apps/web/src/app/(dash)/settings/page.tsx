@@ -16,9 +16,7 @@ type Settings = {
   theme: Theme;
 };
 
-type SettingsPatch = Partial<
-  Pick<Settings, "default_broker" | "risk_profile" | "theme">
->;
+type SettingsPatch = Partial<Pick<Settings, "default_broker" | "risk_profile" | "theme">>;
 
 const SAVE_DEBOUNCE_MS = 400;
 
@@ -119,23 +117,14 @@ export default function SettingsPage() {
         </Card>
       ) : error ? (
         <Card title="Could not load settings" hint={error}>
-          <button
-            onClick={load}
-            className="text-xs text-accent hover:underline"
-          >
+          <button onClick={load} className="text-xs text-accent hover:underline">
             Retry
           </button>
         </Card>
       ) : settings ? (
         <Card
           title="Profile"
-          hint={
-            saving
-              ? "Saving…"
-              : savedAt
-                ? `Saved at ${savedAt}`
-                : undefined
-          }
+          hint={saving ? "Saving…" : savedAt ? `Saved at ${savedAt}` : undefined}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="block">
@@ -153,9 +142,7 @@ export default function SettingsPage() {
               <span className="text-xs text-ink-muted">Risk profile</span>
               <select
                 value={settings.risk_profile}
-                onChange={(e) =>
-                  queueSave({ risk_profile: e.target.value as RiskProfile })
-                }
+                onChange={(e) => queueSave({ risk_profile: e.target.value as RiskProfile })}
                 className="mt-1 w-full rounded border border-border bg-bg px-2 py-1 text-sm text-ink"
               >
                 <option value="conservative">Conservative</option>

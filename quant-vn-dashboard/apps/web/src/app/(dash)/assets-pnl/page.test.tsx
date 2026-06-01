@@ -63,9 +63,7 @@ describe("AssetsPnlPage", () => {
   it("renders the page header and disclaimer", () => {
     render(<AssetsPnlPage />);
     expect(screen.getByRole("heading", { name: "Assets & PnL" })).toBeDefined();
-    expect(
-      screen.getByText(/Research dashboard · Manual entry · No orders placed/i),
-    ).toBeDefined();
+    expect(screen.getByText(/Research dashboard · Manual entry · No orders placed/i)).toBeDefined();
   });
 
   it("renders the 8-card asset grid with mocked zeros", () => {

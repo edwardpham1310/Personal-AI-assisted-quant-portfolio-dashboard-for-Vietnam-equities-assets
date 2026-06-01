@@ -71,9 +71,7 @@ export function useLiveOrderIntents(accountId: string | null) {
     setLoading(true);
     try {
       const qs = accountId ? `?account_id=${accountId}` : "";
-      const rows = await api<LiveOrderIntent[]>(
-        `/trading/live-order-intents${qs}`,
-      );
+      const rows = await api<LiveOrderIntent[]>(`/trading/live-order-intents${qs}`);
       setData(rows);
     } finally {
       setLoading(false);
@@ -91,9 +89,7 @@ export function useLiveOrderActions(accountId: string | null) {
   const api = useApi();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<LiveOrderIntentResult | null>(
-    null,
-  );
+  const [lastResult, setLastResult] = useState<LiveOrderIntentResult | null>(null);
 
   function _setError(e: unknown) {
     const msg =
@@ -118,17 +114,14 @@ export function useLiveOrderActions(accountId: string | null) {
       setBusy(true);
       setError(null);
       try {
-        const row = await api<LiveOrderIntent>(
-          "/trading/live-order-intents",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              account_id: accountId,
-              source_type: "MANUAL",
-              ...body,
-            }),
-          },
-        );
+        const row = await api<LiveOrderIntent>("/trading/live-order-intents", {
+          method: "POST",
+          body: JSON.stringify({
+            account_id: accountId,
+            source_type: "MANUAL",
+            ...body,
+          }),
+        });
         return row;
       } catch (e) {
         _setError(e);
@@ -183,10 +176,7 @@ export function useLiveOrderActions(accountId: string | null) {
   );
 
   const confirm = useCallback(
-    async (
-      intentId: string,
-      risk_acknowledged: boolean,
-    ): Promise<LiveOrderIntentResult | null> => {
+    async (intentId: string, risk_acknowledged: boolean): Promise<LiveOrderIntentResult | null> => {
       setBusy(true);
       setError(null);
       try {

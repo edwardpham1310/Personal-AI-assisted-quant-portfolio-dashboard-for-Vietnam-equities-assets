@@ -59,10 +59,7 @@ export default function AssetsPnlPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {pnl.error ? (
-          <ErrorState
-            message={`PnL error: ${pnl.error}`}
-            onRetry={() => void pnl.refresh()}
-          />
+          <ErrorState message={`PnL error: ${pnl.error}`} onRetry={() => void pnl.refresh()} />
         ) : (
           <RealizedVsUnrealizedChart pnl={pnl.pnl} />
         )}
@@ -72,11 +69,7 @@ export default function AssetsPnlPage() {
             onRetry={() => void costs.refresh()}
           />
         ) : (
-          <FeeTaxDragChart
-            costs={costs.costs}
-            period={period}
-            onPeriodChange={setPeriod}
-          />
+          <FeeTaxDragChart costs={costs.costs} period={period} onPeriodChange={setPeriod} />
         )}
       </div>
 
