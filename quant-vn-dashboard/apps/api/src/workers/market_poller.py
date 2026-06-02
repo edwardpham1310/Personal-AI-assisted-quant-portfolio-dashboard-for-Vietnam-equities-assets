@@ -27,7 +27,7 @@ from typing import Any
 from uuid import uuid4
 
 from providers.market_data.base import MarketDataProvider
-from services import market_cache
+from services import market_breadth, market_cache
 from services.cache import Cache
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,20 @@ class MarketPoller:
             quotes = await self._provider.get_latest_quotes(symbols)
             for q in quotes:
                 await market_cache.set_quote(self._cache, q, ttl_seconds=self._quote_ttl)
+            # Derive breadth + top movers from the quotes already in hand — no
+            # extra SSI calls. Reuses the quote TTL since they refresh on the
+            # same cadence. NOTE: computed over the polled core universe only,
+            # not the full market (see services/market_breadth.py).
+            await market_cache.set_breadth(
+                self._cache,
+                market_breadth.compute_breadth(quotes),
+                ttl_seconds=self._quote_ttl,
+            )
+            await market_cache.set_top_movers(
+                self._cache,
+                market_breadth.compute_top_movers(quotes),
+                ttl_seconds=self._quote_ttl,
+            )
             await market_cache.set_last_poll(
                 self._cache, ok=True, symbol_count=len(symbols)
             )

@@ -23,7 +23,7 @@ from schemas.market import (
     Security,
     SymbolDetail,
 )
-from services import market_cache
+from services import market_breadth, market_cache
 from services.cache import Cache
 from workers.market_poller import MarketPoller
 
@@ -295,6 +295,33 @@ async def live_status(
         "last_poll": last_poll,
         "quote_stale_after_seconds": settings.ssi_quote_stale_seconds,
     }
+
+
+@router.get(
+    "/live/breadth",
+    summary="Latest cached market breadth snapshot",
+)
+async def live_breadth(
+    _user: AuthContext = Depends(get_current_user),
+    cache: Cache = Depends(get_cache),
+) -> dict:
+    # Breadth over the polled core universe only — NOT full-market breadth.
+    # Populated by the MarketPoller; empty (all-zero) shape when the cache is
+    # cold (poller off / not yet warmed).
+    payload = await market_cache.get_breadth(cache)
+    return payload if payload is not None else market_breadth.empty_breadth()
+
+
+@router.get(
+    "/live/top-movers",
+    summary="Latest cached top movers snapshot",
+)
+async def live_top_movers(
+    _user: AuthContext = Depends(get_current_user),
+    cache: Cache = Depends(get_cache),
+) -> dict:
+    payload = await market_cache.get_top_movers(cache)
+    return payload if payload is not None else market_breadth.empty_top_movers()
 
 
 # ── Phase 2 chart module ────────────────────────────────────────────────────
