@@ -15,11 +15,10 @@ import { createClient } from "@/lib/supabase/server";
  *   GET /api/stream/watchlist/<id>        → ${API}/stream/watchlist/<id>
  *   GET /api/stream/market-overview       → ${API}/stream/market-overview
  *
- * This route handler requires a long-lived host (Node runtime, no serverless
- * function timeout). Vercel cannot host it — use Cloudflare Pages with
- * `runtime: "nodejs"` or a VPS.
+ * Cloudflare Pages requires dynamic route handlers to run on the Edge runtime.
+ * The response body stays streamed through to the browser as SSE.
  */
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
     // can reach directly.
     const target = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!target) return [];
-    return [{ source: "/api/:path*", destination: `${target}/:path*` }];
+    // Never rewrite /api/stream/* — that path is served by the SSE BFF proxy
+    // route handler, which injects the Supabase auth header. Rewriting it would
+    // bypass auth and send the EventSource straight to FastAPI unauthenticated.
+    return [{ source: "/api/:path((?!stream/).*)", destination: `${target}/:path` }];
   },
 };
 
