@@ -10,8 +10,14 @@ import { PnlWaterfall } from "@/components/dashboard/PnlWaterfall";
 import { ActionPanels } from "@/components/dashboard/ActionPanels";
 import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
 import { useAssetsSummary } from "@/hooks/useAssetsSummary";
+import { isProductionBuild } from "@/lib/env";
 
 const DEFAULT_LIVE_SYMBOLS = ["FPT", "MWG", "HPG", "VNM", "VCB"];
+
+// These four charts have no backend endpoint yet. In production we pass an
+// empty series so they render an honest empty state instead of mock data; in
+// development the components fall back to their mock default prop for UI work.
+const PROD_EMPTY = isProductionBuild ? [] : undefined;
 
 export default function DashboardHomePage() {
   const portfolio = usePortfolioSummary();
@@ -52,13 +58,13 @@ export default function DashboardHomePage() {
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <EquityCurveChart />
-        <IndexComparisonChart />
+        <EquityCurveChart data={PROD_EMPTY} />
+        <IndexComparisonChart data={PROD_EMPTY} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AllocationDonut />
-        <PnlWaterfall />
+        <AllocationDonut data={PROD_EMPTY} />
+        <PnlWaterfall data={PROD_EMPTY} />
       </div>
 
       <section>

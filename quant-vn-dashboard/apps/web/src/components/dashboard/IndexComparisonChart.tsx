@@ -11,16 +11,31 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/AsyncStates";
 import { makeMockIndexComparison } from "@/lib/mock/market";
 
-const DATA = makeMockIndexComparison(90);
+type ComparisonPoint = { ts: string; vnindex: number; vn30: number };
 
-export function IndexComparisonChart() {
+// In development the default prop renders a mock series so the chart can be
+// built/visualised; in production the page passes ``[]`` (no real endpoint is
+// wired yet) so an honest empty state shows instead of fabricated lines.
+export function IndexComparisonChart({
+  data = makeMockIndexComparison(90),
+}: {
+  data?: ComparisonPoint[];
+}) {
+  if (data.length === 0) {
+    return (
+      <Card title="VNINDEX vs VN30" hint="Rebased to 100">
+        <EmptyState>No index comparison data yet.</EmptyState>
+      </Card>
+    );
+  }
   return (
-    <Card title="VNINDEX vs VN30" hint="90D rebased to 100">
+    <Card title="VNINDEX vs VN30" hint="Rebased to 100">
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={DATA} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="#21262d" vertical={false} />
             <XAxis dataKey="ts" tick={{ fill: "#8b949e", fontSize: 10 }} minTickGap={32} />
             <YAxis tick={{ fill: "#8b949e", fontSize: 10 }} width={48} />

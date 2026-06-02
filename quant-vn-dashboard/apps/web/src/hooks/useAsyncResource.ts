@@ -26,8 +26,8 @@ type Options<T> = {
    *  to true AND surfaces ``error`` so callers can render an error banner
    *  instead of silently displaying fake data. Defaults to true on
    *  production builds (``NEXT_PUBLIC_APP_ENV=production``). Set to false
-   *  explicitly only for hooks whose fallback is intentionally
-   *  synthetic (e.g. ``usePortfolioMockSummary``). */
+   *  explicitly only for dev-only fixture hooks whose fallback is
+   *  intentionally synthetic. */
   disableMockOnError?: boolean;
 };
 
