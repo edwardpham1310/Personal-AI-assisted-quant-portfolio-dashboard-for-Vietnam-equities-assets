@@ -34,7 +34,11 @@ export function useMarketIndices() {
   return useAsyncResource<IndexSnapshot[]>({
     fetcher: async () => {
       const rows = await api<ApiIndex[]>("/market/live/indices");
-      return rows.length === 0 ? MOCK_INDICES : rows.map(adaptIndex);
+      // An empty-but-successful response means the live cache is cold (poller
+      // off or not yet warmed) — surface that as an empty result, not stale
+      // mock numbers. Mock only substitutes on a genuine fetch *error* via
+      // ``mockFallback`` below (and only when mock-on-error is enabled).
+      return rows.map(adaptIndex);
     },
     mockFallback: MOCK_INDICES,
   });

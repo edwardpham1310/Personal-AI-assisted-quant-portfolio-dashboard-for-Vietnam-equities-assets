@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/AsyncStates";
 import { LiveQuotesPanel } from "@/components/live/LiveQuotesPanel";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -9,13 +8,17 @@ import { IndexComparisonChart } from "@/components/dashboard/IndexComparisonChar
 import { AllocationDonut } from "@/components/dashboard/AllocationDonut";
 import { PnlWaterfall } from "@/components/dashboard/PnlWaterfall";
 import { ActionPanels } from "@/components/dashboard/ActionPanels";
-import { usePortfolioMockSummary } from "@/hooks/usePortfolioMockSummary";
+import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
+import { useAssetsSummary } from "@/hooks/useAssetsSummary";
 
 const DEFAULT_LIVE_SYMBOLS = ["FPT", "MWG", "HPG", "VNM", "VCB"];
 
 export default function DashboardHomePage() {
-  const portfolio = usePortfolioMockSummary();
+  const portfolio = usePortfolioSummary();
+  const assets = useAssetsSummary();
   const updatedAt = new Date().toLocaleTimeString();
+  const loading = portfolio.loading || assets.loading;
+  const error = portfolio.error ?? assets.error;
 
   return (
     <div className="space-y-6">
@@ -31,18 +34,20 @@ export default function DashboardHomePage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-ink-dim">
           <span>Updated {updatedAt}</span>
-          {portfolio.isMock ? <Badge tone="mock">Mock Data</Badge> : null}
         </div>
       </header>
 
-      {portfolio.error ? (
+      {error ? (
         <ErrorState
-          message={`Portfolio summary error: ${portfolio.error}. Showing mock data.`}
-          onRetry={portfolio.refetch}
+          message={`Portfolio summary error: ${error}`}
+          onRetry={() => {
+            void portfolio.refresh();
+            void assets.refresh();
+          }}
         />
       ) : null}
 
-      <KpiGrid summary={portfolio.data} loading={portfolio.isLoading} />
+      <KpiGrid summary={portfolio.summary} assets={assets.summary} loading={loading} />
 
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
 
