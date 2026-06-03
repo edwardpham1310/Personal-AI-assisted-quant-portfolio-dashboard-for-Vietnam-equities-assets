@@ -16,7 +16,7 @@ import { formatVnd } from "@/lib/format";
 
 export function EquityCurveChart({ data = MOCK_EQUITY_CURVE }: { data?: EquityPoint[] }) {
   return (
-    <Card title="Portfolio equity curve" hint="Mock daily series — 90 trading days">
+    <Card title="Portfolio equity curve" hint="Daily NAV — endpoint pending">
       {data.length === 0 ? (
         <EmptyState>No portfolio history yet.</EmptyState>
       ) : (
