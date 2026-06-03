@@ -17,7 +17,7 @@ import { formatVnd } from "@/lib/format";
 
 export function PnlWaterfall({ data = MOCK_PNL_BUCKETS }: { data?: PnlBucket[] }) {
   return (
-    <Card title="PnL by bucket" hint="Realized + unrealized contribution (mock)">
+    <Card title="PnL by bucket" hint="Realized + unrealized contribution — endpoint pending">
       {data.length === 0 ? (
         <EmptyState>No PnL breakdown yet.</EmptyState>
       ) : (

@@ -35,7 +35,7 @@ export default function MarketOverviewPage() {
 
       {indices.error ? (
         <ErrorState
-          message={`Indices error: ${indices.error}. Showing mock data.`}
+          message={`Indices error: ${indices.error}`}
           onRetry={indices.refetch}
         />
       ) : null}
