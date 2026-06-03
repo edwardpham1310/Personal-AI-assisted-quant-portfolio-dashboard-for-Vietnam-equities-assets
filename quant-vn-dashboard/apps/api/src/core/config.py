@@ -168,6 +168,11 @@ class Settings(BaseSettings):
         """Secrets that must be set before production traffic is served."""
         return (
             "supabase_url",
+            # Sent as the PostgREST ``apikey`` header on every Supabase DB call
+            # (services/supabase_db.PostgrestDB). If empty, PostgREST returns
+            # 401 "No API key found" and every authed data route fails with
+            # "Not authorized." even though JWT verification succeeded.
+            "supabase_anon_key",
             "supabase_jwt_secret",
             "supabase_service_role_key",
             "database_url",
