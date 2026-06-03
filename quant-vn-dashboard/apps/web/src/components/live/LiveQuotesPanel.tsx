@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/Card";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { formatNumber } from "@/lib/format";
 
 export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
   const { quotes, lastUpdate, connected, error } = useLiveQuotes(symbols);
@@ -64,7 +65,7 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
             {quotes.map((q) => (
               <tr key={q.symbol} className="border-t border-border">
                 <td className="py-1 font-mono">{q.symbol}</td>
-                <td className="py-1 text-right font-mono">{q.price.toLocaleString()}</td>
+                <td className="py-1 text-right font-mono">{formatNumber(q.price)}</td>
                 <td
                   className={`py-1 text-right font-mono ${
                     q.change && q.change > 0
@@ -74,7 +75,7 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
                         : "text-ink-muted"
                   }`}
                 >
-                  {q.change != null ? q.change.toLocaleString() : "—"}
+                  {formatNumber(q.change)}
                 </td>
                 <td
                   className={`py-1 text-right text-xs ${q.stale ? "text-accent" : "text-ink-dim"}`}

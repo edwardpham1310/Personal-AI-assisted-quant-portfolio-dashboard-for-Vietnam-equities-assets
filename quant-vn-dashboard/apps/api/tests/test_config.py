@@ -169,6 +169,29 @@ def test_production_allows_ssi_use_mock_false_with_creds(
     assert settings.warn_if_missing_secrets() == []
 
 
+def test_production_requires_supabase_anon_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The anon key is the PostgREST apikey — without it every authed DB call
+    fails with 401 'Not authorized.' even though JWT verification succeeds.
+    Production must fail-fast instead of booting into that silent state."""
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", '["https://app.example.com"]')
+    monkeypatch.setenv("SSI_USE_MOCK", "false")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)  # the gap under test
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", "x")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "x")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://x")
+    monkeypatch.setenv("SSI_CONSUMER_ID", "x")
+    monkeypatch.setenv("SSI_CONSUMER_SECRET", "x")
+    monkeypatch.setenv("AUTO_TRADE_LIVE_ENABLED", "false")
+    monkeypatch.setenv("AUTO_TRADE_ORDER_PLACEMENT_ENABLED", "false")
+    get_settings.cache_clear()
+    settings = get_settings()
+    assert "supabase_anon_key" in settings.missing_secrets()
+    with pytest.raises(RuntimeError):
+        settings.warn_if_missing_secrets()
+
+
 def test_production_refuses_order_placement_enabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
