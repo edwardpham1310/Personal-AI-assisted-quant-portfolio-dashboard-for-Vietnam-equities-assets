@@ -10,7 +10,7 @@ const COLORS = ["#4f8bf0", "#22c55e", "#a855f7", "#f59e0b", "#64748b"];
 
 export function AllocationDonut({ data = MOCK_ALLOCATION }: { data?: AllocationSlice[] }) {
   return (
-    <Card title="Allocation" hint="By sector (mock)">
+    <Card title="Allocation" hint="By strategy tag (market value)">
       {data.length === 0 ? (
         <EmptyState>No allocation data.</EmptyState>
       ) : (

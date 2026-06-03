@@ -69,6 +69,22 @@ class Quote(BaseModel):
     source: str  # 'ssi' | 'mock' | 'cache'
 
 
+class MarketRegime(BaseModel):
+    """VNINDEX trend heuristic for the dashboard regime tile.
+
+    ``score`` is a 4-state heuristic (30/50/60/80), NOT a continuous 0..100
+    dial — render it as a discrete label, not a gauge. ``50`` means the
+    VNINDEX history was unavailable/too short, not "medium".
+    """
+
+    score: int  # 30=down, 50=no-data, 60=mixed, 80=up
+    label: str  # "UPTREND" | "MIXED" | "DOWNTREND" | "NO_DATA"
+    bars_used: int = 0
+    as_of: str | None = None
+    data_status: str = "FRESH"  # "FRESH" | "DATA_UNAVAILABLE"
+    disclaimer: str = "Research only — VNINDEX trend heuristic, not financial advice."
+
+
 # Phase 2 data-policy status codes. The dashboard renders these directly so
 # operators can distinguish "we haven't been told the credentials" from "the
 # credentials are wrong" from "the upstream is briefly flaky".

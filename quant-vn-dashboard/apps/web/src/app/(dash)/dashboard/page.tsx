@@ -10,18 +10,24 @@ import { PnlWaterfall } from "@/components/dashboard/PnlWaterfall";
 import { ActionPanels } from "@/components/dashboard/ActionPanels";
 import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
 import { useAssetsSummary } from "@/hooks/useAssetsSummary";
+import { usePortfolioTodayPnl } from "@/hooks/usePortfolioTodayPnl";
+import { useMarketRegime } from "@/hooks/useMarketRegime";
+import { usePortfolioAllocation } from "@/hooks/usePortfolioAllocation";
 import { isProductionBuild } from "@/lib/env";
 
 const DEFAULT_LIVE_SYMBOLS = ["FPT", "MWG", "HPG", "VNM", "VCB"];
 
-// These four charts have no backend endpoint yet. In production we pass an
-// empty series so they render an honest empty state instead of mock data; in
-// development the components fall back to their mock default prop for UI work.
+// Equity-curve and PnL-waterfall have no backend endpoint yet. In production we
+// pass an empty series so they render an honest empty state instead of mock
+// data; in development the components fall back to their mock default prop.
 const PROD_EMPTY = isProductionBuild ? [] : undefined;
 
 export default function DashboardHomePage() {
   const portfolio = usePortfolioSummary();
   const assets = useAssetsSummary();
+  const todayPnl = usePortfolioTodayPnl();
+  const regime = useMarketRegime();
+  const allocation = usePortfolioAllocation();
   const updatedAt = new Date().toLocaleTimeString();
   const loading = portfolio.loading || assets.loading;
   const error = portfolio.error ?? assets.error;
@@ -53,7 +59,13 @@ export default function DashboardHomePage() {
         />
       ) : null}
 
-      <KpiGrid summary={portfolio.summary} assets={assets.summary} loading={loading} />
+      <KpiGrid
+        summary={portfolio.summary}
+        assets={assets.summary}
+        loading={loading}
+        todayPnl={todayPnl.data?.total_day_pnl ?? null}
+        regime={regime.data?.label ?? null}
+      />
 
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
 
@@ -63,7 +75,7 @@ export default function DashboardHomePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AllocationDonut data={PROD_EMPTY} />
+        <AllocationDonut data={allocation.data} />
         <PnlWaterfall data={PROD_EMPTY} />
       </div>
 

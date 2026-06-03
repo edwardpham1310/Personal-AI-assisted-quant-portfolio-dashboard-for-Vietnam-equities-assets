@@ -10,9 +10,10 @@ const PLACEHOLDER = "—";
  * Dashboard Home KPI grid, backed by the real ``GET /portfolio/summary`` and
  * ``GET /assets/summary`` endpoints.
  *
- * Three tiles (Today PnL, Risk Score, Market Regime) have no backend source
- * yet and render ``—`` with a TODO hint rather than fabricated numbers. Wire
- * them once the API exposes intraday PnL / a risk score / a regime signal.
+ * Today PnL (intraday MtM) and Market Regime are backed by real endpoints
+ * (``GET /portfolio/today-pnl`` and ``GET /market/regime``). Risk Score has no
+ * portfolio-level backend source yet and renders ``—`` with a TODO hint rather
+ * than a fabricated number.
  *
  * NOTE: ``total_unrealized_pnl_pct`` is already in *percent units* (e.g. -3.42
  * means -3.42%), so it is rendered directly — do NOT pass it through
@@ -22,13 +23,18 @@ export function KpiGrid({
   summary,
   assets,
   loading,
+  todayPnl = null,
+  regime = null,
 }: {
   summary: PortfolioSummary | null;
   assets: AssetsSummary | null;
   loading: boolean;
+  todayPnl?: number | null;
+  regime?: string | null;
 }) {
   const unrealizedPnl = summary?.total_unrealized_pnl ?? null;
   const unrealizedPnlPct = summary?.total_unrealized_pnl_pct ?? null;
+  const regimeTone = regime === "UPTREND" ? "up" : regime === "DOWNTREND" ? "down" : "neutral";
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
@@ -68,9 +74,21 @@ export function KpiGrid({
         hint="settles in ≤2 trading days"
         loading={loading}
       />
-      <KpiCard label="Today PnL" value={PLACEHOLDER} hint="TODO: no backend endpoint yet" />
+      <KpiCard
+        label="Today PnL"
+        value={todayPnl != null ? formatVnd(todayPnl, { compact: true }) : PLACEHOLDER}
+        tone={todayPnl != null ? signedColor(todayPnl) : "neutral"}
+        hint="intraday MtM vs reference"
+        loading={loading}
+      />
       <KpiCard label="Risk Score" value={PLACEHOLDER} hint="TODO: no backend endpoint yet" />
-      <KpiCard label="Market Regime" value={PLACEHOLDER} hint="TODO: no backend endpoint yet" />
+      <KpiCard
+        label="Market Regime"
+        value={regime ?? PLACEHOLDER}
+        tone={regimeTone}
+        hint="VNINDEX trend heuristic"
+        loading={loading}
+      />
     </div>
   );
 }
