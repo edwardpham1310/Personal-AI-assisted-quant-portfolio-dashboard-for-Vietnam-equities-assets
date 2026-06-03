@@ -59,7 +59,7 @@ export default function DashboardHomePage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <EquityCurveChart data={PROD_EMPTY} />
-        <IndexComparisonChart data={PROD_EMPTY} />
+        <IndexComparisonChart />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
