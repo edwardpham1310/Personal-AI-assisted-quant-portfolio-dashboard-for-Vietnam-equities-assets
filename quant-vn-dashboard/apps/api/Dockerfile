@@ -20,5 +20,10 @@ COPY tests ./tests
 
 EXPOSE 8000
 
+# Container-level liveness against the unauthenticated GET /health route
+# (health.py). Uses the Python stdlib so the slim image needs no curl/wget.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
 # Production command. For dev, override with `--reload`.
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

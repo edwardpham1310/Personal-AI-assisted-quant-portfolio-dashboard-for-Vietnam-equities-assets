@@ -97,12 +97,18 @@ async def list_manual_portfolio(
     )
     if not accounts:
         return ManualPortfolioSnapshot(accounts=[])
-    positions = await db.select("manual_positions", user_jwt=user.raw_token)
+    # Defense-in-depth: scope positions to the user's own account ids explicitly
+    # (in addition to RLS) so a misconfigured policy can't leak another user's
+    # rows. PostgREST/FakeSupabaseDB ``select`` supports equality filters only,
+    # so fetch per account — a personal portfolio has 1–3 accounts.
     by_account: dict[str, list[ManualPosition]] = {}
-    for row in positions:
-        by_account.setdefault(row["account_id"], []).append(
-            ManualPosition.model_validate(row)
+    for acc in accounts:
+        rows = await db.select(
+            "manual_positions",
+            where={"account_id": acc["id"]},
+            user_jwt=user.raw_token,
         )
+        by_account[acc["id"]] = [ManualPosition.model_validate(row) for row in rows]
     return ManualPortfolioSnapshot(
         accounts=[
             ManualAccountWithPositions(**acc, positions=by_account.get(acc["id"], []))
