@@ -1,17 +1,21 @@
 "use client";
 
+import { useApi } from "@/lib/api";
 import { MOCK_BREADTH, type MarketBreadth } from "@/lib/mock/market";
 import { useAsyncResource } from "./useAsyncResource";
 
 /**
- * Market breadth is computed by a backend job that has not been wired yet
- * (see ``market:breadth`` cache key in ``services/market_cache.py``). Until
- * then this hook stays on the mock fallback so the UI is exercised.
+ * Market breadth from ``GET /market/live/breadth`` (poller-populated cache).
+ *
+ * NOTE: the backend computes breadth over the polled core-symbol universe, not
+ * the full market — see ``services/market_breadth.py``. When the cache is cold
+ * (poller off) the endpoint returns an all-zero shape; mock only substitutes on
+ * a genuine fetch error via ``mockFallback``.
  */
 export function useMarketBreadth() {
+  const api = useApi();
   return useAsyncResource<MarketBreadth>({
-    fetcher: () => Promise.reject(new Error("breadth_endpoint_pending")),
+    fetcher: () => api<MarketBreadth>("/market/live/breadth"),
     mockFallback: MOCK_BREADTH,
-    alwaysMock: true,
   });
 }

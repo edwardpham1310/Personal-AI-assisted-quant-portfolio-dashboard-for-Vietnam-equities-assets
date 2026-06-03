@@ -17,14 +17,16 @@ from schemas.market import (
     DataFreshness,
     IndexInfo,
     LatestQuote,
+    MarketRegime,
     OHLCVBar,
     ProviderStatus,
     Quote,
     Security,
     SymbolDetail,
 )
-from services import market_cache
+from services import market_breadth, market_cache
 from services.cache import Cache
+from services.recommendation_engine import compute_market_regime
 from workers.market_poller import MarketPoller
 
 router = APIRouter()
@@ -295,6 +297,81 @@ async def live_status(
         "last_poll": last_poll,
         "quote_stale_after_seconds": settings.ssi_quote_stale_seconds,
     }
+
+
+# VNINDEX regime: how far back to pull daily bars (≈300 trading bars), and the
+# label for each discrete heuristic score. Cached briefly so dashboard polling
+# doesn't fan out one SSI call per tab.
+_REGIME_HISTORY_DAYS = 430
+_REGIME_CACHE_KEY = "market:regime"
+_REGIME_CACHE_TTL = 60
+_REGIME_LABELS = {80: "UPTREND", 60: "MIXED", 30: "DOWNTREND", 50: "NO_DATA"}
+
+
+@router.get(
+    "/regime",
+    response_model=MarketRegime,
+    summary="VNINDEX market-regime heuristic (research only)",
+)
+async def market_regime(
+    _user: AuthContext = Depends(get_current_user),
+    provider: MarketDataProvider = Depends(get_market_provider),
+    cache: Cache = Depends(get_cache),
+) -> MarketRegime:
+    cached = await cache.get_json(_REGIME_CACHE_KEY)
+    if cached is not None:
+        return MarketRegime(**cached)
+
+    today = datetime.now(UTC).date()
+    start = today - timedelta(days=_REGIME_HISTORY_DAYS)
+    bars: list[OHLCVBar] = []
+    try:
+        bars = await provider.get_daily_ohlcv("VNINDEX", start, today)
+    except ProviderError:
+        bars = []
+    except Exception:
+        # Mock/older providers may not expose an index OHLCV path — treat as
+        # no-data rather than failing the dashboard tile.
+        bars = []
+
+    score = compute_market_regime(bars)
+    bars_used = len(bars)
+    result = MarketRegime(
+        score=score,
+        label=_REGIME_LABELS.get(score, "NO_DATA"),
+        bars_used=bars_used,
+        as_of=bars[-1].ts.isoformat() if bars else None,
+        data_status="FRESH" if bars_used >= 60 else "DATA_UNAVAILABLE",
+    )
+    await cache.set_json(_REGIME_CACHE_KEY, result.model_dump(mode="json"), ttl_seconds=_REGIME_CACHE_TTL)
+    return result
+
+
+@router.get(
+    "/live/breadth",
+    summary="Latest cached market breadth snapshot",
+)
+async def live_breadth(
+    _user: AuthContext = Depends(get_current_user),
+    cache: Cache = Depends(get_cache),
+) -> dict:
+    # Breadth over the polled core universe only — NOT full-market breadth.
+    # Populated by the MarketPoller; empty (all-zero) shape when the cache is
+    # cold (poller off / not yet warmed).
+    payload = await market_cache.get_breadth(cache)
+    return payload if payload is not None else market_breadth.empty_breadth()
+
+
+@router.get(
+    "/live/top-movers",
+    summary="Latest cached top movers snapshot",
+)
+async def live_top_movers(
+    _user: AuthContext = Depends(get_current_user),
+    cache: Cache = Depends(get_cache),
+) -> dict:
+    payload = await market_cache.get_top_movers(cache)
+    return payload if payload is not None else market_breadth.empty_top_movers()
 
 
 # ── Phase 2 chart module ────────────────────────────────────────────────────

@@ -44,6 +44,27 @@ async def test_poll_once_populates_cache() -> None:
 
 
 @pytest.mark.asyncio
+async def test_poll_once_writes_breadth_and_top_movers() -> None:
+    cache = InMemoryCache()
+    poller = _poller(MockMarketDataProvider(), cache, core=("FPT", "MWG", "HPG", "VNM"))
+
+    await poller.poll_once()
+
+    breadth = await market_cache.get_breadth(cache)
+    assert breadth is not None
+    assert set(breadth) == {"advancers", "decliners", "unchanged", "ceiling", "floor"}
+    # Mock quotes carry change_pct, so every polled symbol is classified.
+    assert breadth["advancers"] + breadth["decliners"] + breadth["unchanged"] == 4
+
+    movers = await market_cache.get_top_movers(cache)
+    assert movers is not None
+    assert set(movers) == {"gainers", "losers", "by_value", "by_volume_spike"}
+    # Mock provider leaves Quote.value None → by_value empty; no ADV → spike empty.
+    assert movers["by_value"] == []
+    assert movers["by_volume_spike"] == []
+
+
+@pytest.mark.asyncio
 async def test_poll_once_handles_provider_failure_safely() -> None:
     """Errors must surface as type names — never as request bodies or secrets."""
     cache = InMemoryCache()

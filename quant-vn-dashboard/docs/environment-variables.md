@@ -30,9 +30,12 @@ settings for production, and in the repo-root `.env` for local dev.
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | Yes | `http://localhost:8000` | Base URL the web app uses for every `apps/api` request. Must point at the FastAPI host. |
+| `NEXT_PUBLIC_API_BASE_URL` | Yes | `http://localhost:8000` | Base URL the web app uses for every `apps/api` request. Must point at the FastAPI host. In a production build (`NEXT_PUBLIC_APP_ENV=production`) a missing/localhost value throws at request time instead of silently calling localhost. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | (none) | Supabase project URL used by `@supabase/ssr` for browser auth. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | (none) | Supabase anon key. Safe to expose; RLS gates everything. |
+| `NEXT_PUBLIC_APP_ENV` | Yes (prod) | `development` | Runtime environment label inlined into the bundle. Set to `production` in Cloudflare Pages to enable prod-only guards (no mock fallback, and the localhost API-URL guard above). |
+
+> Cloudflare Pages also needs a build-time `NODE_VERSION=20` (Next.js 15 requires Node ≥ 20). It is a Pages build setting, not an app variable — see `cloudflare-pages-setup.md`.
 
 ## Backend — core
 

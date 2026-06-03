@@ -130,3 +130,47 @@ class PortfolioSummary(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     disclaimer: str = "Research only — not financial advice. No orders placed."
 
+
+class AllocationSlice(BaseModel):
+    label: str  # strategy tag or symbol
+    value: float  # market value in VND
+    weight: float | None = None  # fraction of total (0..1); None when total==0
+
+
+class AllocationResponse(BaseModel):
+    """Allocation breakdown for the dashboard donut (point-in-time snapshot)."""
+
+    by_strategy_tag: list[AllocationSlice] = Field(default_factory=list)
+    by_symbol: list[AllocationSlice] = Field(default_factory=list)
+    total_market_value: float = 0.0
+    as_of: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    disclaimer: str = "Research only — market value at last poll. No orders placed."
+
+
+class PositionDayPnl(BaseModel):
+    symbol: str
+    quantity: int
+    prev_close: float | None = None  # = Quote.reference_price (session reference)
+    current_price: float | None = None
+    day_pnl: float | None = None
+    day_pnl_pct: float | None = None
+
+
+class TodayPnlResponse(BaseModel):
+    """Intraday mark-to-market PnL vs the session reference price.
+
+    TODO(today-pnl): ``prev_close`` is SSI's session reference price, already
+    adjusted by the exchange on ex-div/split days — do NOT reuse for historical
+    attribution. This is unrealized MTM, not net of sell tax (0.1%) / brokerage,
+    and ignores T+2 settlement.
+    """
+
+    total_day_pnl: float = 0.0
+    positions: list[PositionDayPnl] = Field(default_factory=list)
+    as_of: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    disclaimer: str = (
+        "Today MTM (unrealized, pre-cost). Not realized; not net of tax/fees. No orders placed."
+    )
+

@@ -88,6 +88,18 @@ MAX_POSITION_VND = 50_000_000       # hard cap per recommendation in VND
 EQUITY_PCT_PER_RECO = 0.05          # 5% of total equity per recommendation
 MAX_ADV_PCT = 0.005                 # 0.5% of avg 20d trading value
 LOT_SIZE = 100                      # HOSE/HNX standard lot
+# TODO(cost-model): BROKERAGE_RATE / SLIPPAGE_RATE / LOT_SIZE are duplicated
+#   from services.order_preview (canonical name there: DEFAULT_LOT_SIZE). Values
+#   currently match; do NOT consolidate without a refactor that verifies no
+#   scoring drift (a fee-schedule change in order_preview must not silently move
+#   recommendation scores). order_preview also defines VAT_RATE (10% on
+#   brokerage) and SELL_TAX_RATE (0.1% sell-side) that this engine does NOT apply
+#   — its cost model understates SELL round-trip cost by ~0.11%.
+# TODO(vn-assumptions): settlement T+2, the VN trading calendar/holidays
+#   (services.vn_holidays), and corporate-action (div/split/rights) price
+#   adjustment are not modelled here. Wire these in before using price-level
+#   features for live P&L reconciliation; until then treat outputs as research
+#   signals only.
 
 # Stop-loss / take-profit fall-back percentages when ATR14 is null.
 STOP_PCT_SHORT = 0.05               # 5% stop when ATR unavailable, short horizons

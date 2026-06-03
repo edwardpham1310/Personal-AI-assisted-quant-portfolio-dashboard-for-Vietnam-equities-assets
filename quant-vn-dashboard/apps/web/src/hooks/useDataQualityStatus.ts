@@ -1,6 +1,7 @@
 "use client";
 
 import { useApi } from "@/lib/api";
+import { isProductionBuild } from "@/lib/env";
 import {
   MOCK_DATA_QUALITY,
   MOCK_RISK_ALERTS,
@@ -47,18 +48,22 @@ export function useDataQualityStatus() {
   });
 }
 
+// Risk/settlement alert endpoints are not wired yet. In production resolve to
+// an EMPTY list (the panels render an honest empty state) — never synthetic
+// alerts. In development keep the mock for UI work (shown with a "Mock" badge).
+// TODO: point these fetchers at real endpoints once they exist.
 export function useRiskAlerts() {
   return useAsyncResource<RiskAlert[]>({
-    fetcher: () => Promise.reject(new Error("risk_alerts_endpoint_pending")),
+    fetcher: () => Promise.resolve([]),
     mockFallback: MOCK_RISK_ALERTS,
-    alwaysMock: true,
+    alwaysMock: !isProductionBuild,
   });
 }
 
 export function useSettlementAlerts() {
   return useAsyncResource<SettlementAlert[]>({
-    fetcher: () => Promise.reject(new Error("settlement_alerts_endpoint_pending")),
+    fetcher: () => Promise.resolve([]),
     mockFallback: MOCK_SETTLEMENT_ALERTS,
-    alwaysMock: true,
+    alwaysMock: !isProductionBuild,
   });
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/AsyncStates";
 import { LiveQuotesPanel } from "@/components/live/LiveQuotesPanel";
 import { KpiGrid } from "@/components/dashboard/KpiGrid";
@@ -9,13 +8,29 @@ import { IndexComparisonChart } from "@/components/dashboard/IndexComparisonChar
 import { AllocationDonut } from "@/components/dashboard/AllocationDonut";
 import { PnlWaterfall } from "@/components/dashboard/PnlWaterfall";
 import { ActionPanels } from "@/components/dashboard/ActionPanels";
-import { usePortfolioMockSummary } from "@/hooks/usePortfolioMockSummary";
+import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
+import { useAssetsSummary } from "@/hooks/useAssetsSummary";
+import { usePortfolioTodayPnl } from "@/hooks/usePortfolioTodayPnl";
+import { useMarketRegime } from "@/hooks/useMarketRegime";
+import { usePortfolioAllocation } from "@/hooks/usePortfolioAllocation";
+import { isProductionBuild } from "@/lib/env";
 
 const DEFAULT_LIVE_SYMBOLS = ["FPT", "MWG", "HPG", "VNM", "VCB"];
 
+// Equity-curve and PnL-waterfall have no backend endpoint yet. In production we
+// pass an empty series so they render an honest empty state instead of mock
+// data; in development the components fall back to their mock default prop.
+const PROD_EMPTY = isProductionBuild ? [] : undefined;
+
 export default function DashboardHomePage() {
-  const portfolio = usePortfolioMockSummary();
+  const portfolio = usePortfolioSummary();
+  const assets = useAssetsSummary();
+  const todayPnl = usePortfolioTodayPnl();
+  const regime = useMarketRegime();
+  const allocation = usePortfolioAllocation();
   const updatedAt = new Date().toLocaleTimeString();
+  const loading = portfolio.loading || assets.loading;
+  const error = portfolio.error ?? assets.error;
 
   return (
     <div className="space-y-6">
@@ -31,29 +46,37 @@ export default function DashboardHomePage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-ink-dim">
           <span>Updated {updatedAt}</span>
-          {portfolio.isMock ? <Badge tone="mock">Mock Data</Badge> : null}
         </div>
       </header>
 
-      {portfolio.error ? (
+      {error ? (
         <ErrorState
-          message={`Portfolio summary error: ${portfolio.error}. Showing mock data.`}
-          onRetry={portfolio.refetch}
+          message={`Portfolio summary error: ${error}`}
+          onRetry={() => {
+            void portfolio.refresh();
+            void assets.refresh();
+          }}
         />
       ) : null}
 
-      <KpiGrid summary={portfolio.data} loading={portfolio.isLoading} />
+      <KpiGrid
+        summary={portfolio.summary}
+        assets={assets.summary}
+        loading={loading}
+        todayPnl={todayPnl.data?.total_day_pnl ?? null}
+        regime={regime.data?.label ?? null}
+      />
 
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <EquityCurveChart />
+        <EquityCurveChart data={PROD_EMPTY} />
         <IndexComparisonChart />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AllocationDonut />
-        <PnlWaterfall />
+        <AllocationDonut data={allocation.data} />
+        <PnlWaterfall data={PROD_EMPTY} />
       </div>
 
       <section>

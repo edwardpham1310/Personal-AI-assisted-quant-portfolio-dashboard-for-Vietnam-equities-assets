@@ -19,6 +19,8 @@ from fastapi.responses import JSONResponse
 from core.deps import get_cache, get_db
 from core.security import AuthContext, get_current_user
 from schemas.portfolio import (
+    AllocationResponse,
+    AllocationSlice,
     EnrichedPosition,
     ManualAccount,
     ManualAccountCreate,
@@ -29,7 +31,9 @@ from schemas.portfolio import (
     ManualPositionUpdate,
     PortfolioSummary,
     PositionCreate,
+    PositionDayPnl,
     PositionUpdate,
+    TodayPnlResponse,
 )
 from services import market_cache, portfolio_valuation
 from services.cache import Cache
@@ -93,12 +97,18 @@ async def list_manual_portfolio(
     )
     if not accounts:
         return ManualPortfolioSnapshot(accounts=[])
-    positions = await db.select("manual_positions", user_jwt=user.raw_token)
+    # Defense-in-depth: scope positions to the user's own account ids explicitly
+    # (in addition to RLS) so a misconfigured policy can't leak another user's
+    # rows. PostgREST/FakeSupabaseDB ``select`` supports equality filters only,
+    # so fetch per account — a personal portfolio has 1–3 accounts.
     by_account: dict[str, list[ManualPosition]] = {}
-    for row in positions:
-        by_account.setdefault(row["account_id"], []).append(
-            ManualPosition.model_validate(row)
+    for acc in accounts:
+        rows = await db.select(
+            "manual_positions",
+            where={"account_id": acc["id"]},
+            user_jwt=user.raw_token,
         )
+        by_account[acc["id"]] = [ManualPosition.model_validate(row) for row in rows]
     return ManualPortfolioSnapshot(
         accounts=[
             ManualAccountWithPositions(**acc, positions=by_account.get(acc["id"], []))
@@ -257,6 +267,111 @@ async def get_portfolio_summary(
     quotes = await market_cache.get_quotes(cache, symbols)
     summary, _ = portfolio_valuation.compute_summary(positions, quotes)
     return summary
+
+
+@router.get(
+    "/today-pnl",
+    response_model=TodayPnlResponse,
+    summary="Intraday mark-to-market PnL vs session reference (research only)",
+)
+async def get_today_pnl(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+    cache: Cache = Depends(get_cache),
+) -> TodayPnlResponse:
+    account = await _get_default_account(db, user)
+    if account is None:
+        return TodayPnlResponse()
+    positions = await _load_positions_for_user(db, user, account["id"])
+    if not positions:
+        return TodayPnlResponse()
+
+    symbols = [str(p["symbol"]).upper() for p in positions]
+    quotes = await market_cache.get_quotes(cache, symbols)
+    rows: list[PositionDayPnl] = []
+    total = 0.0
+    warnings: list[str] = []
+    latest_ts: str | None = None
+
+    for pos, quote in zip(positions, quotes, strict=False):
+        sym = str(pos["symbol"]).upper()
+        qty = int(pos.get("quantity") or 0)
+        if quote is None:
+            warnings.append(f"quote_missing:{sym}")
+            rows.append(PositionDayPnl(symbol=sym, quantity=qty))
+            continue
+        prev = quote.reference_price
+        price = quote.price
+        day_pnl: float | None = None
+        day_pct: float | None = None
+        if prev is not None:
+            day_pnl = (price - prev) * qty
+            total += day_pnl
+            base = prev * qty
+            day_pct = (day_pnl / base) if base else None
+        else:
+            warnings.append(f"reference_price_missing:{sym}")
+        ts = quote.ts.isoformat() if hasattr(quote.ts, "isoformat") else str(quote.ts)
+        if latest_ts is None or ts > latest_ts:
+            latest_ts = ts
+        rows.append(
+            PositionDayPnl(
+                symbol=sym,
+                quantity=qty,
+                prev_close=prev,
+                current_price=price,
+                day_pnl=day_pnl,
+                day_pnl_pct=day_pct,
+            )
+        )
+
+    return TodayPnlResponse(
+        total_day_pnl=total, positions=rows, as_of=latest_ts, warnings=warnings
+    )
+
+
+@router.get(
+    "/allocation",
+    response_model=AllocationResponse,
+    summary="Allocation by strategy tag / symbol (research only)",
+)
+async def get_allocation(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+    cache: Cache = Depends(get_cache),
+) -> AllocationResponse:
+    account = await _get_default_account(db, user)
+    if account is None:
+        return AllocationResponse()
+    positions = await _load_positions_for_user(db, user, account["id"])
+    if not positions:
+        return AllocationResponse()
+
+    symbols = [str(p["symbol"]).upper() for p in positions]
+    quotes = await market_cache.get_quotes(cache, symbols)
+    summary, enriched = portfolio_valuation.compute_summary(positions, quotes)
+    total = summary.total_market_value
+
+    by_tag = [
+        AllocationSlice(label=tag, value=val, weight=(val / total if total > 0 else None))
+        for tag, val in summary.by_strategy_tag.items()
+    ]
+    by_symbol = [
+        AllocationSlice(label=ep.symbol, value=ep.market_value, weight=ep.weight)
+        for ep in enriched
+        if ep.market_value is not None
+    ]
+    warnings = list(summary.warnings)
+    if total <= 0:
+        warnings.append("cache_cold_or_no_market_value")
+
+    return AllocationResponse(
+        by_strategy_tag=by_tag,
+        by_symbol=by_symbol,
+        total_market_value=total,
+        as_of=summary.last_marked_at,
+        warnings=warnings,
+    )
 
 
 @router.get(
