@@ -2,7 +2,7 @@
 
 Doc này là hướng dẫn **lần đầu** dựng frontend trên Cloudflare Pages.
 Sau khi xong, bạn sẽ có một URL công khai dạng
-`https://quant-vn.trunghieu1096.workers.dev` (hoặc domain riêng) để truy cập dashboard.
+`https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev/` (hoặc domain riêng) để truy cập dashboard.
 
 > **Lưu ý về định dạng URL Cloudflare**:
 > - Domain mặc định mà Cloudflare cung cấp có thể là `<project>.pages.dev`
@@ -162,7 +162,7 @@ set sẽ build fail với lỗi `error Node.js v18 is below the minimum...`.
 
 1. Sau khi điền xong 5 env vars Production, bấm **Save and Deploy**.
 2. Pages bắt đầu chạy build. Khoảng 3–5 phút.
-3. Khi xong, sẽ có link dạng `https://quant-vn.trunghieu1096.workers.dev` (project name
+3. Khi xong, sẽ có link dạng `https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev/` (project name
    bạn đặt ở bước 2).
 4. Mở link → sẽ thấy trang `/login` của dashboard. (Nếu thấy lỗi build,
    xem mục 8 Troubleshooting.)
@@ -179,7 +179,7 @@ _assert_production_cors`). Bạn phải set `CORS_ORIGINS` chứa URL Pages.
 
 ```bash
 cd apps/api
-fly secrets set CORS_ORIGINS='["https://quant-vn.trunghieu1096.workers.dev"]'
+fly secrets set CORS_ORIGINS='["https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev"]'
 fly deploy   # restart để pick up CORS_ORIGINS mới
 ```
 
@@ -187,7 +187,7 @@ fly deploy   # restart để pick up CORS_ORIGINS mới
 
 Sửa `.env` trên server:
 ```
-CORS_ORIGINS=["https://quant-vn.trunghieu1096.workers.dev"]
+CORS_ORIGINS=["https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev"]
 ```
 Sau đó `sudo systemctl restart quant-vn-api`.
 
@@ -213,7 +213,7 @@ Nếu muốn URL đẹp như `https://dashboard.quantvn.com` thay cho
 3. Sau khi domain active, **cập nhật backend CORS** để gồm cả domain
    này:
    ```
-   CORS_ORIGINS=["https://quant-vn.trunghieu1096.workers.dev","https://dashboard.quantvn.com"]
+   CORS_ORIGINS=["https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev","https://dashboard.quantvn.com"]
    ```
 
 ---
@@ -285,7 +285,7 @@ bị reject), nên staging có thể chạy mock không cần SSI credential th�
 
 | | |
 |---|---|
-| ☐ | Pages build xanh; URL `https://quant-vn.trunghieu1096.workers.dev` mở được |
+| ☐ | Pages build xanh; URL `https://personal-ai-assisted-quant-portfolio-dashboard-for-vietnam.pages.dev/` mở được |
 | ☐ | Login Supabase thành công, redirect về `/dashboard` |
 | ☐ | `/data-quality` cho thấy `provider.status_code = READY`, `provider.mock = false` (Phase 2) |
 | ☐ | `/market` hiển thị giá thật, KHÔNG có badge "Mock Data" |

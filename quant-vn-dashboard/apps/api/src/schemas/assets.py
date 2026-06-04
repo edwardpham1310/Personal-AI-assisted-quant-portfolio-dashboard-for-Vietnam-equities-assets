@@ -52,6 +52,29 @@ class PnlBySymbol(BaseModel):
     cost_basis: float = 0.0
 
 
+class PnlBucket(BaseModel):
+    """One ordered contribution bar in the PnL waterfall."""
+
+    bucket: str
+    value: float = 0.0
+
+
+class PnlWaterfall(BaseModel):
+    """Ordered PnL contribution series: Realized → Unrealized → Costs → Net.
+
+    ``Realized`` is gross of fees (price-vs-avg-cost); ``Costs`` is the negated
+    historical trade-fee total — the two are disjoint, so ``Net`` (their
+    arithmetic sum) does not double-count. ``Costs`` covers realized trade
+    costs only, not projected exit costs on open positions (Unrealized stays
+    gross), so ``Net`` is not a liquidation value. Empty ``buckets`` is the
+    honest-empty shape when there is no account / no trades and positions.
+    """
+
+    buckets: list[PnlBucket] = Field(default_factory=list)
+    as_of: str | None = None
+    disclaimer: str = "Research only — not financial advice. No orders placed."
+
+
 class CostBreakdown(BaseModel):
     """Aggregated cost ledger for a period (MTD / YTD / ALL)."""
 

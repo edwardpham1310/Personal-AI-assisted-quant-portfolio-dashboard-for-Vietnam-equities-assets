@@ -66,14 +66,15 @@ export type Mover = {
   change_pct: number;
   volume: number;
   value?: number;
-  spike_pct?: number;
 };
 
 export type TopMovers = {
   gainers: Mover[];
   losers: Mover[];
   by_value: Mover[];
-  by_volume_spike: Mover[];
+  // Ranked by raw session volume (ordinal). Replaces the former, never-real
+  // ``by_volume_spike`` (which needed an ADV-20d baseline the live feed lacks).
+  by_volume: Mover[];
 };
 
 export const MOCK_TOP_MOVERS: TopMovers = {
@@ -92,9 +93,10 @@ export const MOCK_TOP_MOVERS: TopMovers = {
     { symbol: "FPT", price: 87_200, change_pct: 0.0234, volume: 4_200_000, value: 366_240_000_000 },
     { symbol: "MWG", price: 42_850, change_pct: 0.0202, volume: 3_900_000, value: 167_115_000_000 },
   ],
-  by_volume_spike: [
-    { symbol: "DGC", price: 68_400, change_pct: 0.015, volume: 8_400_000, spike_pct: 3.0 },
-    { symbol: "GVR", price: 32_200, change_pct: -0.007, volume: 6_200_000, spike_pct: 1.48 },
+  by_volume: [
+    { symbol: "HPG", price: 24_850, change_pct: -0.022, volume: 5_400_000 },
+    { symbol: "FPT", price: 87_200, change_pct: 0.0234, volume: 4_200_000 },
+    { symbol: "STB", price: 28_900, change_pct: -0.018, volume: 4_100_000 },
   ],
 };
 

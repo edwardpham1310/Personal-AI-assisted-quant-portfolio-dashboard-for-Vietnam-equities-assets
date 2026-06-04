@@ -16,7 +16,9 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { RangeSelect } from "@/components/ui/RangeSelect";
 import { useDailyOhlcv } from "@/hooks/useDailyOhlcv";
+import { OHLCV_RANGE_OPTIONS, rangeToDays, type RangeKey } from "@/lib/dateRange";
 import type { OHLCV } from "@/lib/mock/market";
 import { formatNumber } from "@/lib/format";
 
@@ -90,15 +92,10 @@ function Candle(props: CandleProps) {
   );
 }
 
-const TIMEFRAMES: { label: string; days: number }[] = [
-  { label: "1M", days: 30 },
-  { label: "3M", days: 90 },
-  { label: "6M", days: 180 },
-];
-
 export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: string }) {
   const [symbol, setSymbol] = useState(initialSymbol);
-  const [days, setDays] = useState(90);
+  const [range, setRange] = useState<RangeKey>("3M");
+  const days = useMemo(() => rangeToDays(range), [range]);
   const { data, isLoading, error, isMock, refetch } = useDailyOhlcv(symbol, days);
   const enriched = useMemo(() => enrich(data), [data]);
 
@@ -125,20 +122,8 @@ export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: st
         >
           Refresh
         </button>
-        <div className="ml-auto flex gap-1">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.label}
-              onClick={() => setDays(tf.days)}
-              className={`rounded border px-2 py-0.5 text-xs ${
-                days === tf.days
-                  ? "border-accent text-accent"
-                  : "border-border text-ink-muted hover:border-ink-dim"
-              }`}
-            >
-              {tf.label}
-            </button>
-          ))}
+        <div className="ml-auto">
+          <RangeSelect value={range} options={OHLCV_RANGE_OPTIONS} onChange={setRange} />
         </div>
       </div>
 

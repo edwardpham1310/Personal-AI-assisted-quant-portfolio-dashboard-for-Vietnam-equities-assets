@@ -73,6 +73,17 @@ def _parse_symbol_list(raw: str) -> list[str]:
     return parts
 
 
+def _sorted_ascending(bars: list[OHLCVBar]) -> list[OHLCVBar]:
+    """Guarantee ascending-by-timestamp order for chart feeds.
+
+    The SSI provider returns bars in page order, which is not contractually
+    ascending; candlestick libraries and positional rolling-MA math require
+    oldest→newest. Internal consumers (recommendations/scanner) already re-sort,
+    so this makes the chart-facing endpoints honour the same contract.
+    """
+    return sorted(bars, key=lambda b: b.ts)
+
+
 def _validate_date_range(start: date, end: date, *, max_days: int) -> None:
     today = datetime.now(UTC).date()
     if start > end:
@@ -170,7 +181,7 @@ async def get_daily_ohlcv(
     sym = _normalize_symbol(symbol)
     _validate_date_range(start, end, max_days=MAX_DAILY_HISTORY_DAYS)
     try:
-        return await provider.get_daily_ohlcv(sym, start, end)
+        return _sorted_ascending(await provider.get_daily_ohlcv(sym, start, end))
     except ProviderError as exc:
         raise _provider_error_to_http(exc) from None
 
@@ -193,7 +204,9 @@ async def get_intraday_ohlcv(
     if interval not in ALLOWED_INTERVALS:
         raise HTTPException(400, f"Unsupported interval. Allowed: {ALLOWED_INTERVALS}.")
     try:
-        return await provider.get_intraday_ohlcv(sym, start, end, interval)
+        return _sorted_ascending(
+            await provider.get_intraday_ohlcv(sym, start, end, interval)
+        )
     except ProviderError as exc:
         raise _provider_error_to_http(exc) from None
 
@@ -495,7 +508,7 @@ async def get_candles(
     try:
         if timeframe in _DAILY_TIMEFRAMES:
             _validate_date_range(start, today, max_days=MAX_DAILY_HISTORY_DAYS)
-            bars = await provider.get_daily_ohlcv(sym, start, today)
+            bars = _sorted_ascending(await provider.get_daily_ohlcv(sym, start, today))
             source = "SSI" if provider.name == "ssi" else provider.name.upper()
             return [
                 _bar_to_candle(
@@ -509,7 +522,9 @@ async def get_candles(
             ]
         interval = _TIMEFRAME_TO_INTRADAY[timeframe]
         _validate_date_range(start, today, max_days=MAX_INTRADAY_DAYS)
-        bars = await provider.get_intraday_ohlcv(sym, start, today, interval)
+        bars = _sorted_ascending(
+            await provider.get_intraday_ohlcv(sym, start, today, interval)
+        )
         source = "SSI" if provider.name == "ssi" else provider.name.upper()
         return [
             _bar_to_candle(

@@ -7,8 +7,8 @@ import { useAsyncResource } from "./useAsyncResource";
 /**
  * Top movers from ``GET /market/live/top-movers`` (poller-populated cache).
  *
- * Computed over the polled core-symbol universe. ``by_volume_spike`` is always
- * empty until an ADV baseline is wired (see ``services/market_breadth.py``).
+ * Computed over the polled core-symbol universe. ``by_volume`` is an ordinal
+ * raw-session-volume ranking (it replaced the never-real ``by_volume_spike``).
  * Missing keys are defaulted to ``[]`` so ``TopMoversCard`` can't crash on a
  * partial payload; mock only substitutes on a genuine fetch error.
  */
@@ -21,7 +21,7 @@ export function useTopMovers() {
         gainers: r.gainers ?? [],
         losers: r.losers ?? [],
         by_value: r.by_value ?? [],
-        by_volume_spike: r.by_volume_spike ?? [],
+        by_volume: r.by_volume ?? [],
       };
     },
     mockFallback: MOCK_TOP_MOVERS,

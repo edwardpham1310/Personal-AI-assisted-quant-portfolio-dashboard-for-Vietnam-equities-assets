@@ -95,6 +95,10 @@ def get_trading_provider(
                 consumer_id=settings.ssi_trading_consumer_id,
                 consumer_secret=settings.ssi_trading_consumer_secret,
                 base_url=settings.ssi_trading_base_url,
+                private_key=settings.ssi_trading_private_key,
+                account_no=settings.ssi_trading_account_no,
+                two_factor_type=settings.ssi_trading_two_factor_type,
+                pin=settings.ssi_trading_pin,
                 timeout=settings.ssi_trading_timeout_seconds,
             )
         _trading_provider_use_mock = settings.ssi_trading_use_mock

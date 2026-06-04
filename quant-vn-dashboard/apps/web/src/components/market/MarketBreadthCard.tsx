@@ -34,7 +34,13 @@ export function MarketBreadthCard({
   breadth: MarketBreadth;
   isMock: boolean;
 }) {
-  const { advancers, decliners, unchanged, ceiling, floor } = breadth;
+  // Defensive: coerce each field so a partial/missing payload renders 0,
+  // never NaN% (the poller can return a sparse object on a cold cache).
+  const advancers = Number(breadth?.advancers) || 0;
+  const decliners = Number(breadth?.decliners) || 0;
+  const unchanged = Number(breadth?.unchanged) || 0;
+  const ceiling = Number(breadth?.ceiling) || 0;
+  const floor = Number(breadth?.floor) || 0;
   const total = advancers + decliners + unchanged || 1;
   const advRatio = advancers / total;
 

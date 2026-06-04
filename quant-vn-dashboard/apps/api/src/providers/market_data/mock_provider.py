@@ -166,6 +166,7 @@ class MockMarketDataProvider(MarketDataProvider):
             drift, _, vol = _det01(f"{sym}-{ts.isoformat()}")
             price = ref * (1 + (drift - 0.5) * 0.04)
             change = price - ref
+            volume = float(int(vol * 1_000_000))
             out.append(
                 Quote(
                     symbol=sym,
@@ -174,7 +175,10 @@ class MockMarketDataProvider(MarketDataProvider):
                     reference_price=ref,
                     change=change,
                     change_pct=change / ref,
-                    volume=float(int(vol * 1_000_000)),
+                    volume=volume,
+                    # Mock-only session turnover so the "By value" tab populates
+                    # in dev. SSI supplies the real ``Value`` field in prod.
+                    value=price * volume,
                     ts=ts,
                     stale=False,
                     source="mock",

@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 
 from schemas.market import Quote
 from services.portfolio_valuation import (
+    build_pnl_waterfall,
     compute_summary,
     cost_breakdown,
     enrich_position,
@@ -223,3 +224,52 @@ def test_cost_breakdown_uses_asia_ho_chi_minh_for_default_today(
     # MTD anchored at June 1 ICT → only the June 1 trade qualifies.
     assert cb.brokerage_fee == 25
     assert cb.trade_count == 1
+
+
+# ── build_pnl_waterfall ──────────────────────────────────────────────────────
+
+
+def test_waterfall_normal_orders_and_net_identity() -> None:
+    wf = build_pnl_waterfall(realized=1200.0, unrealized=2000.0, costs=300.0, as_of="2026-05-29")
+    assert [b.bucket for b in wf.buckets] == ["Realized", "Unrealized", "Costs", "Net"]
+    vals = {b.bucket: b.value for b in wf.buckets}
+    assert vals["Realized"] == 1200.0  # gross — unchanged by fees
+    assert vals["Unrealized"] == 2000.0
+    assert vals["Costs"] == -300.0  # costs negate
+    assert vals["Net"] == 1200.0 + 2000.0 - 300.0
+    # Net is the arithmetic sum of the prior three buckets (no double-count).
+    assert abs(vals["Net"] - (vals["Realized"] + vals["Unrealized"] + vals["Costs"])) < 1e-9
+    assert wf.as_of == "2026-05-29"
+
+
+def test_waterfall_costs_only_is_negative_net() -> None:
+    wf = build_pnl_waterfall(realized=0.0, unrealized=0.0, costs=202.0)
+    vals = {b.bucket: b.value for b in wf.buckets}
+    assert vals["Costs"] == -202.0
+    assert vals["Net"] == -202.0
+    assert wf.as_of is None
+
+
+def test_waterfall_negative_net_when_costs_exceed_gains() -> None:
+    wf = build_pnl_waterfall(realized=100.0, unrealized=0.0, costs=500.0)
+    vals = {b.bucket: b.value for b in wf.buckets}
+    assert vals["Net"] == -400.0
+
+
+def test_waterfall_only_unrealized_no_trades() -> None:
+    wf = build_pnl_waterfall(realized=0.0, unrealized=2000.0, costs=0.0, as_of="2026-05-29")
+    vals = {b.bucket: b.value for b in wf.buckets}
+    assert vals["Realized"] == 0.0
+    assert vals["Unrealized"] == 2000.0
+    assert abs(vals["Costs"]) < 1e-9
+    assert vals["Net"] == 2000.0
+
+
+def test_waterfall_no_double_count_realized_stays_gross() -> None:
+    # Fees live ONLY in the Costs bucket; Realized is the gross figure verbatim.
+    realized_gross = 1500.0
+    wf = build_pnl_waterfall(realized=realized_gross, unrealized=0.0, costs=120.0)
+    vals = {b.bucket: b.value for b in wf.buckets}
+    assert vals["Realized"] == realized_gross
+    assert vals["Costs"] == -120.0
+    assert vals["Net"] == realized_gross - 120.0

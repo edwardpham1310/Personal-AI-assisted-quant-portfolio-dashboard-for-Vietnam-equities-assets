@@ -33,6 +33,29 @@ vi.mock("@/hooks/usePortfolioPositions", () => ({
 
 import PortfolioPage from "./page";
 
+type Account = { id: string; user_id: string; name: string; broker: string; currency: string };
+
+// Route the api mock by path: PortfolioPage calls /portfolio/manual to discover
+// accounts, and BrokerAccountCard calls /trading/status on mount. Default the
+// broker status to mock mode so no live balances are fetched.
+function setupApi(opts: { accounts?: Account[]; status?: Record<string, unknown> } = {}) {
+  const accounts = opts.accounts ?? [];
+  const status = opts.status ?? {
+    mock: true,
+    status_code: "READ_ONLY",
+    ssi_trading_use_mock: true,
+  };
+  apiMock.mockImplementation((path: string) => {
+    if (typeof path === "string" && path.startsWith("/trading/status")) {
+      return Promise.resolve(status);
+    }
+    if (typeof path === "string" && path.startsWith("/portfolio/manual")) {
+      return Promise.resolve({ accounts });
+    }
+    return Promise.resolve(undefined);
+  });
+}
+
 beforeEach(() => {
   apiMock.mockReset();
   summaryRefresh.mockReset();
@@ -41,17 +64,16 @@ beforeEach(() => {
 
 describe("PortfolioPage", () => {
   it("renders the header and research disclaimer", async () => {
-    apiMock.mockResolvedValueOnce({ accounts: [] });
+    setupApi();
     render(<PortfolioPage />);
     expect(screen.getByRole("heading", { name: "Portfolio" })).toBeDefined();
     expect(screen.getByText(/Research dashboard · Manual entry · No orders placed/i)).toBeDefined();
-    // Drain the resolved /portfolio/manual promise so the post-fetch state
-    // update lands inside the test (silences React act() warnings).
+    // Drain the resolved fetches so post-fetch state updates land in the test.
     await waitFor(() => expect(apiMock).toHaveBeenCalled());
   });
 
   it("shows the no-account hint when the user has no accounts yet", async () => {
-    apiMock.mockResolvedValueOnce({ accounts: [] });
+    setupApi({ accounts: [] });
     render(<PortfolioPage />);
     await waitFor(() => {
       expect(screen.getByText(/No account yet/i)).toBeDefined();
@@ -59,15 +81,9 @@ describe("PortfolioPage", () => {
   });
 
   it("shows the default-account notice when exactly one account exists", async () => {
-    apiMock.mockResolvedValueOnce({
+    setupApi({
       accounts: [
-        {
-          id: "acc-1",
-          user_id: "user-1",
-          name: "Main SSI",
-          broker: "SSI",
-          currency: "VND",
-        },
+        { id: "acc-1", user_id: "user-1", name: "Main SSI", broker: "SSI", currency: "VND" },
       ],
     });
     render(<PortfolioPage />);
@@ -78,18 +94,16 @@ describe("PortfolioPage", () => {
     expect(screen.getAllByText(/default account/i).length).toBeGreaterThan(0);
   });
 
-  it("renders the disabled SSI sync button with a Phase 2 badge", async () => {
-    apiMock.mockResolvedValueOnce({ accounts: [] });
+  it("renders the broker card in honest mock state (no fake balances)", async () => {
+    setupApi({ accounts: [] });
     render(<PortfolioPage />);
-    const btn = screen.getByRole("button", { name: /Sync from SSI/i });
-    expect(btn).toBeDefined();
-    expect(btn.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText("Phase 2")).toBeDefined();
-    await waitFor(() => expect(apiMock).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(screen.getByText(/running in mock mode/i)).toBeDefined();
+    });
   });
 
   it("renders the position-table empty state when there are no positions", async () => {
-    apiMock.mockResolvedValueOnce({ accounts: [] });
+    setupApi({ accounts: [] });
     render(<PortfolioPage />);
     await waitFor(() => {
       expect(screen.getByText(/No positions yet/i)).toBeDefined();

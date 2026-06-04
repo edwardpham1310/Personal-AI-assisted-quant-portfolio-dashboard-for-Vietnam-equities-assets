@@ -495,11 +495,11 @@ def test_trading_status_reports_safe_mode(client: TestClient, auth_headers) -> N
 # ── SSI Trading stub: 501 without ever contacting SSI ──────────────────────
 
 
-def test_ssi_trading_stub_emits_not_implemented_status() -> None:
-    """The SSITradingProvider raises NotImplemented-style 501 on read calls
-    but its ``status()`` returns a structured snapshot. This proves the
-    deps factory can wire it without crashing — Phase 3 will replace the
-    501 bodies with real SSI calls.
+def test_ssi_trading_unconfigured_status_and_honest_503() -> None:
+    """Phase 2.4: the read-only connector, constructed WITHOUT the read
+    credentials (private key / account / PIN), reports ``CONFIG_MISSING`` and
+    its read calls raise an honest 503 — never a fabricated balance. Order
+    placement stays permanently disabled.
     """
     import asyncio
 
@@ -513,7 +513,7 @@ def test_ssi_trading_stub_emits_not_implemented_status() -> None:
         timeout=5.0,
     )
     status = asyncio.run(provider.status())
-    assert status.status_code == "NOT_IMPLEMENTED"
+    assert status.status_code == "CONFIG_MISSING"
     assert status.mock is False
     assert status.order_placement_enabled is False
 
@@ -522,7 +522,7 @@ def test_ssi_trading_stub_emits_not_implemented_status() -> None:
 
     with pytest.raises(TradingProviderError) as exc:
         asyncio.run(_try_cash())
-    assert exc.value.status_code == 501
+    assert exc.value.status_code == 503
 
 
 def test_ssi_trading_stub_rejects_missing_credentials() -> None:

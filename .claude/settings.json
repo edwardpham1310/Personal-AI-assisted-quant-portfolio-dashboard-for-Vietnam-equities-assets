@@ -17,6 +17,8 @@
       "Read(**/.mypy_cache/**)",
       "Read(**/.ruff_cache/**)",
       "Read(**/.cache/**)",
+      "Read(**/.gitnexus/**)",
+      "Read(**/.gitnexus-cache/**)",
       "Read(**/logs/**)",
       "Read(**/tmp/**)",
       "Read(**/ai-context/**)",

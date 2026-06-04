@@ -23,10 +23,16 @@ Design constraints (deliberate, audited):
 * **by_value** uses ``Quote.value`` (session turnover in VND) directly — never
   ``price * volume`` (SSI volume units are not guaranteed to be shares). It is
   empty when ``value`` is absent (e.g. the mock provider leaves it ``None``).
-* **by_volume_spike** requires an Average-Daily-Volume baseline that a live
-  quote does not carry, so it is always returned empty here.
-  TODO(top_movers): wire an ADV-20d lookup (from the datapipe) to populate
-  volume-spike rankings.
+* **by_volume** ranks by raw session ``Quote.volume`` (top-N). It is an
+  ORDINAL activity ranking only — SSI volume units are not guaranteed to be
+  shares, so magnitudes are not strictly comparable across symbols; ``by_value``
+  (turnover in VND) remains the more robust liquidity measure. This replaces the
+  former ``by_volume_spike``, which required an Average-Daily-Volume (ADV-20d)
+  baseline a live quote cannot carry — so it was always empty. We do NOT
+  fabricate a spike multiple.
+  TODO(top_movers): a true volume-spike (today ÷ ADV-20d) needs daily-bar
+  history — wire an ADV-20d lookup (datapipe ``avg_volume_20d`` or the scanner's
+  ``_volume_ratio``) if/when the poller caches daily bars.
 
 The output shapes match the frontend contracts exactly
 (``MarketBreadth`` / ``TopMovers`` / ``Mover`` in
@@ -67,7 +73,7 @@ def empty_top_movers() -> dict[str, list[Any]]:
     All four keys are always present so the frontend ``TopMoversCard`` (which
     indexes ``movers[tab]``) never hits ``undefined``.
     """
-    return {"gainers": [], "losers": [], "by_value": [], "by_volume_spike": []}
+    return {"gainers": [], "losers": [], "by_value": [], "by_volume": []}
 
 
 def compute_breadth(quotes: list[Quote]) -> dict[str, int]:
@@ -110,9 +116,10 @@ def _mover(q: Quote, pct: float, *, with_value: bool = False) -> dict[str, Any]:
 
 
 def compute_top_movers(quotes: list[Quote], top_n: int = _DEFAULT_TOP_N) -> dict[str, list[Any]]:
-    """Top gainers / losers / by-value over the polled set.
+    """Top gainers / losers / by-value / by-volume over the polled set.
 
-    ``by_volume_spike`` is always empty (see module docstring — no ADV baseline).
+    ``by_volume`` is an ordinal raw-session-volume ranking (see module
+    docstring); it replaces the former always-empty ``by_volume_spike``.
     """
     with_pct = [(q, _signed_change_pct(q)) for q in quotes]
     movable = [(q, pct) for q, pct in with_pct if pct is not None]
@@ -125,9 +132,14 @@ def compute_top_movers(quotes: list[Quote], top_n: int = _DEFAULT_TOP_N) -> dict
     by_value_src = [(q, pct) for q, pct in movable if q.value is not None]
     by_value = sorted(by_value_src, key=lambda qp: qp[0].value or 0.0, reverse=True)[:top_n]
 
+    # Ranked by raw session volume (ordinal only). Restricted to movable rows so
+    # every mover carries a valid change_pct for the % column.
+    by_volume_src = [(q, pct) for q, pct in movable if q.volume]
+    by_volume = sorted(by_volume_src, key=lambda qp: qp[0].volume or 0.0, reverse=True)[:top_n]
+
     return {
         "gainers": [_mover(q, pct) for q, pct in gainers],
         "losers": [_mover(q, pct) for q, pct in losers],
         "by_value": [_mover(q, pct, with_value=True) for q, pct in by_value],
-        "by_volume_spike": [],
+        "by_volume": [_mover(q, pct) for q, pct in by_volume],
     }

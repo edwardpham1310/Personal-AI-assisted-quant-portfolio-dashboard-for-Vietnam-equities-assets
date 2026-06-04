@@ -308,3 +308,43 @@ def test_symbol_detail_unknown_symbol_still_returns_shape(
     body = r.json()
     assert body["security"]["symbol"] == "UNKNOWN"
     assert isinstance(body["warnings"], list)
+
+
+def test_daily_ohlcv_returned_ascending_even_if_provider_descending(
+    auth_headers, fake_db, fake_cache
+) -> None:
+    """The chart-facing route must guarantee oldest→newest regardless of the
+    provider's page order (SSI is not contractually ascending)."""
+    from datetime import datetime
+
+    from core.deps import get_cache, get_db, get_market_provider
+    from main import create_app
+    from schemas.market import OHLCVBar
+
+    def _bar(day: int) -> OHLCVBar:
+        return OHLCVBar(
+            symbol="FPT",
+            ts=datetime(2026, 5, day, tzinfo=UTC),
+            open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
+        )
+
+    class _DescProvider:
+        name = "mock"
+
+        async def get_daily_ohlcv(self, symbol, start, end):
+            # Deliberately DESCENDING (newest first) + one out-of-order bar.
+            return [_bar(3), _bar(1), _bar(2)]
+
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: fake_db
+    app.dependency_overrides[get_cache] = lambda: fake_cache
+    app.dependency_overrides[get_market_provider] = lambda: _DescProvider()
+    client = TestClient(app)
+
+    headers, _ = auth_headers()
+    r = client.get(
+        "/market/ohlcv/daily/FPT?start=2026-05-01&end=2026-05-03", headers=headers
+    )
+    assert r.status_code == 200, r.text
+    timestamps = [b["ts"] for b in r.json()]
+    assert timestamps == sorted(timestamps)  # ascending chronological

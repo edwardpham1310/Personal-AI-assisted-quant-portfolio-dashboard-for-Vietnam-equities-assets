@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -14,26 +14,14 @@ import {
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { Badge } from "@/components/ui/Badge";
+import { RangeSelect } from "@/components/ui/RangeSelect";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useIndexComparison } from "@/hooks/useIndexComparison";
-
-// Days-since-Jan-1 for the YTD button, clamped to the backend's 365-day cap.
-function ytdDays(): number {
-  const now = new Date();
-  const jan1 = new Date(now.getFullYear(), 0, 1);
-  return Math.min(365, Math.max(1, Math.ceil((now.getTime() - jan1.getTime()) / 86_400_000) + 1));
-}
-
-const RANGES: { label: string; days: number }[] = [
-  { label: "1M", days: 30 },
-  { label: "3M", days: 90 },
-  { label: "6M", days: 180 },
-  { label: "1Y", days: 365 },
-  { label: "YTD", days: ytdDays() },
-];
+import { OHLCV_RANGE_OPTIONS, rangeToDays, type RangeKey } from "@/lib/dateRange";
 
 export function IndexComparisonChart() {
-  const [days, setDays] = useState(90);
+  const [range, setRange] = useState<RangeKey>("3M");
+  const days = useMemo(() => rangeToDays(range), [range]);
   const { data, isLoading, error, isMock } = useIndexComparison(days);
 
   return (
@@ -45,23 +33,10 @@ export function IndexComparisonChart() {
         </span>
       }
       hint="Rebased to 100"
+      action={
+        <RangeSelect value={range} options={OHLCV_RANGE_OPTIONS} onChange={setRange} />
+      }
     >
-      <div className="mb-3 flex justify-end gap-1">
-        {RANGES.map((r) => (
-          <button
-            key={r.label}
-            onClick={() => setDays(r.days)}
-            className={`rounded border px-2 py-0.5 text-xs ${
-              days === r.days
-                ? "border-accent text-accent"
-                : "border-border text-ink-muted hover:border-ink-dim"
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-
       {isLoading ? (
         <Skeleton height={224} />
       ) : error ? (

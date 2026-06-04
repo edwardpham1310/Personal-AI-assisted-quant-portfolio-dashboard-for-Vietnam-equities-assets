@@ -82,6 +82,22 @@ class Settings(BaseSettings):
     ssi_trading_order_placement_enabled: bool = False
     ssi_trading_timeout_seconds: float = 10.0
 
+    # ── Phase 2.4 SSI Trading READ-ONLY account sync ───────────────────────
+    # Credential-ready but SHIPPED DISABLED (ssi_trading_use_mock=True by
+    # default). These enable the read-only connector (cash balance + stock
+    # positions) ONLY — there is still NO order-placement code path
+    # (submit_order raises 501). SAFETY: SSI FastConnect mints even a
+    # read-only access token only after a 2FA PIN/OTP, and that same PIN
+    # authorizes order placement — so populating ``ssi_trading_pin`` puts an
+    # order-capable secret in the deployment. Leave these empty unless you
+    # have explicitly accepted that risk AND proven read-only usage against
+    # the SSI sandbox. The wire format is implemented to convention and is
+    # marked TODO(ssi-sandbox) until sandbox-verified.
+    ssi_trading_private_key: str = ""       # RSA private key (PEM) to sign AccessToken
+    ssi_trading_account_no: str = ""        # Broker account number for read queries
+    ssi_trading_two_factor_type: int = 0    # 0 = PIN, 1 = OTP
+    ssi_trading_pin: str = ""               # 2FA code/PIN (order-capable secret)
+
     # ── Phase 2.8 Manual-confirm live trading ──────────────────────────────
     # Five-flag AND gate. Real SSI NewOrder runs ONLY when every flag is
     # in the "live" state AND the orchestrator validates re-auth +

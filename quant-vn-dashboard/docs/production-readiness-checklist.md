@@ -50,8 +50,8 @@ Cross-references:
 
 | | Item | Phase | Verified |
 |---|---|---|---|
-| ☐ | N/A — confirmed no `wrangler.toml` exists; the architecture uses Next.js BFF on Pages with Node runtime | 🟢 | |
-| ☐ | SSE proxy `apps/web/src/app/api/stream/[...path]/route.ts` deployed with `runtime = "nodejs"` | 🟢 | |
+| ☐ | N/A — confirmed no `wrangler.toml` exists; the architecture uses Next.js BFF on Cloudflare Pages Edge runtime | 🟢 | |
+| ☐ | SSE proxy `apps/web/src/app/api/stream/[...path]/route.ts` deployed with `runtime = "edge"` | 🟢 | |
 | ☐ | SSE first-chunk arrives within 5s on production URL | 🟢 | |
 | ☐ | If a future Worker is added: `wrangler deploy --dry-run` passes in CI | future | |
 
