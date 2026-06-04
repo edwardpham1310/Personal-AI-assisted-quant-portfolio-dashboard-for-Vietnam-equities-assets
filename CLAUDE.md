@@ -25,6 +25,8 @@ Quant_Finance/
 
 ## Đọc trước khi code
 
+- Ưu tiên GitNexus MCP/code graph trước khi đọc file rộng. Hỏi graph về module,
+  symbol, import/dependency, call-chain, rồi chỉ mở file liên quan trực tiếp.
 - Kiến trúc tổng thể: `docs/architecture.md`
 - Product vision: `docs/product-vision.md`
 - Nguyên tắc nghiên cứu: `docs/trading-rules.md`
@@ -47,6 +49,23 @@ Quant_Finance/
 
 - Thêm audit note vào `datapipe/docs/audit/` hoặc `quant/docs/audit/`
 - Chạy test suite của package liên quan trước khi coi là xong
+- Nếu thay đổi dependency/module boundary, chạy lại GitNexus analyze:
+  `cd quant-vn-dashboard/apps/web && npm run gitnexus:analyze:fast`
+
+## GitNexus MCP
+
+Codex dùng project-local MCP config tại `.codex/config.toml`:
+
+```toml
+[mcp_servers.gitnexus]
+command = "npx"
+args = ["-y", "gitnexus@latest", "mcp"]
+```
+
+Nếu Claude Code không đọc MCP config này trực tiếp, vẫn dùng GitNexus theo quy
+tắc workflow: chạy
+`npx gitnexus@latest analyze --index-only --drop-embeddings` và hỏi agent dựa
+vào graph/context trước khi mở file.
 
 ## Package references
 

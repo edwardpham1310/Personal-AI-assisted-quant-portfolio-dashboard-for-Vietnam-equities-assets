@@ -11,9 +11,10 @@ Two route families live here:
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
 from core.deps import get_cache, get_db
@@ -22,6 +23,8 @@ from schemas.portfolio import (
     AllocationResponse,
     AllocationSlice,
     EnrichedPosition,
+    EquityPoint,
+    EquitySnapshotRunResult,
     ManualAccount,
     ManualAccountCreate,
     ManualAccountWithPositions,
@@ -35,7 +38,7 @@ from schemas.portfolio import (
     PositionUpdate,
     TodayPnlResponse,
 )
-from services import market_cache, portfolio_valuation
+from services import market_cache, portfolio_snapshots, portfolio_valuation
 from services.cache import Cache
 from services.supabase_db import SupabaseDB
 
@@ -371,6 +374,73 @@ async def get_allocation(
         total_market_value=total,
         as_of=summary.last_marked_at,
         warnings=warnings,
+    )
+
+
+@router.get(
+    "/equity-curve",
+    response_model=list[EquityPoint],
+    summary="Daily NAV history for the default account (forward-only, honest-empty)",
+)
+async def get_equity_curve(
+    start: date | None = Query(
+        default=None, description="Inclusive start date (YYYY-MM-DD); omit for all history"
+    ),
+    end: date | None = Query(
+        default=None, description="Inclusive end date (YYYY-MM-DD); omit for through-latest"
+    ),
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+) -> list[EquityPoint]:
+    """Read-only, ascending by date. Returns only days actually snapshotted into
+    ``portfolio_equity_snapshots`` — never synthesises NAV. ``start``/``end`` is a
+    true calendar window; omit both for full history. Empty list until the writer
+    (POST /portfolio/snapshots/run) has recorded a matching day."""
+    if start is not None and end is not None and start > end:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="start must be <= end."
+        )
+    account = await _get_default_account(db, user)
+    if account is None:
+        return []
+    return await portfolio_snapshots.load_curve(
+        db,
+        user,
+        account["id"],
+        start=start.isoformat() if start else None,
+        end=end.isoformat() if end else None,
+    )
+
+
+@router.post(
+    "/snapshots/run",
+    response_model=EquitySnapshotRunResult,
+    summary="Record today's NAV snapshot for the default account (idempotent per day)",
+)
+async def run_equity_snapshot(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+    cache: Cache = Depends(get_cache),
+) -> EquitySnapshotRunResult:
+    """Writer trigger for the equity curve. Auth: the caller's own JWT — the
+    dashboard fires this on mount and an external cron can call it with a
+    user token. Records at most one snapshot per account per trading day; a
+    repeat call the same day recomputes the existing row. No orders, no
+    trading — pure NAV valuation persistence."""
+    account = await _get_default_account(db, user)
+    if account is None:
+        return EquitySnapshotRunResult(recorded=False, reason="no_account")
+    try:
+        result = await portfolio_snapshots.record_daily_snapshot(
+            db, user, cache, account["id"]
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    return EquitySnapshotRunResult(
+        recorded=True,
+        snapshot_date=result["snapshot_date"],
+        total_equity=result["total_equity"],
+        warnings=result["warnings"],
     )
 
 

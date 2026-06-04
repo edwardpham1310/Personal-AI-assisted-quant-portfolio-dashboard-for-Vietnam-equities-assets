@@ -1,27 +1,44 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useLiveQuotes, type TransportStatus } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/format";
 
+/** Format a quote timestamp safely — missing/invalid `ts` renders "—", never
+ *  the literal "Invalid Date" string. */
+function formatQuoteTime(ts?: string): string {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleTimeString();
+}
+
+/** Calm, stable badge per transport status — no rapid Disconnected/Stale flips.
+ *  "polling"/"reconnecting" are healthy/transitional and use a neutral tone so a
+ *  working REST fallback is never presented as a failure. */
+const STATUS_BADGE: Record<TransportStatus, { label: string; cls: string } | null> = {
+  live: { label: "Live", cls: "bg-accent-up/15 text-accent-up" },
+  polling: { label: "Polling", cls: "bg-accent/15 text-accent" },
+  reconnecting: { label: "Reconnecting", cls: "bg-ink-dim/15 text-ink-dim" },
+  connecting: null, // startup — no alarming badge
+  offline: { label: "Offline", cls: "bg-accent-down/20 text-accent-down" },
+};
+
 export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
-  const { quotes, lastUpdate, connected, error } = useLiveQuotes(symbols);
+  const { quotes, lastUpdate, transportStatus, hasEverReceivedData, error } =
+    useLiveQuotes(symbols);
+  // Stale is timestamp-driven (q.stale from the backend), independent of the
+  // connection — so it does not flash on transient reconnects.
   const stale = quotes.some((q) => q.stale);
+
+  const badge = STATUS_BADGE[transportStatus];
 
   const headerBadges = (
     <span className="ml-2 inline-flex gap-2 align-middle">
-      {!connected ? (
-        <span
-          className="rounded bg-accent-down/20 px-1.5 py-0.5 text-[10px] font-medium text-accent-down"
-          title={error ?? "Stream disconnected — falling back to polling"}
-        >
-          Disconnected
+      {badge ? (
+        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.cls}`}>
+          {badge.label}
         </span>
-      ) : (
-        <span className="rounded bg-accent-up/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-up">
-          Live
-        </span>
-      )}
+      ) : null}
       {stale ? (
         <span
           className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"
@@ -43,13 +60,17 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
       }
       hint={
         lastUpdate
-          ? `Last update ${new Date(lastUpdate).toLocaleTimeString()}`
-          : "Awaiting first update…"
+          ? `Last update ${formatQuoteTime(lastUpdate)}`
+          : "Waiting for live data…"
       }
     >
       {quotes.length === 0 ? (
         <p className="text-xs text-ink-dim">
-          {error ? error : "Cache is cold — quotes will appear when the poller writes them."}
+          {transportStatus === "offline" && error
+            ? error
+            : hasEverReceivedData
+              ? "Waiting for live data…"
+              : "Cache is cold — quotes will appear when the poller writes them."}
         </p>
       ) : (
         <table className="w-full text-sm">
@@ -79,9 +100,9 @@ export function LiveQuotesPanel({ symbols }: { symbols: string[] }) {
                 </td>
                 <td
                   className={`py-1 text-right text-xs ${q.stale ? "text-accent" : "text-ink-dim"}`}
-                  title={q.ts}
+                  title={q.ts ?? undefined}
                 >
-                  {new Date(q.ts).toLocaleTimeString()}
+                  {formatQuoteTime(q.ts)}
                 </td>
               </tr>
             ))}

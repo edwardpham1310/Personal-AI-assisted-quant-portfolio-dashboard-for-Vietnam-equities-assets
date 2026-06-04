@@ -73,11 +73,11 @@ def test_compute_breadth_skips_quotes_without_reference() -> None:
 # ── Pure-function: top movers ─────────────────────────────────────────────────
 
 
-def test_compute_top_movers_ranks_gainers_losers_and_value() -> None:
+def test_compute_top_movers_ranks_gainers_losers_value_and_volume() -> None:
     quotes = [
-        _q("UP1", 110.0, 100.0, value=5_000.0),  # +10%
-        _q("UP2", 105.0, 100.0, value=9_000.0),  # +5%
-        _q("DN1", 90.0, 100.0, value=1_000.0),  # -10%
+        _q("UP1", 110.0, 100.0, volume=2_000.0, value=5_000.0),  # +10%
+        _q("UP2", 105.0, 100.0, volume=8_000.0, value=9_000.0),  # +5%
+        _q("DN1", 90.0, 100.0, volume=5_000.0, value=1_000.0),  # -10%
     ]
     m = market_breadth.compute_top_movers(quotes)
     assert [r["symbol"] for r in m["gainers"]] == ["UP1", "UP2"]
@@ -85,8 +85,16 @@ def test_compute_top_movers_ranks_gainers_losers_and_value() -> None:
     # by_value sorts by traded value desc, independent of price move.
     assert [r["symbol"] for r in m["by_value"]] == ["UP2", "UP1", "DN1"]
     assert m["by_value"][0]["value"] == 9_000.0
-    # No ADV baseline → always empty.
-    assert m["by_volume_spike"] == []
+    # by_volume sorts by raw session volume desc (replaces the old fake spike).
+    assert [r["symbol"] for r in m["by_volume"]] == ["UP2", "DN1", "UP1"]
+    assert m["by_volume"][0]["volume"] == 8_000.0
+    assert "by_volume_spike" not in m
+
+
+def test_compute_top_movers_by_volume_empty_when_volume_absent() -> None:
+    quotes = [_q("UP1", 110.0, 100.0), _q("DN1", 90.0, 100.0)]  # no volume field
+    m = market_breadth.compute_top_movers(quotes)
+    assert m["by_volume"] == []
 
 
 def test_compute_top_movers_by_value_empty_when_value_absent() -> None:
@@ -108,7 +116,7 @@ def test_empty_shapes_have_all_keys() -> None:
         "gainers",
         "losers",
         "by_value",
-        "by_volume_spike",
+        "by_volume",
     }
 
 
@@ -135,7 +143,7 @@ def test_live_top_movers_cold_cache_returns_full_empty_shape(
     assert r.status_code == 200
     body = r.json()
     # All four keys present so the frontend never indexes undefined.
-    assert body == {"gainers": [], "losers": [], "by_value": [], "by_volume_spike": []}
+    assert body == {"gainers": [], "losers": [], "by_value": [], "by_volume": []}
 
 
 def test_live_breadth_returns_seeded_payload(client: TestClient, auth_headers, fake_cache) -> None:

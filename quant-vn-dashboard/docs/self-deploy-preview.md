@@ -35,7 +35,7 @@ once SSI + Supabase credentials are in your hands.
 |---|---|---|
 | Project name | `quant-vn` (or your own; lowercase + hyphens) | Becomes the URL prefix on `*.pages.dev` |
 | Production branch | `main` | |
-| Framework preset | **Next.js** | The Pages Next.js adapter (not "Static HTML"). The frontend uses the App Router with one Node-runtime BFF route (`/api/stream/[...path]`). |
+| Framework preset | **Next.js** | The Pages Next.js adapter (not "Static HTML"). The frontend uses the App Router with one Edge-runtime BFF route (`/api/stream/[...path]`). |
 | **Root directory** | `quant-vn-dashboard` | Repo root sits one level up. |
 | **Build command** | `cd apps/web && pnpm install --frozen-lockfile=false && pnpm build` | The web app lives in `apps/web/`. |
 | **Build output directory** | `apps/web/.next` | |

@@ -21,6 +21,7 @@ from schemas.assets import (
     CostBreakdown,
     CostPeriod,
     PnlBreakdown,
+    PnlWaterfall,
 )
 from services import market_cache, portfolio_valuation
 from services.cache import Cache
@@ -233,6 +234,51 @@ async def get_pnl(
         "by_symbol": [row.model_dump() for row in by_symbol],
         "disclaimer": "Research only — not financial advice. No orders placed.",
     }
+
+
+@router.get(
+    "/pnl/waterfall",
+    response_model=PnlWaterfall,
+    summary="Ordered PnL contribution series: Realized → Unrealized → Costs → Net",
+)
+async def get_pnl_waterfall(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+    cache: Cache = Depends(get_cache),
+) -> PnlWaterfall:
+    account = await _get_default_account_row(db, user)
+    if account is None:
+        return PnlWaterfall()  # honest-empty: buckets []
+
+    positions = await _load_positions(db, user, account["id"])
+    trades = await _load_trades(db, user, account["id"])
+
+    # Honest-empty when the account has neither trades nor positions: no bars
+    # instead of four zeros (mirrors PnlWaterfall.tsx `data.length === 0`).
+    if not positions and not trades:
+        return PnlWaterfall()
+
+    # Unrealized (live-marked) — same path as /assets/pnl.
+    summary_unrealized = 0.0
+    as_of: str | None = None
+    if positions:
+        symbols = [str(p["symbol"]).upper() for p in positions]
+        quotes = await market_cache.get_quotes(cache, symbols)
+        summary, _ = portfolio_valuation.compute_summary(positions, quotes)
+        summary_unrealized = summary.total_unrealized_pnl
+        as_of = summary.last_marked_at
+
+    # Realized is GROSS of fees; costs are the disjoint fee total → no double-count.
+    realized = portfolio_valuation.realized_pnl_from_trades(trades)
+    total_realized = float(realized.get("total_realized", 0.0))
+    costs = portfolio_valuation.cost_breakdown(trades).total
+
+    return portfolio_valuation.build_pnl_waterfall(
+        realized=total_realized,
+        unrealized=summary_unrealized,
+        costs=costs,
+        as_of=as_of,
+    )
 
 
 @router.get(

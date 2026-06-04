@@ -13,14 +13,24 @@ import { useAssetsSummary } from "@/hooks/useAssetsSummary";
 import { usePortfolioTodayPnl } from "@/hooks/usePortfolioTodayPnl";
 import { useMarketRegime } from "@/hooks/useMarketRegime";
 import { usePortfolioAllocation } from "@/hooks/usePortfolioAllocation";
+import { useEquityCurve } from "@/hooks/useEquityCurve";
+import { usePnlWaterfall } from "@/hooks/usePnlWaterfall";
+import { RangeSelect } from "@/components/ui/RangeSelect";
+import { EQUITY_RANGE_OPTIONS, type RangeKey } from "@/lib/dateRange";
+import { useState } from "react";
 import { isProductionBuild } from "@/lib/env";
 
 const DEFAULT_LIVE_SYMBOLS = ["FPT", "MWG", "HPG", "VNM", "VCB"];
 
-// Equity-curve and PnL-waterfall have no backend endpoint yet. In production we
-// pass an empty series so they render an honest empty state instead of mock
-// data; in development the components fall back to their mock default prop.
+// Equity-curve and PnL-waterfall are now backed by real endpoints. When the
+// backend returns data we show it. When it returns honest-empty ([]), in
+// production we keep the empty array (honest empty state, never mock); in
+// development we pass `undefined` so the components fall back to their mock
+// default prop for local design work.
 const PROD_EMPTY = isProductionBuild ? [] : undefined;
+function liveOrEmpty<T>(rows: T[]): T[] | undefined {
+  return rows.length > 0 ? rows : PROD_EMPTY;
+}
 
 export default function DashboardHomePage() {
   const portfolio = usePortfolioSummary();
@@ -28,6 +38,9 @@ export default function DashboardHomePage() {
   const todayPnl = usePortfolioTodayPnl();
   const regime = useMarketRegime();
   const allocation = usePortfolioAllocation();
+  const [equityRange, setEquityRange] = useState<RangeKey>("3M");
+  const equityCurve = useEquityCurve(equityRange);
+  const pnlWaterfall = usePnlWaterfall();
   const updatedAt = new Date().toLocaleTimeString();
   const loading = portfolio.loading || assets.loading;
   const error = portfolio.error ?? assets.error;
@@ -70,13 +83,22 @@ export default function DashboardHomePage() {
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <EquityCurveChart data={PROD_EMPTY} />
+        <EquityCurveChart
+          data={liveOrEmpty(equityCurve.data)}
+          action={
+            <RangeSelect
+              value={equityRange}
+              options={EQUITY_RANGE_OPTIONS}
+              onChange={setEquityRange}
+            />
+          }
+        />
         <IndexComparisonChart />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AllocationDonut data={allocation.data} />
-        <PnlWaterfall data={PROD_EMPTY} />
+        <PnlWaterfall data={liveOrEmpty(pnlWaterfall.data)} />
       </div>
 
       <section>

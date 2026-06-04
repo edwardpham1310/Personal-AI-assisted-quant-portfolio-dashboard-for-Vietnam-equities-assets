@@ -27,6 +27,8 @@ type Event = {
 };
 
 const REST_FALLBACK_INTERVAL_MS = 30_000;
+// Stable identity so useEventStream doesn't recreate the EventSource each render.
+const OVERVIEW_EVENT_TYPES = ["market_overview"];
 
 export function useMarketOverviewStream() {
   const api = useApi();
@@ -42,7 +44,7 @@ export function useMarketOverviewStream() {
 
   const { connected, error: streamError } = useEventStream<Event>({
     path: "/api/stream/market-overview",
-    eventTypes: ["market_overview"],
+    eventTypes: OVERVIEW_EVENT_TYPES,
     onMessage: handleMessage,
   });
 

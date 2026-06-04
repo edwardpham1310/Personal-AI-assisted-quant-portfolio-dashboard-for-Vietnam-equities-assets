@@ -13,6 +13,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatVnd, formatNumber, formatPct } from "@/lib/format";
+import { sortByTimeAsc } from "@/lib/dateRange";
 import {
   usePaperAccounts,
   usePaperEquityCurve,
@@ -74,7 +75,10 @@ export default function PaperTradingPage() {
     }
   }
 
-  const equityChartData = equity.data.map((p) => ({
+  // Defensive: sort by the raw timestamp ascending BEFORE formatting to a
+  // locale string (which is not chronologically sortable), so the curve always
+  // renders oldest→newest regardless of source order.
+  const equityChartData = sortByTimeAsc(equity.data, (p) => p.timestamp).map((p) => ({
     ts: new Date(p.timestamp).toLocaleString(),
     equity: p.total_equity,
     drawdown: -(p.drawdown * 100),

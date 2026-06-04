@@ -7,13 +7,13 @@ import { EmptyState } from "@/components/ui/AsyncStates";
 import type { Mover, TopMovers } from "@/lib/mock/market";
 import { formatNumber, formatPct, formatVnd } from "@/lib/format";
 
-type Tab = "gainers" | "losers" | "by_value" | "by_volume_spike";
+type Tab = "gainers" | "losers" | "by_value" | "by_volume";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "gainers", label: "Gainers" },
   { id: "losers", label: "Losers" },
   { id: "by_value", label: "By value" },
-  { id: "by_volume_spike", label: "Vol spike" },
+  { id: "by_volume", label: "Most active" },
 ];
 
 function MoverRow({ row, tab }: { row: Mover; tab: Tab }) {
@@ -35,9 +35,7 @@ function MoverRow({ row, tab }: { row: Mover; tab: Tab }) {
       <td className="py-1 text-right font-mono text-ink-dim">
         {tab === "by_value" && row.value != null
           ? formatVnd(row.value, { compact: true })
-          : tab === "by_volume_spike" && row.spike_pct != null
-            ? `${row.spike_pct.toFixed(2)}×`
-            : formatNumber(row.volume)}
+          : formatNumber(row.volume)}
       </td>
     </tr>
   );
@@ -83,9 +81,7 @@ export function TopMoversCard({ movers, isMock }: { movers: TopMovers; isMock: b
               <th className="py-1">Symbol</th>
               <th className="py-1 text-right">Price</th>
               <th className="py-1 text-right">%</th>
-              <th className="py-1 text-right">
-                {tab === "by_value" ? "Value" : tab === "by_volume_spike" ? "× avg vol" : "Volume"}
-              </th>
+              <th className="py-1 text-right">{tab === "by_value" ? "Value" : "Volume"}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,6 +91,12 @@ export function TopMoversCard({ movers, isMock }: { movers: TopMovers; isMock: b
           </tbody>
         </table>
       )}
+      {tab === "by_volume" && rows.length > 0 ? (
+        <p className="mt-2 text-[11px] text-ink-dim">
+          Ranked by raw session volume (ordinal only — use “By value” for true
+          liquidity).
+        </p>
+      ) : null}
     </Card>
   );
 }

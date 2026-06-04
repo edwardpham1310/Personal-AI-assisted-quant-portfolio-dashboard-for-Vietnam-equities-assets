@@ -47,6 +47,8 @@ _USER_OWNED_TABLES = {
     "auto_trade_decisions",
     "auto_trade_orders",
     "auto_trade_risk_counters",
+    # Phase 2.2 dashboard equity-curve NAV history.
+    "portfolio_equity_snapshots",
 }
 
 

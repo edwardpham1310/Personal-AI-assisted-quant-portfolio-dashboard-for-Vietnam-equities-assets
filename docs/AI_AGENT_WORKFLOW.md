@@ -1,129 +1,172 @@
-# AI Agent Workflow
+# AI Agent Workflow with GitNexus Code Knowledge Graph
 
-This repo is set up for small, targeted AI coding sessions. Claude Code,
-Codex, Aider, Continue, and Repomix should operate on source files,
-configuration, docs, tests, and tiny fixtures. They should not load runtime
-market data, database files, logs, build outputs, or generated context bundles.
+This repository is configured for small, graph-guided AI coding sessions.
+Claude Code, Codex, Aider, Continue, and other coding agents should use
+GitNexus to query architecture, symbols, call chains, imports, and file
+relationships before reading files directly.
 
-## Why 1M Context Is Disabled
+## Repository Shape
 
-Claude Code 1M context can be expensive and can fail with:
+This is a monorepo:
 
-```text
-API Error: Usage credits required for 1M context
+- `datapipe/`: Python data ingestion, validation, SQLite/DuckDB export.
+- `quant/`: Python strategy, backtest, costs, portfolio, recommendations.
+- `quant-vn-dashboard/apps/api/`: FastAPI backend.
+- `quant-vn-dashboard/apps/web/`: Next.js dashboard.
+- `docs/`, `guide/`: workspace documentation.
+
+Package managers in use:
+
+- Python: `pip` / editable installs from `pyproject.toml`.
+- Frontend: `npm` from `quant-vn-dashboard/apps/web/package-lock.json`.
+- GitNexus: npx-based commands, no global install required.
+
+Node.js 18+ is required for `npx`; Node.js 20+ is recommended because the
+frontend uses Next.js 15.
+
+## Purpose
+
+Use GitNexus to reduce token usage and make safer edits:
+
+- Start from graph queries and repository summaries.
+- Identify impacted modules, symbols, imports, call chains, and nearby tests.
+- Read only the smallest directly connected file set.
+- Avoid pasting large files into context.
+- Keep runtime data, databases, caches, and generated indexes out of git.
+
+## Setup
+
+From the frontend package, use the package scripts:
+
+```bash
+cd quant-vn-dashboard/apps/web
+npm run gitnexus:analyze
+npm run gitnexus:analyze:fast
+npm run gitnexus:analyze:force
+npm run gitnexus:mcp
+npm run gitnexus:serve
 ```
 
-This project does not need full-repo or full-data context. Quant work is safer
-when agents inspect schemas, interfaces, validation rules, tests, and small
-fixtures.
+From the repository root, use npx directly:
 
-The repo-level Claude configuration sets:
+```bash
+npx gitnexus@latest analyze
+npx gitnexus@latest analyze --index-only --drop-embeddings
+npx -y gitnexus@latest mcp
+```
+
+GitNexus embeddings are off by default in the current CLI. Use
+`--index-only --drop-embeddings` for quick local graph refreshes and CI-like
+checks that do not inject generated text into `AGENTS.md` or `CLAUDE.md`.
+The package scripts clean generated `.gitnexus/` folders before analysis so a
+stale or incompatible local index cannot poison the next run.
+
+## MCP
+
+Codex uses the project-local MCP config in `.codex/config.toml`:
+
+```toml
+[mcp_servers.gitnexus]
+command = "npx"
+args = ["-y", "gitnexus@latest", "mcp"]
+```
+
+If a tool does not read project-local Codex config, add the same block to your
+user-level config:
+
+```text
+~/.codex/config.toml
+```
+
+For Cursor or another editor, use the equivalent MCP command:
+
+```json
+{
+  "mcpServers": {
+    "gitnexus": {
+      "command": "npx",
+      "args": ["-y", "gitnexus@latest", "mcp"]
+    }
+  }
+}
+```
+
+Do not overwrite user-global editor config from this repo.
+
+## Daily Workflow
+
+1. Run GitNexus analyze after major refactors:
+   `npx gitnexus@latest analyze --index-only --drop-embeddings`.
+2. Ask the agent to use GitNexus MCP/context first.
+3. Agent identifies impacted modules/files through graph queries.
+4. Agent reads only the smallest necessary file set.
+5. Agent edits small, targeted changes.
+6. Agent runs focused tests/lint/typecheck for the touched package.
+7. Re-run analyze if dependency structure changed.
+
+## Token-Saving Policy
+
+Agents must not read the whole repo.
+
+Agents must not paste large files into context.
+
+Agents must start from graph queries and repo summary.
+
+Agents must inspect only upstream/downstream related files.
+
+Agents must avoid:
+
+- `data/raw/`, `data/processed/`, `data/cache/`, `data/vendor/`
+- `datapipe/data/`, `quant/data/`, `quant-vn-dashboard/data/`
+- `db/`, `quant-vn-dashboard/db/` runtime DB files
+- `.gitnexus/`, `.gitnexus-cache/`, `ai-context/`
+- `.git/`, `.venv/`, `venv/`, `node_modules/`, `.next/`
+- `*.duckdb`, `*.sqlite`, `*.sqlite3`, `*.db`, `*.parquet`, large `*.csv`,
+  logs, caches, and build outputs
+
+Tiny fixtures under `tests/fixtures/` are allowed.
+
+## Quant-Specific Module Map
+
+Use GitNexus to locate these module families before editing:
+
+- Backend API: `quant-vn-dashboard/apps/api/src/api/routes/`,
+  `core/`, `services/`, `repositories/`.
+- SSI data connector:
+  `quant-vn-dashboard/apps/api/src/providers/market_data/`,
+  `datapipe/src/quant_vn_data/providers/`.
+- DuckDB/SQLite pipeline:
+  `datapipe/src/quant_vn_data/storage/`, `src/data_pipeline/`.
+- Candle chart service:
+  frontend chart components and hooks under `quant-vn-dashboard/apps/web/src/`.
+- Strategy engine: `quant/src/quant_vn/strategies/`.
+- Backtest engine: `quant/src/quant_vn/backtest/`.
+- Portfolio module: `quant/src/quant_vn/portfolio/`,
+  `quant-vn-dashboard/apps/api/src/api/routes/portfolio.py`.
+- Risk/fee/tax module: `quant/src/quant_vn/costs/`,
+  `quant/src/quant_vn/execution/rules.py`.
+- Order preview/trading safety module: execution, recommendation validator,
+  auth, permissions, audit logging, and guardrails.
+
+## Safety Rules
+
+- Do not edit trading execution code without an explicit task.
+- Do not enable auto-trading.
+- Do not add real order placement.
+- Do not use mock data when the task requires SSI real data.
+- Never commit secrets, API keys, SSI credentials, tokens, or local DB files.
+- Keep generated data/index files ignored.
+- Do not read DuckDB/SQLite database files directly.
+- If uncertain about market fees, tax, VAT, settlement, lot size, or trading
+  calendar assumptions, add a TODO instead of hardcoding.
+
+## Claude 1M Context
+
+Claude Code 1M context is disabled through `.claude/settings.json`:
 
 ```bash
 CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 ```
-
-You can also set it in your shell:
-
-```bash
-export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
-claude --model claude-sonnet-4-5
-```
-
-## Generate Small Context With Repomix
-
-Use Repomix when an AI review needs compressed repo context:
-
-```bash
-npx repomix
-```
-
-For narrow reviews, include only the files needed:
-
-```bash
-npx repomix --include "src/**/*.py,tests/**/*.py,README.md"
-```
-
-The default config writes generated output to:
-
-```text
-ai-context/repomix-output.md
-```
-
-Generated AI context is ignored by git and should not be committed.
-
-## Files Agents Should Avoid
-
-AI agents must not inspect full raw market data files or database files. They
-should work through schema files, sample fixtures, typed interfaces, validation
-rules, and small test datasets.
-
-Avoid:
-
-- `data/raw/`
-- `data/processed/`
-- `data/cache/`
-- `data/vendor/`
-- `datapipe/data/`
-- `quant/data/`
-- `db/`
-- `ai-context/`
-- `.git/`
-- `.venv/`, `venv/`, `node_modules/`
-- `dist/`, `build/`, `.next/`, `coverage/`
-- Large `*.csv` exports; tiny files under `tests/fixtures/` are allowed.
-- `*.parquet`, `*.duckdb`, `*.sqlite`, `*.sqlite3`, `*.db`, `*.log`
-
-## Aider And Continue
-
-Use Aider or Continue on specific files rather than the whole repository:
-
-```bash
-aider src/path/to/file.py tests/path/to/test_file.py
-```
-
-Good prompts:
-
-```text
-Edit only quant/src/quant_vn/costs/taxes.py and quant/tests/test_costs_taxes.py.
-Do not read data files. Use tests/fixtures if sample rows are needed.
-```
-
-```text
-Review datapipe/src/quant_vn_data/validation/ohlcv_checks.py for duplicate date
-handling. Do not inspect runtime databases or raw provider files.
-```
-
-## Data Access Rules
-
-Runtime data is outside normal agent context:
-
-- Real DuckDB/SQLite files must not be committed.
-- Large CSV/parquet files must not be committed.
-- Raw provider data belongs in `data/raw/` or package runtime data folders.
-- Processed datasets belong in `data/processed/`.
-- Agents should use `src/data_pipeline/` interfaces and `tests/fixtures/`.
-- Storage code should expose functions/classes instead of requiring database
-  file inspection.
-
-## Quant-Specific Review Rules
-
-When editing quant logic for Vietnam markets, account for:
-
-- Brokerage fees.
-- Tax assumptions.
-- VAT/service fees when relevant.
-- Slippage.
-- Liquidity filters.
-- Settlement delay.
-- Trading calendar.
-- Corporate actions.
-- Lot size and order constraints.
-
-If an assumption is uncertain, add a TODO and source requirement instead of
-hardcoding it.
-
-## Troubleshooting
 
 If Claude reports:
 
@@ -138,4 +181,4 @@ export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
 claude --model claude-sonnet-4-5
 ```
 
-Then restart the Claude Code session from a small prompt with explicit files.
+Then restart from a small prompt with explicit files or GitNexus graph queries.

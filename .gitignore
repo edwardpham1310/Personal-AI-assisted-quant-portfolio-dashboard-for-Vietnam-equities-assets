@@ -3,9 +3,12 @@
 .env.*
 !.env.example
 *.env
+*.env.local
 .claude/*
 !.claude/
 !.claude/settings.json
+!.claude/commands/
+!.claude/commands/*.md
 .claude/settings.local.json
 
 # Python
@@ -21,6 +24,7 @@ dist/
 .venv/
 venv/
 env/
+node_modules/
 
 # Data and databases
 data/*
@@ -34,6 +38,7 @@ data/processed/**
 !data/cache/
 data/cache/**
 !data/cache/.gitkeep
+data/vendor/
 !data/samples/
 !data/samples/.gitkeep
 db/*
@@ -65,6 +70,8 @@ ai-context/*
 !ai-context/.gitkeep
 repomix-output.*
 .repo-context.*
+.gitnexus/
+.gitnexus-cache/
 
 # Testing and tooling
 .pytest_cache/

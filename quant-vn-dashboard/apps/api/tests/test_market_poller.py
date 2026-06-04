@@ -58,10 +58,10 @@ async def test_poll_once_writes_breadth_and_top_movers() -> None:
 
     movers = await market_cache.get_top_movers(cache)
     assert movers is not None
-    assert set(movers) == {"gainers", "losers", "by_value", "by_volume_spike"}
-    # Mock provider leaves Quote.value None → by_value empty; no ADV → spike empty.
-    assert movers["by_value"] == []
-    assert movers["by_volume_spike"] == []
+    assert set(movers) == {"gainers", "losers", "by_value", "by_volume"}
+    # Mock quotes now carry value (price*volume) and volume, so both populate.
+    assert len(movers["by_value"]) > 0
+    assert len(movers["by_volume"]) > 0
 
 
 @pytest.mark.asyncio

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import { ErrorState, EmptyState } from "@/components/ui/AsyncStates";
 import { useApi } from "@/lib/api";
 import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
@@ -13,6 +12,7 @@ import { AllocationDonut } from "@/components/portfolio/AllocationDonut";
 import { StrategyAllocationDonut } from "@/components/portfolio/StrategyAllocationDonut";
 import { PnlBySymbolBar } from "@/components/portfolio/PnlBySymbolBar";
 import { PortfolioVsVnindexPlaceholder } from "@/components/portfolio/PortfolioVsVnindexPlaceholder";
+import { BrokerAccountCard } from "@/components/portfolio/BrokerAccountCard";
 import { formatVnd, formatNumber } from "@/lib/format";
 import type { EnrichedPosition, PositionCreate, PositionUpdate } from "@/hooks/portfolio-types";
 
@@ -135,16 +135,6 @@ export default function PortfolioPage() {
           >
             {summary.loading || positions.loading ? "Refreshing…" : "Refresh"}
           </button>
-          <button
-            type="button"
-            disabled
-            title="Phase 2 — SSI read-only sync is not yet wired up."
-            aria-disabled
-            className="inline-flex cursor-not-allowed items-center gap-1 rounded border border-border bg-bg-subtle px-2 py-1 text-xs text-ink-dim opacity-60"
-          >
-            Sync from SSI
-            <Badge tone="info">Phase 2</Badge>
-          </button>
         </div>
       </header>
 
@@ -183,6 +173,9 @@ export default function PortfolioPage() {
           </div>
         )}
       </Card>
+
+      {/* Read-only SSI broker account (honest state; live data only when connected) */}
+      <BrokerAccountCard />
 
       <Card title="Create an account">
         <form onSubmit={createAccount} className="flex gap-2">

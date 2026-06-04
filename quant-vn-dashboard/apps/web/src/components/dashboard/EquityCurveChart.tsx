@@ -13,10 +13,17 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { MOCK_EQUITY_CURVE, type EquityPoint } from "@/lib/mock/portfolio";
 import { formatVnd } from "@/lib/format";
+import type { ReactNode } from "react";
 
-export function EquityCurveChart({ data = MOCK_EQUITY_CURVE }: { data?: EquityPoint[] }) {
+export function EquityCurveChart({
+  data = MOCK_EQUITY_CURVE,
+  action,
+}: {
+  data?: EquityPoint[];
+  action?: ReactNode;
+}) {
   return (
-    <Card title="Portfolio equity curve" hint="Daily NAV — endpoint pending">
+    <Card title="Portfolio equity curve" hint="Daily NAV — forward-only history" action={action}>
       {data.length === 0 ? (
         <EmptyState>No portfolio history yet.</EmptyState>
       ) : (

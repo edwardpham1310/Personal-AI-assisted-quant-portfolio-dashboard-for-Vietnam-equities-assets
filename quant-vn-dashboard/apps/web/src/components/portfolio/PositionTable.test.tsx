@@ -84,6 +84,32 @@ describe("PositionTable", () => {
     expect(dashWithWarning).toBeDefined();
   });
 
+  it("does not crash when a row omits warnings/id (partial backend payload)", () => {
+    // Simulate a malformed row that violates the TS contract at runtime — the
+    // table must still render the row instead of throwing and blanking out.
+    const malformed = {
+      account_id: "acc-1",
+      symbol: "FPT",
+      exchange: "HOSE",
+      quantity: 100,
+      sellable_quantity: 100,
+      pending_quantity: 0,
+      avg_cost: 50_000,
+      market_price: 60_000,
+      market_value: 6_000_000,
+      unrealized_pnl: 1_000_000,
+      unrealized_pnl_pct: 20,
+      weight: 100,
+      strategy_tag: null,
+      note: null,
+      last_marked_at: null,
+      // NOTE: `id` and `warnings` intentionally omitted.
+    } as unknown as EnrichedPosition;
+
+    expect(() => render(<PositionTable rows={[malformed]} />)).not.toThrow();
+    expect(screen.getByTestId("position-row-FPT")).toBeDefined();
+  });
+
   it("wires edit + delete callbacks per row", () => {
     const rows = [makePosition({ symbol: "FPT" })];
     const onEdit = vi.fn();

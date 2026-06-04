@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from schemas.assets import CostBreakdown, CostPeriod, PnlBySymbol
+from schemas.assets import CostBreakdown, CostPeriod, PnlBucket, PnlBySymbol, PnlWaterfall
 from schemas.market import Quote
 from schemas.portfolio import EnrichedPosition, PortfolioSummary
 
@@ -323,3 +323,35 @@ def build_pnl_by_symbol(
         rows[sym] = existing
 
     return sorted(rows.values(), key=lambda r: r.symbol)
+
+
+# ── Pnl waterfall (for /assets/pnl/waterfall) ────────────────────────────────
+
+
+def build_pnl_waterfall(
+    *,
+    realized: float,
+    unrealized: float,
+    costs: float,
+    as_of: str | None = None,
+) -> PnlWaterfall:
+    """Compose the ordered PnL contribution series from already-computed totals.
+
+    ``realized`` is GROSS of fees (price-vs-avg-cost from
+    ``realized_pnl_from_trades``); ``costs`` is the POSITIVE historical
+    trade-fee total from ``cost_breakdown(...).total``. The ``Costs`` bucket
+    carries ``-costs`` and ``Net`` is the arithmetic sum of the prior three
+    buckets — realized and costs are disjoint quantities, so nothing is
+    double-counted. Pure: the route decides honest-empty (``buckets == []``)
+    before calling this.
+    """
+    net = realized + unrealized - costs
+    return PnlWaterfall(
+        buckets=[
+            PnlBucket(bucket="Realized", value=realized),
+            PnlBucket(bucket="Unrealized", value=unrealized),
+            PnlBucket(bucket="Costs", value=-costs),
+            PnlBucket(bucket="Net", value=net),
+        ],
+        as_of=as_of,
+    )

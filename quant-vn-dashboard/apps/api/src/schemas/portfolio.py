@@ -174,3 +174,25 @@ class TodayPnlResponse(BaseModel):
         "Today MTM (unrealized, pre-cost). Not realized; not net of tax/fees. No orders placed."
     )
 
+
+class EquityPoint(BaseModel):
+    """One daily NAV point on the portfolio equity curve.
+
+    ``ts`` is the snapshot trading day (YYYY-MM-DD, Asia/Ho_Chi_Minh);
+    ``equity`` is total NAV at that mark. Matches the frontend ``EquityPoint``
+    type. The curve is forward-only — it only contains days actually snapshotted.
+    """
+
+    ts: str
+    equity: float = 0.0
+
+
+class EquitySnapshotRunResult(BaseModel):
+    """Outcome of POST /portfolio/snapshots/run (writer trigger)."""
+
+    recorded: bool = False
+    reason: str | None = None
+    snapshot_date: str | None = None
+    total_equity: float | None = None
+    warnings: list[str] = Field(default_factory=list)
+

@@ -214,10 +214,12 @@ export function PositionTable({ rows, onEdit, onDelete }: PositionTableProps) {
         </thead>
         <tbody>
           {visible.map((row) => {
-            const warning = row.warnings[0];
+            // Defensive: a backend row may omit `warnings`/`id` on a partial
+            // payload; never let one bad row crash the whole portfolio table.
+            const warning = (row.warnings ?? [])[0];
             return (
               <tr
-                key={row.id}
+                key={row.id ?? row.symbol}
                 data-testid={`position-row-${row.symbol}`}
                 className="border-b border-border align-top"
               >
