@@ -22,7 +22,16 @@ export type StreamState = {
  * Thin EventSource wrapper. Browser EventSources reconnect automatically on
  * transport-level disconnects, so we don't need to implement exponential
  * backoff ourselves — we only expose ``connected`` so callers can show a
- * "Reconnecting…" badge and fall back to REST polling.
+ * status badge and fall back to REST polling.
+ *
+ * Stability: ``onMessage`` and ``eventTypes`` are held in refs and the effect
+ * depends only on ``path``, ``enabled``, and a VALUE-based join of the event
+ * names. This is deliberate — callers commonly pass an inline ``eventTypes``
+ * array literal whose identity changes every render. Depending on the array
+ * reference would tear down and recreate the EventSource on every parent
+ * re-render (e.g. each incoming quote), flipping ``connected`` false→true
+ * repeatedly and making the UI flicker. With this design the connection is
+ * created once per ``path`` and survives unrelated re-renders.
  */
 export function useEventStream<T = unknown>({
   path,
@@ -32,14 +41,23 @@ export function useEventStream<T = unknown>({
 }: Options<T>): StreamState {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const sourceRef = useRef<EventSource | null>(null);
+
+  // Latest callback + event list, read inside the listener without becoming
+  // effect dependencies (so they never trigger a reconnect).
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
+  const eventTypesRef = useRef(eventTypes);
+  eventTypesRef.current = eventTypes;
+
+  // Value-based dependency so re-renders with a fresh array literal of the
+  // SAME names do not recreate the connection.
+  const eventTypesKey = eventTypes.join(",");
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !path) return;
     let cancelled = false;
 
     const source = new EventSource(path);
-    sourceRef.current = source;
 
     source.onopen = () => {
       if (cancelled) return;
@@ -53,12 +71,12 @@ export function useEventStream<T = unknown>({
       setError("Stream disconnected");
     };
 
-    eventTypes.forEach((eventType) => {
+    eventTypesRef.current.forEach((eventType) => {
       source.addEventListener(eventType, (e: MessageEvent) => {
         if (cancelled) return;
         try {
           const parsed = JSON.parse(e.data) as T;
-          onMessage(eventType, parsed);
+          onMessageRef.current(eventType, parsed);
         } catch {
           setError("Malformed event payload");
         }
@@ -68,10 +86,10 @@ export function useEventStream<T = unknown>({
     return () => {
       cancelled = true;
       source.close();
-      sourceRef.current = null;
       setConnected(false);
     };
-  }, [path, enabled, eventTypes, onMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, enabled, eventTypesKey]);
 
   return { connected, error };
 }
