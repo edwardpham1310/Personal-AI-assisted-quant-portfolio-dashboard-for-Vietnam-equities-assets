@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.routes import (
+    alerts,
     assets,
     auth,
     auto_trade,
@@ -142,6 +143,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
     app.include_router(watchlist.router, prefix="/watchlists", tags=["watchlist"])
+    app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(market.router, prefix="/market", tags=["market"])
     app.include_router(stream.router, prefix="/stream", tags=["stream"])
     app.include_router(portfolio.router, prefix="/portfolio", tags=["portfolio"])

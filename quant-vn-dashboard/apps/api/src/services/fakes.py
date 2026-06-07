@@ -23,6 +23,7 @@ _USER_OWNED_TABLES = {
     "watchlists",
     "manual_portfolio_accounts",
     "recommendation_snapshots",
+    "alerts",
     "security_audit_logs",
     # Phase 2.5 SSI Trading read-only + preview tables.
     "trading_accounts",

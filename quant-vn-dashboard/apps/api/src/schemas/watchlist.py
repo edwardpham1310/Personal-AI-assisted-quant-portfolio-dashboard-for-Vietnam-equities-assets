@@ -29,6 +29,11 @@ class WatchlistItemCreate(BaseModel):
     display_order: int = 0
 
 
+class WatchlistUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    description: str | None = Field(default=None, max_length=400)
+
+
 class Watchlist(BaseModel):
     id: str
     user_id: str
