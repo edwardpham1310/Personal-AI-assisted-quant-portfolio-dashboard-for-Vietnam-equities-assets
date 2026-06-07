@@ -298,8 +298,14 @@ def test_recommendation_codebase_contains_no_financial_advice_wording() -> None:
     ]
     rec_components = web_root / "components" / "recommendations"
     if rec_components.exists():
-        targets.extend(rec_components.glob("*.tsx"))
-        targets.extend(rec_components.glob("*.ts"))
+        # Skip test files: they must reference the forbidden phrases verbatim
+        # in order to assert those phrases never appear in the rendered UI.
+        targets.extend(
+            p for p in rec_components.glob("*.tsx") if not p.name.endswith(".test.tsx")
+        )
+        targets.extend(
+            p for p in rec_components.glob("*.ts") if not p.name.endswith(".test.ts")
+        )
 
     # Phrases that have NO place in a Phase 1 research engine.
     forbidden = [

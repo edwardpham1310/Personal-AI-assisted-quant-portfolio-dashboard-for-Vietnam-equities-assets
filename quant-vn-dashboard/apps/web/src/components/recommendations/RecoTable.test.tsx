@@ -43,6 +43,12 @@ function makeRec(overrides: Partial<RecommendationResult> = {}): RecommendationR
     chart_context: null,
     chart_url: "/market/FPT",
     disclaimer: "research signal · not financial advice · no orders placed",
+    is_held: false,
+    held_weight_pct: null,
+    held_quantity: null,
+    held_avg_cost: null,
+    held_unrealized_pct: null,
+    portfolio_note: null,
     ...overrides,
   };
 }
