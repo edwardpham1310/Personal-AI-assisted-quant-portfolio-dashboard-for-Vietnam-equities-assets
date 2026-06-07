@@ -57,6 +57,19 @@ import AssetsPnlPage from "./page";
 
 beforeEach(() => {
   apiMock.mockReset();
+  // Route the net-worth / cash-movement / settlement hooks to honest-empty.
+  apiMock.mockImplementation((path?: string) => {
+    if (typeof path !== "string") return Promise.resolve(undefined);
+    if (path.startsWith("/portfolio/equity-curve")) return Promise.resolve([]);
+    if (path.startsWith("/portfolio/snapshots/run")) return Promise.resolve({ recorded: false });
+    if (path.startsWith("/assets/cash-movements")) {
+      return Promise.resolve({ movements: [], net_cash_flow: 0 });
+    }
+    if (path.startsWith("/assets/settlement")) {
+      return Promise.resolve({ alerts: [], pending_count: 0, pending_cash: 0 });
+    }
+    return Promise.resolve(undefined);
+  });
 });
 
 describe("AssetsPnlPage", () => {
@@ -81,10 +94,12 @@ describe("AssetsPnlPage", () => {
     expect(screen.getByRole("tab", { name: "ALL" })).toBeDefined();
   });
 
-  it("renders the placeholder cards for net-worth, cash, and settlement alerts", () => {
+  it("renders the real net-worth, cash-movement, and settlement cards (honest-empty)", async () => {
     render(<AssetsPnlPage />);
     expect(screen.getByText("Net-worth curve")).toBeDefined();
     expect(screen.getByText("Cash movement")).toBeDefined();
     expect(screen.getByText("Settlement alerts")).toBeDefined();
+    // Honest empty state after the async fetch resolves (not a placeholder/mock).
+    expect(await screen.findByText(/No pending settlements/i)).toBeDefined();
   });
 });

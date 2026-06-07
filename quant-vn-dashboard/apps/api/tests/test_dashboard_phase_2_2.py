@@ -249,3 +249,49 @@ def test_equity_curve_isolated_by_user(
     r = client.get("/portfolio/equity-curve", headers=headers_b)
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_snapshot_skips_when_quote_cache_cold(
+    client: TestClient, auth_headers, fake_db
+) -> None:
+    # A held position with NO seeded quote → NAV would understate stock value.
+    # The writer must refuse to persist a misleading point.
+    headers, _ = auth_headers()
+    client.post(
+        "/portfolio/positions",
+        headers=headers,
+        json={"symbol": "FPT", "quantity": 100, "avg_cost": 50.0},
+    )
+    r = client.post("/portfolio/snapshots/run", headers=headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["recorded"] is False
+    assert body["reason"] == "quotes_unavailable"
+    assert any("quote_missing" in w for w in body["warnings"])
+    # Nothing was written, and the curve stays honestly empty.
+    assert fake_db._tables.get("portfolio_equity_snapshots", []) == []
+    assert client.get("/portfolio/equity-curve", headers=headers).json() == []
+
+
+def test_snapshot_records_cash_only_account(
+    client: TestClient, auth_headers, fake_db
+) -> None:
+    # An account with cash but NO positions has no unpriced stock, so the NAV is
+    # fully real and the snapshot records (NAV == cash).
+    headers, uid = auth_headers()
+    acct_id = "acc-cash-only"
+    fake_db._tables["manual_portfolio_accounts"].append(
+        {"id": acct_id, "user_id": uid, "name": "Default", "created_at": "2026-01-01"}
+    )
+    fake_db._tables.setdefault("cash_balances", []).append(
+        {"id": "cb-1", "account_id": acct_id, "settled_cash": 5_000_000}
+    )
+    r = client.post("/portfolio/snapshots/run", headers=headers)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["recorded"] is True
+    assert body["reason"] is None
+    assert body["total_equity"] == 5_000_000
+    points = client.get("/portfolio/equity-curve", headers=headers).json()
+    assert len(points) == 1
+    assert points[0]["equity"] == 5_000_000

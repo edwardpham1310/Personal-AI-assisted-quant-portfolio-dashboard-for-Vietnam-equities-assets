@@ -36,22 +36,18 @@ import PortfolioPage from "./page";
 type Account = { id: string; user_id: string; name: string; broker: string; currency: string };
 
 // Route the api mock by path: PortfolioPage calls /portfolio/manual to discover
-// accounts, and BrokerAccountCard calls /trading/status on mount. Default the
-// broker status to mock mode so no live balances are fetched.
-function setupApi(opts: { accounts?: Account[]; status?: Record<string, unknown> } = {}) {
+// accounts; BrokerAccountCard calls POST /portfolio/sync/ssi; the
+// Portfolio-vs-VNINDEX chart fetches the equity curve + VNINDEX. Default the
+// broker snapshot to mock mode so no live balances are fetched.
+function setupApi(opts: { accounts?: Account[]; broker?: Record<string, unknown> } = {}) {
   const accounts = opts.accounts ?? [];
-  const status = opts.status ?? {
-    mock: true,
-    status_code: "READ_ONLY",
-    ssi_trading_use_mock: true,
-  };
-  apiMock.mockImplementation((path: string) => {
-    if (typeof path === "string" && path.startsWith("/trading/status")) {
-      return Promise.resolve(status);
-    }
-    if (typeof path === "string" && path.startsWith("/portfolio/manual")) {
-      return Promise.resolve({ accounts });
-    }
+  const broker = opts.broker ?? { connected: false, status_code: "READ_ONLY", mock: true };
+  apiMock.mockImplementation((path?: string) => {
+    if (typeof path !== "string") return Promise.resolve(undefined);
+    if (path.startsWith("/portfolio/sync/ssi")) return Promise.resolve(broker);
+    if (path.startsWith("/portfolio/manual")) return Promise.resolve({ accounts });
+    if (path.startsWith("/portfolio/equity-curve")) return Promise.resolve([]);
+    if (path.startsWith("/market/ohlcv/daily/VNINDEX")) return Promise.resolve([]);
     return Promise.resolve(undefined);
   });
 }

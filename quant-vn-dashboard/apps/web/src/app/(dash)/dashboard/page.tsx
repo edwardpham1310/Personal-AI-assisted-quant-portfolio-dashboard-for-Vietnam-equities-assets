@@ -7,8 +7,10 @@ import { EquityCurveChart } from "@/components/dashboard/EquityCurveChart";
 import { IndexComparisonChart } from "@/components/dashboard/IndexComparisonChart";
 import { AllocationDonut } from "@/components/dashboard/AllocationDonut";
 import { PnlWaterfall } from "@/components/dashboard/PnlWaterfall";
+import { RiskScoreCard } from "@/components/dashboard/RiskScoreCard";
 import { ActionPanels } from "@/components/dashboard/ActionPanels";
 import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
+import { usePortfolioRiskScore } from "@/hooks/usePortfolioRiskScore";
 import { useAssetsSummary } from "@/hooks/useAssetsSummary";
 import { usePortfolioTodayPnl } from "@/hooks/usePortfolioTodayPnl";
 import { useMarketRegime } from "@/hooks/useMarketRegime";
@@ -41,6 +43,7 @@ export default function DashboardHomePage() {
   const [equityRange, setEquityRange] = useState<RangeKey>("3M");
   const equityCurve = useEquityCurve(equityRange);
   const pnlWaterfall = usePnlWaterfall();
+  const risk = usePortfolioRiskScore();
   const updatedAt = new Date().toLocaleTimeString();
   const loading = portfolio.loading || assets.loading;
   const error = portfolio.error ?? assets.error;
@@ -78,6 +81,8 @@ export default function DashboardHomePage() {
         loading={loading}
         todayPnl={todayPnl.data?.total_day_pnl ?? null}
         regime={regime.data?.label ?? null}
+        riskScore={risk.data?.score ?? null}
+        riskBand={risk.data?.band ?? null}
       />
 
       <LiveQuotesPanel symbols={DEFAULT_LIVE_SYMBOLS} />
@@ -100,6 +105,8 @@ export default function DashboardHomePage() {
         <AllocationDonut data={allocation.data} />
         <PnlWaterfall data={liveOrEmpty(pnlWaterfall.data)} />
       </div>
+
+      <RiskScoreCard />
 
       <section>
         <h2 className="text-sm font-semibold text-ink mb-2">Action panels</h2>

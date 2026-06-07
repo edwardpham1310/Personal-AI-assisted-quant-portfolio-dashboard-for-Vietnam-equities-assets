@@ -52,6 +52,47 @@ class PnlBySymbol(BaseModel):
     cost_basis: float = 0.0
 
 
+class CashMovement(BaseModel):
+    """One trade-driven cash flow (signed). Deposits/withdrawals are not
+    tracked — there is no external cash ledger for the manual portfolio."""
+
+    date: str  # trade_date (YYYY-MM-DD)
+    settlement_date: str | None = None
+    symbol: str
+    side: TradeSide
+    gross: float = 0.0  # price * quantity
+    fees: float = 0.0  # brokerage + vat + sell tax + advance + slippage
+    amount: float = 0.0  # signed net cash impact: − on BUY, + on SELL
+
+
+class CashMovementResponse(BaseModel):
+    movements: list[CashMovement] = Field(default_factory=list)
+    net_cash_flow: float = 0.0
+    as_of: str | None = None
+    note: str = "Trade-driven cash flows only — deposits/withdrawals are not tracked."
+    disclaimer: str = "Research only — not financial advice. No orders placed."
+
+
+class SettlementAlert(BaseModel):
+    """A pending T+2 settlement derived from a trade's ``settlement_date``."""
+
+    settlement_date: str
+    symbol: str
+    side: TradeSide
+    kind: str  # "CASH_IN" (sell proceeds) | "SHARES_IN" (bought shares)
+    quantity: int = 0
+    amount: float | None = None  # settling cash for sells; None for buys
+    days_until: int = 0
+
+
+class SettlementResponse(BaseModel):
+    alerts: list[SettlementAlert] = Field(default_factory=list)
+    pending_count: int = 0
+    pending_cash: float = 0.0  # authoritative aggregate from cash_balances
+    as_of: str | None = None
+    disclaimer: str = "T+2 settlement view. Research only — not financial advice."
+
+
 class PnlBucket(BaseModel):
     """One ordered contribution bar in the PnL waterfall."""
 

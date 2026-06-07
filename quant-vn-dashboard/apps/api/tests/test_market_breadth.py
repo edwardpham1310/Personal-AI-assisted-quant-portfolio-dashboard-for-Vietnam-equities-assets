@@ -132,7 +132,13 @@ def test_live_breadth_cold_cache_returns_empty_shape(client: TestClient, auth_he
     headers, _ = auth_headers()
     r = client.get("/market/live/breadth", headers=headers)
     assert r.status_code == 200
-    assert r.json() == {"advancers": 0, "decliners": 0, "unchanged": 0, "ceiling": 0, "floor": 0}
+    body = r.json()
+    assert {k: body[k] for k in ("advancers", "decliners", "unchanged", "ceiling", "floor")} == {
+        "advancers": 0, "decliners": 0, "unchanged": 0, "ceiling": 0, "floor": 0
+    }
+    # Honest coverage: default is the polled tracked universe, NOT full-market.
+    assert body["coverage"] == "tracked_universe"
+    assert body["universe_size"] == 6  # default market_core_symbols
 
 
 def test_live_top_movers_cold_cache_returns_full_empty_shape(
@@ -143,7 +149,10 @@ def test_live_top_movers_cold_cache_returns_full_empty_shape(
     assert r.status_code == 200
     body = r.json()
     # All four keys present so the frontend never indexes undefined.
-    assert body == {"gainers": [], "losers": [], "by_value": [], "by_volume": []}
+    assert {k: body[k] for k in ("gainers", "losers", "by_value", "by_volume")} == {
+        "gainers": [], "losers": [], "by_value": [], "by_volume": []
+    }
+    assert body["coverage"] == "tracked_universe"
 
 
 def test_live_breadth_returns_seeded_payload(client: TestClient, auth_headers, fake_cache) -> None:
@@ -153,4 +162,35 @@ def test_live_breadth_returns_seeded_payload(client: TestClient, auth_headers, f
     headers, _ = auth_headers()
     r = client.get("/market/live/breadth", headers=headers)
     assert r.status_code == 200
-    assert r.json() == payload
+    body = r.json()
+    assert {k: body[k] for k in payload} == payload
+    assert body["coverage"] == "tracked_universe"
+
+
+def test_live_breadth_full_market_coverage_when_enabled_and_warm(
+    client: TestClient, auth_headers, fake_cache, monkeypatch
+) -> None:
+    monkeypatch.setenv("ENABLE_FULL_MARKET_SCAN", "true")
+    from core.config import get_settings
+
+    get_settings.cache_clear()
+    asyncio.run(
+        market_cache.set_full_scan(
+            fake_cache,
+            {
+                "breadth": {"advancers": 300, "decliners": 250, "unchanged": 40,
+                            "ceiling": 9, "floor": 4},
+                "top_movers": {"gainers": [], "losers": [], "by_value": [], "by_volume": []},
+                "universe_size": 420,
+            },
+            ttl_seconds=600,
+        )
+    )
+    headers, _ = auth_headers()
+    b = client.get("/market/live/breadth", headers=headers).json()
+    assert b["coverage"] == "full_market"
+    assert b["universe_size"] == 420
+    assert b["advancers"] == 300
+    m = client.get("/market/live/top-movers", headers=headers).json()
+    assert m["coverage"] == "full_market"
+    assert m["universe_size"] == 420

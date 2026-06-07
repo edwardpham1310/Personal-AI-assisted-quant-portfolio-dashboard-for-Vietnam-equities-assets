@@ -9,6 +9,7 @@
  */
 
 export type RangeKey =
+  | "1D"
   | "5D"
   | "1W"
   | "2W"
@@ -24,16 +25,21 @@ export type RangeKey =
 export type RangeOption = { key: RangeKey; label: string };
 
 /**
- * Ranges for daily OHLCV charts (candlestick, index comparison). Capped at 1Y
- * because the backend daily-history endpoint rejects ranges > 365 days. `ALL`
- * and multi-year ranges are intentionally omitted here. `1D` is omitted because
- * the chart plots daily bars (a true intraday 1D view is a separate, deferred
- * feature gated on intraday pagination).
+ * The standard dashboard range set: 1D · 1W · 1M · 3M · 6M · YTD · 1Y · All.
+ * Every time-series chart draws from one of the two lists below so the dropdown
+ * is consistent across the app. (`5D`/`2W`/`2Y`/`5Y` remain valid keys for the
+ * helpers but are not offered — the standard set keeps the UI compact.)
+ */
+
+/**
+ * Ranges for daily OHLCV charts (candlestick, index comparison,
+ * portfolio-vs-VNINDEX). The standard set MINUS `All`/multi-year, because the
+ * backend daily-history endpoint hard-caps at 365 days. `1D` shows the latest
+ * one or two daily bars.
  */
 export const OHLCV_RANGE_OPTIONS: RangeOption[] = [
-  { key: "5D", label: "5D" },
+  { key: "1D", label: "1D" },
   { key: "1W", label: "1W" },
-  { key: "2W", label: "2W" },
   { key: "1M", label: "1M" },
   { key: "3M", label: "3M" },
   { key: "6M", label: "6M" },
@@ -42,20 +48,18 @@ export const OHLCV_RANGE_OPTIONS: RangeOption[] = [
 ];
 
 /**
- * Ranges for the portfolio / paper equity curve, which is DB-backed and
- * supports the full span. `ALL` returns the entire forward-only history.
+ * Ranges for the DB-backed equity curve, which has no 365-day cap. The full
+ * standard set including `All` (the entire forward-only NAV history).
  */
 export const EQUITY_RANGE_OPTIONS: RangeOption[] = [
+  { key: "1D", label: "1D" },
   { key: "1W", label: "1W" },
-  { key: "2W", label: "2W" },
   { key: "1M", label: "1M" },
   { key: "3M", label: "3M" },
   { key: "6M", label: "6M" },
   { key: "YTD", label: "YTD" },
   { key: "1Y", label: "1Y" },
-  { key: "2Y", label: "2Y" },
-  { key: "5Y", label: "5Y" },
-  { key: "ALL", label: "ALL" },
+  { key: "ALL", label: "All" },
 ];
 
 /** Format a Date as an inclusive ISO date (YYYY-MM-DD). */
@@ -75,6 +79,9 @@ export function rangeStartDate(key: RangeKey, now: Date = new Date()): Date | nu
   if (key === "YTD") return new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
   const d = new Date(now);
   switch (key) {
+    case "1D":
+      d.setUTCDate(d.getUTCDate() - 1);
+      break;
     case "5D":
       d.setUTCDate(d.getUTCDate() - 5);
       break;

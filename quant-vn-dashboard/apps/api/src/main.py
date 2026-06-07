@@ -73,6 +73,9 @@ async def lifespan(app: FastAPI):
             index_ttl=settings.index_cache_ttl_seconds,
             core_symbols=settings.market_core_symbols,
             core_indices=settings.market_core_indices,
+            enable_full_market_scan=settings.enable_full_market_scan,
+            full_market_scan_max_symbols=settings.full_market_scan_max_symbols,
+            full_market_scan_chunk_size=settings.full_market_scan_chunk_size,
         )
         set_poller(poller)
         await poller.start()

@@ -18,10 +18,12 @@ from core.security import AuthContext, get_current_user
 from schemas.assets import (
     AssetsSummary,
     CashBalance,
+    CashMovementResponse,
     CostBreakdown,
     CostPeriod,
     PnlBreakdown,
     PnlWaterfall,
+    SettlementResponse,
 )
 from services import market_cache, portfolio_valuation
 from services.cache import Cache
@@ -296,3 +298,53 @@ async def get_costs(
         return CostBreakdown(period=period)
     trades = await _load_trades(db, user, account["id"])
     return portfolio_valuation.cost_breakdown(trades, period=period)
+
+
+@router.get(
+    "/cash-movements",
+    response_model=CashMovementResponse,
+    summary="Trade-driven cash flows (deposits/withdrawals not tracked)",
+)
+async def get_cash_movements(
+    start: str | None = Query(default=None, description="Inclusive start date YYYY-MM-DD"),
+    end: str | None = Query(default=None, description="Inclusive end date YYYY-MM-DD"),
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+) -> CashMovementResponse:
+    account = await _get_default_account_row(db, user)
+    if account is None:
+        return CashMovementResponse()
+    trades = await _load_trades(db, user, account["id"])
+    movements = portfolio_valuation.build_cash_movements(trades, start=start, end=end)
+    return CashMovementResponse(
+        movements=movements,
+        net_cash_flow=sum(m.amount for m in movements),
+        as_of=movements[-1].date if movements else None,
+    )
+
+
+@router.get(
+    "/settlement",
+    response_model=SettlementResponse,
+    summary="Pending T+2 settlements (read-only, from trade settlement dates)",
+)
+async def get_settlement(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+) -> SettlementResponse:
+    account = await _get_default_account_row(db, user)
+    if account is None:
+        return SettlementResponse()
+    trades = await _load_trades(db, user, account["id"])
+    alerts = portfolio_valuation.build_settlement_alerts(trades)
+    # Pure read of pending cash (no auto-init side effect on a GET).
+    cash_rows = await db.select(
+        "cash_balances", where={"account_id": account["id"]}, user_jwt=user.raw_token
+    )
+    pending_cash = float(cash_rows[0].get("pending_cash") or 0.0) if cash_rows else 0.0
+    return SettlementResponse(
+        alerts=alerts,
+        pending_count=len(alerts),
+        pending_cash=pending_cash,
+        as_of=alerts[0].settlement_date if alerts else None,
+    )

@@ -18,12 +18,14 @@ import type { ReactNode } from "react";
 export function EquityCurveChart({
   data = MOCK_EQUITY_CURVE,
   action,
+  title = "Portfolio equity curve",
 }: {
   data?: EquityPoint[];
   action?: ReactNode;
+  title?: string;
 }) {
   return (
-    <Card title="Portfolio equity curve" hint="Daily NAV — forward-only history" action={action}>
+    <Card title={title} hint="Daily NAV — forward-only history" action={action}>
       {data.length === 0 ? (
         <EmptyState>No portfolio history yet.</EmptyState>
       ) : (

@@ -17,6 +17,7 @@ INDEX_KEY = "index:{code}"
 WATCHLIST_KEY = "watchlist:{user_id}:{watchlist_id}"
 BREADTH_KEY = "market:breadth"
 TOP_MOVERS_KEY = "market:top_movers"
+FULL_SCAN_KEY = "market:full_scan"
 SSI_STATUS_KEY = "system:ssi_status"
 LAST_POLL_KEY = "system:last_poll"
 
@@ -95,6 +96,16 @@ async def set_breadth(cache: Cache, payload: Any, *, ttl_seconds: int) -> None:
 
 async def get_breadth(cache: Cache) -> Any:
     return await cache.get_json(BREADTH_KEY)
+
+
+# Full-market scan (whole-universe breadth + top movers). Separate key so the
+# tracked-universe payloads above are never overwritten by the slower scan.
+async def set_full_scan(cache: Cache, payload: Any, *, ttl_seconds: int) -> None:
+    await cache.set_json(FULL_SCAN_KEY, payload, ttl_seconds=ttl_seconds)
+
+
+async def get_full_scan(cache: Cache) -> Any:
+    return await cache.get_json(FULL_SCAN_KEY)
 
 
 # ── Poller heartbeat / SSI status ────────────────────────────────────────────

@@ -117,9 +117,27 @@ async def record_daily_snapshot(
 ) -> dict[str, Any]:
     """Upsert today's (ICT) NAV snapshot for ``account_id``. Idempotent per
     trading day: a second call on the same day recomputes and updates the
-    existing row rather than appending a duplicate."""
+    existing row rather than appending a duplicate.
+
+    Reliability guard: if a held position has no quote (cold cache / poller
+    off), ``compute_summary`` values it at 0 and the NAV would understate stock
+    value. We must NOT persist a misleading point — the curve has to be real,
+    fully-marked NAV. In that case we SKIP the write and report
+    ``recorded=False, reason="quotes_unavailable"`` so the caller (dashboard or
+    cron) can retry once the cache is warm. Cash-only and fully-priced accounts
+    record normally."""
     snapshot_date = _ict_today_iso(now)
     nav = await compute_nav(db, user, cache, account_id)
+
+    if any(str(w).startswith("quote_missing") for w in nav.warnings):
+        # Understated NAV — never write a fabricated/low point.
+        return {
+            "recorded": False,
+            "reason": "quotes_unavailable",
+            "snapshot_date": snapshot_date,
+            "total_equity": nav.total_equity,
+            "warnings": nav.warnings,
+        }
 
     existing = await db.select(
         _TABLE, where={"account_id": account_id, "snapshot_date": snapshot_date},
@@ -148,6 +166,8 @@ async def record_daily_snapshot(
             user_jwt=user.raw_token,
         )
     return {
+        "recorded": True,
+        "reason": None,
         "snapshot_date": snapshot_date,
         "total_equity": nav.total_equity,
         "warnings": nav.warnings,

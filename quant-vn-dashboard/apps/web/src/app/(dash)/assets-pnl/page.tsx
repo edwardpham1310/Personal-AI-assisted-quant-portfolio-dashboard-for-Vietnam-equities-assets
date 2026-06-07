@@ -8,16 +8,27 @@ import { useAssetsCosts } from "@/hooks/useAssetsCosts";
 import { AssetCardGrid } from "@/components/assets/AssetCardGrid";
 import { RealizedVsUnrealizedChart } from "@/components/assets/RealizedVsUnrealizedChart";
 import { FeeTaxDragChart } from "@/components/assets/FeeTaxDragChart";
-import { NetWorthCurvePlaceholder } from "@/components/assets/NetWorthCurvePlaceholder";
-import { CashMovementPlaceholder } from "@/components/assets/CashMovementPlaceholder";
-import { SettlementAlertsPlaceholder } from "@/components/assets/SettlementAlertsPlaceholder";
+import { CashMovementChart } from "@/components/assets/CashMovementChart";
+import { SettlementAlertsCard } from "@/components/assets/SettlementAlertsCard";
+import { EquityCurveChart } from "@/components/dashboard/EquityCurveChart";
+import { RangeSelect } from "@/components/ui/RangeSelect";
+import { useEquityCurve } from "@/hooks/useEquityCurve";
+import { EQUITY_RANGE_OPTIONS, type RangeKey } from "@/lib/dateRange";
+import { isProductionBuild } from "@/lib/env";
 import type { CostPeriod } from "@/hooks/portfolio-types";
+
+// Net worth ≡ NAV history (real equity-curve snapshots). In production an empty
+// curve stays empty (honest); in dev pass undefined so the chart shows its mock
+// default for design work — never mock in production.
+const PROD_EMPTY = isProductionBuild ? [] : undefined;
 
 export default function AssetsPnlPage() {
   const assets = useAssetsSummary();
   const pnl = useAssetsPnl();
   const [period, setPeriod] = useState<CostPeriod>("MTD");
   const costs = useAssetsCosts(period);
+  const [netWorthRange, setNetWorthRange] = useState<RangeKey>("3M");
+  const netWorth = useEquityCurve(netWorthRange);
 
   const anyLoading = assets.loading || pnl.loading || costs.loading;
   const refresh = () => {
@@ -74,11 +85,21 @@ export default function AssetsPnlPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <NetWorthCurvePlaceholder />
-        <CashMovementPlaceholder />
+        <EquityCurveChart
+          title="Net-worth curve"
+          data={netWorth.data.length > 0 ? netWorth.data : PROD_EMPTY}
+          action={
+            <RangeSelect
+              value={netWorthRange}
+              options={EQUITY_RANGE_OPTIONS}
+              onChange={setNetWorthRange}
+            />
+          }
+        />
+        <CashMovementChart />
       </div>
 
-      <SettlementAlertsPlaceholder />
+      <SettlementAlertsCard />
     </div>
   );
 }

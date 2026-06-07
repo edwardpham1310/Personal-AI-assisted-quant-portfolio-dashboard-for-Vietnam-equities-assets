@@ -44,8 +44,16 @@ function MoverRow({ row, tab }: { row: Mover; tab: Tab }) {
 export function TopMoversCard({ movers, isMock }: { movers: TopMovers; isMock: boolean }) {
   const [tab, setTab] = useState<Tab>("gainers");
   const rows = movers[tab];
+  // Honest coverage label — these rankings are over the polled "tracked
+  // universe" unless the backend confirms a full-market scan.
+  const isFull = movers?.coverage === "full_market";
+  const size = movers?.universe_size;
+  const hint = isFull
+    ? `Full market${size ? ` · ${size} symbols` : ""}`
+    : `Tracked universe${size ? ` · ${size} symbols` : ""} — polled large caps, not the whole market`;
   return (
     <Card
+      hint={hint}
       title={
         <>
           Top movers

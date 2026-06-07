@@ -367,12 +367,27 @@ async def market_regime(
 async def live_breadth(
     _user: AuthContext = Depends(get_current_user),
     cache: Cache = Depends(get_cache),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
-    # Breadth over the polled core universe only — NOT full-market breadth.
-    # Populated by the MarketPoller; empty (all-zero) shape when the cache is
-    # cold (poller off / not yet warmed).
+    """Market breadth. ``coverage`` tells the UI what the numbers cover:
+    ``full_market`` when the whole-universe scan is enabled AND warm, else
+    ``tracked_universe`` (the polled core symbols). Empty (all-zero) shape when
+    the cache is cold."""
+    if settings.enable_full_market_scan:
+        full = await market_cache.get_full_scan(cache)
+        if isinstance(full, dict) and isinstance(full.get("breadth"), dict):
+            return {
+                **full["breadth"],
+                "coverage": "full_market",
+                "universe_size": int(full.get("universe_size") or 0),
+            }
     payload = await market_cache.get_breadth(cache)
-    return payload if payload is not None else market_breadth.empty_breadth()
+    breadth = payload if payload is not None else market_breadth.empty_breadth()
+    return {
+        **breadth,
+        "coverage": "tracked_universe",
+        "universe_size": len(settings.market_core_symbols),
+    }
 
 
 @router.get(
@@ -382,9 +397,25 @@ async def live_breadth(
 async def live_top_movers(
     _user: AuthContext = Depends(get_current_user),
     cache: Cache = Depends(get_cache),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
+    """Top movers. ``coverage`` is ``full_market`` when the whole-universe scan
+    is enabled AND warm, else ``tracked_universe``."""
+    if settings.enable_full_market_scan:
+        full = await market_cache.get_full_scan(cache)
+        if isinstance(full, dict) and isinstance(full.get("top_movers"), dict):
+            return {
+                **full["top_movers"],
+                "coverage": "full_market",
+                "universe_size": int(full.get("universe_size") or 0),
+            }
     payload = await market_cache.get_top_movers(cache)
-    return payload if payload is not None else market_breadth.empty_top_movers()
+    movers = payload if payload is not None else market_breadth.empty_top_movers()
+    return {
+        **movers,
+        "coverage": "tracked_universe",
+        "universe_size": len(settings.market_core_symbols),
+    }
 
 
 # ── Phase 2 chart module ────────────────────────────────────────────────────
