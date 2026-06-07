@@ -143,6 +143,15 @@ def _clamp_int(value: float, lo: int = 0, hi: int = 100) -> int:
     return int(round(max(lo, min(hi, value))))
 
 
+def _to_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _slope(values: list[float]) -> float:
     """Simple linear-regression slope of ``values`` against index. None safe."""
     n = len(values)
@@ -485,28 +494,36 @@ def _confidence_from_score(final_score: int) -> float:
     return round(max(0.0, min(1.0, final_score / 100.0)), 4)
 
 
-def _resolve_held_weight(
-    symbol: str, portfolio_positions: list[Any] | None
-) -> float | None:
-    """Return the held weight (as a fraction) if symbol is in the portfolio."""
+# Held-position weight (% within holdings) at/above which we flag concentration.
+CONCENTRATION_WARN_PCT = 15.0
+
+
+def _pos_field(pos: Any, key: str) -> Any:
+    """Read a field off an EnrichedPosition (attr) or a plain dict."""
+    if isinstance(pos, dict):
+        return pos.get(key)
+    return getattr(pos, key, None)
+
+
+def _find_position(symbol: str, portfolio_positions: list[Any] | None) -> Any | None:
     if not portfolio_positions:
         return None
     target = symbol.upper()
     for pos in portfolio_positions:
-        sym = (
-            getattr(pos, "symbol", None)
-            or (pos.get("symbol") if isinstance(pos, dict) else None)
-            or ""
-        )
-        if str(sym).upper() != target:
-            continue
-        weight = (
-            getattr(pos, "weight", None)
-            if not isinstance(pos, dict)
-            else pos.get("weight")
-        )
-        return float(weight) if weight is not None else 0.0
+        if str(_pos_field(pos, "symbol") or "").upper() == target:
+            return pos
     return None
+
+
+def _resolve_held_weight(
+    symbol: str, portfolio_positions: list[Any] | None
+) -> float | None:
+    """Return the held weight (as a fraction) if symbol is in the portfolio."""
+    pos = _find_position(symbol, portfolio_positions)
+    if pos is None:
+        return None
+    weight = _pos_field(pos, "weight")
+    return float(weight) if weight is not None else 0.0
 
 
 def generate_recommendation(
@@ -545,6 +562,26 @@ def generate_recommendation(
     portfolio_fit = compute_portfolio_fit(symbol, portfolio_positions)
     held_weight = _resolve_held_weight(symbol, portfolio_positions)
     held_weight_pct = held_weight * 100.0 if held_weight is not None else None
+
+    # Feature 7: resolve the actual holding so the result can surface
+    # portfolio-aware facts (held quantity / avg cost / weight) to the UI.
+    held_position = _find_position(symbol, portfolio_positions)
+    is_held = held_position is not None
+    held_quantity = _to_float(_pos_field(held_position, "quantity")) if is_held else None
+    held_avg_cost = _to_float(_pos_field(held_position, "avg_cost")) if is_held else None
+    held_unrealized_pct = (
+        _to_float(_pos_field(held_position, "unrealized_pnl_pct")) if is_held else None
+    )
+    portfolio_note: str | None = None
+    if is_held:
+        if held_weight_pct is not None and held_weight_pct >= CONCENTRATION_WARN_PCT:
+            portfolio_note = (
+                f"Already {held_weight_pct:.1f}% of holdings — concentration risk."
+            )
+        elif held_weight_pct is not None:
+            portfolio_note = f"Already held ({held_weight_pct:.1f}% of holdings)."
+        else:
+            portfolio_note = "Already held."
 
     scores_dict: dict[str, float | int | None] = {
         "trend": base_scores.trend,
@@ -610,6 +647,12 @@ def generate_recommendation(
         and indicators.ma200 is not None
     ):
         warnings.append("price_below_ma200")
+    if (
+        is_held
+        and held_weight_pct is not None
+        and held_weight_pct >= CONCENTRATION_WARN_PCT
+    ):
+        warnings.append("portfolio_concentration")
 
     if latest_quote is not None and isinstance(latest_quote.ts, datetime):
         as_of = latest_quote.ts
@@ -679,6 +722,12 @@ def generate_recommendation(
         ma200=indicators.ma200,
         price_above_ma200=indicators.price_above_ma200,
         action_threshold_used=ACTION_BUY_THRESHOLD,
+        is_held=is_held,
+        held_weight_pct=held_weight_pct,
+        held_quantity=held_quantity,
+        held_avg_cost=held_avg_cost,
+        held_unrealized_pct=held_unrealized_pct,
+        portfolio_note=portfolio_note,
         data_status=data_status,
         latest_quote=latest_quote_payload,
         chart_context=chart_ctx,

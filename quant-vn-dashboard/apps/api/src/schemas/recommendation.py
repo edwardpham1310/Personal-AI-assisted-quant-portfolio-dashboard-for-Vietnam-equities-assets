@@ -145,6 +145,17 @@ class RecommendationResult(BaseModel):
     # read this value — now the engine emits it directly.
     avg_value_20d: float | None = None
 
+    # Phase 2.7 (Feature 7) portfolio-aware enrichment. All optional so a
+    # recommendation generated without portfolio context stays valid.
+    # ``held_weight_pct`` is the position's weight WITHIN current holdings (%),
+    # not a % of total equity.
+    is_held: bool = False
+    held_weight_pct: float | None = None
+    held_quantity: float | None = None
+    held_avg_cost: float | None = None
+    held_unrealized_pct: float | None = None
+    portfolio_note: str | None = None
+
     # Phase 2.B guardrail upgrade — additional indicator surface so the
     # frontend can render the guardrail panel without re-fetching scanner.
     vol_cov_20d: float | None = None
@@ -176,3 +187,162 @@ class RecommendationPreviewRequest(BaseModel):
     profile: RecommendationProfile = "short_aggressive"
     horizon: RecommendationHorizon | None = None
     total_equity: float | None = Field(default=None, ge=0.0)
+
+
+# ── Top Picks (Feature 2) ─────────────────────────────────────────────────────
+
+RecommendationStrength = Literal["Weak", "Neutral", "Strong"]
+
+# Safer, non-advice signal vocabulary (no "buy"/"guaranteed" wording).
+RecommendationSignal = Literal[
+    "Watch", "Actionable", "Accumulate", "Wait", "Avoid", "Risky", "Take Profit"
+]
+
+
+class TopPick(BaseModel):
+    """One ranked quant pick. Research signal — decision support, not advice."""
+
+    symbol: str
+    company_name: str | None = None
+    exchange: str | None = None
+    sector: str | None = None  # no source yet (securities master has no sector)
+    price: float | None = None
+    change_pct: float | None = None
+    volume: float | None = None
+    value: float | None = None
+    quant_score: int = Field(ge=0, le=100, default=0)
+    strength: RecommendationStrength
+    signal: RecommendationSignal
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+    reasons: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    last_updated: str | None = None
+
+
+class TopPicksResponse(BaseModel):
+    picks: list[TopPick] = Field(default_factory=list)
+    coverage: str = "tracked_universe"  # full_market only when a full scan exists
+    universe_size: int = 0
+    as_of: str | None = None
+    disclaimer: str = (
+        "Research signals — decision support only, not financial advice. "
+        "No orders placed."
+    )
+
+
+# ── Explainability (Feature 4) ────────────────────────────────────────────────
+
+
+class ScoreContribution(BaseModel):
+    """One component's contribution to the weighted ``final_score``.
+
+    ``contribution = weight * score`` (points out of 100). Lets the UI show
+    *why* a final score is what it is, not just the raw component scores.
+    """
+
+    component: str                       # engine key, e.g. "momentum"
+    label: str                           # display label, e.g. "Momentum"
+    score: int | None = None             # 0..100 component score (None = N/A)
+    weight: float = Field(ge=0.0, le=1.0)
+    contribution: float                  # weight * score, points toward final
+
+
+class RecommendationExplanation(BaseModel):
+    """Structured 'why' for one symbol — derived from a RecommendationResult.
+
+    Read-only view: it never writes a snapshot and adds no new signal. The
+    summary stays in research-signal language (no advice wording).
+    """
+
+    symbol: str
+    profile: RecommendationProfile
+    horizon: RecommendationHorizon
+    action: RecommendationAction
+    strength: RecommendationStrength
+    signal: RecommendationSignal
+    final_score: int = Field(ge=0, le=100)
+    confidence: float = Field(ge=0.0, le=1.0)
+    action_threshold_used: int = 0
+    contributions: list[ScoreContribution] = Field(default_factory=list)
+    summary: str = ""
+    reasons: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    data_status: DataStatus = "FRESH"
+    as_of: str
+    disclaimer: str = "research signal · not financial advice · no orders placed"
+
+
+# ── History + Performance (Feature 5) ─────────────────────────────────────────
+
+
+class RecommendationHistoryItem(BaseModel):
+    """One persisted snapshot, mapped to the display vocabulary.
+
+    ``final_score`` is recomputed from the stored component ``scores`` with the
+    snapshot's profile weights — the same math the live engine uses — so old
+    rows render consistently without storing a redundant column.
+    """
+
+    id: str | None = None
+    symbol: str
+    profile: str | None = None
+    horizon: str
+    action: str                          # stored vocab incl. legacy BUY/SELL
+    signal: RecommendationSignal
+    strength: RecommendationStrength
+    final_score: int = Field(ge=0, le=100, default=0)
+    confidence: float | None = None
+    status: str = "OPEN"
+    reference_price: float | None = None
+    reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    created_at: str | None = None
+    as_of: str | None = None
+
+
+class RecommendationHistoryResponse(BaseModel):
+    items: list[RecommendationHistoryItem] = Field(default_factory=list)
+    count: int = 0
+    range: str = "ALL"
+    as_of: str | None = None
+    disclaimer: str = "research signal · not financial advice · no orders placed"
+
+
+class RecommendationPerformanceItem(BaseModel):
+    """Hypothetical mark-to-market for one snapshot.
+
+    ``return_pct = (current_price - reference_price) / reference_price``. This
+    is NOT an executed-trade P&L — it measures the signal's reference price
+    against the latest quote, for research review only.
+    """
+
+    id: str | None = None
+    symbol: str
+    horizon: str
+    action: str
+    signal: RecommendationSignal
+    reference_price: float
+    current_price: float
+    return_pct: float
+    stale: bool = False
+    created_at: str | None = None
+    priced_as_of: str | None = None
+
+
+class RecommendationPerformanceResponse(BaseModel):
+    items: list[RecommendationPerformanceItem] = Field(default_factory=list)
+    total: int = 0                       # snapshots in range
+    evaluated: int = 0                   # had reference_price AND a current quote
+    skipped_no_reference: int = 0
+    skipped_no_quote: int = 0
+    win_rate: float | None = None        # share of evaluated with return_pct > 0
+    avg_return_pct: float | None = None
+    best: RecommendationPerformanceItem | None = None
+    worst: RecommendationPerformanceItem | None = None
+    range: str = "ALL"
+    as_of: str | None = None
+    basis: str = "hypothetical_from_reference_price"
+    disclaimer: str = (
+        "Hypothetical return from the mark price at signal time to the latest "
+        "quote — not an executed trade. Research signal, not financial advice."
+    )
