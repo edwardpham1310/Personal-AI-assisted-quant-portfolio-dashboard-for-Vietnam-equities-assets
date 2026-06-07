@@ -11,7 +11,7 @@ import { PositionForm } from "@/components/portfolio/PositionForm";
 import { AllocationDonut } from "@/components/portfolio/AllocationDonut";
 import { StrategyAllocationDonut } from "@/components/portfolio/StrategyAllocationDonut";
 import { PnlBySymbolBar } from "@/components/portfolio/PnlBySymbolBar";
-import { PortfolioVsVnindexPlaceholder } from "@/components/portfolio/PortfolioVsVnindexPlaceholder";
+import { PortfolioVsVnindexChart } from "@/components/portfolio/PortfolioVsVnindexChart";
 import { BrokerAccountCard } from "@/components/portfolio/BrokerAccountCard";
 import { formatVnd, formatNumber } from "@/lib/format";
 import type { EnrichedPosition, PositionCreate, PositionUpdate } from "@/hooks/portfolio-types";
@@ -314,7 +314,7 @@ export default function PortfolioPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PnlBySymbolBar positions={positions.positions} />
-        <PortfolioVsVnindexPlaceholder />
+        <PortfolioVsVnindexChart />
       </div>
     </div>
   );

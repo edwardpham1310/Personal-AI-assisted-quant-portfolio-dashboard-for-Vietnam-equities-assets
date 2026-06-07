@@ -96,6 +96,26 @@ class StockPosition(BaseModel):
     as_of: datetime
 
 
+class SsiAccountSnapshot(BaseModel):
+    """Read-only SSI account snapshot for the dashboard broker card.
+
+    Aggregates ``status`` + ``cash`` + ``positions`` in one response. Real data
+    appears only when the provider is a genuinely configured, read-only SSI
+    connection (``connected=True``). In mock/dev or when SSI is unconfigured,
+    ``connected=False`` and ``cash``/``positions`` are omitted — fabricated
+    balances are NEVER surfaced. No order placement happens here.
+    """
+
+    connected: bool = False
+    status_code: str
+    mock: bool = False
+    account_masked: str | None = None
+    cash: CashBalance | None = None
+    positions: list[StockPosition] = Field(default_factory=list)
+    note: str | None = None
+    disclaimer: str = "Read-only SSI account snapshot — no orders are placed."
+
+
 class MaxBuyQuantity(BaseModel):
     account_id: str
     symbol: str

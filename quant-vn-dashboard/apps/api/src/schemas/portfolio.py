@@ -196,3 +196,30 @@ class EquitySnapshotRunResult(BaseModel):
     total_equity: float | None = None
     warnings: list[str] = Field(default_factory=list)
 
+
+class RiskComponent(BaseModel):
+    """One explainable contributor to the portfolio risk score."""
+
+    key: str
+    label: str
+    available: bool = False
+    score: float | None = None  # 0..100 risk subscore (higher = riskier)
+    weight: float = 0.0  # blend weight (only counted when available)
+    detail: str | None = None  # human explanation when available
+    reason: str | None = None  # why unavailable
+
+
+class RiskScoreResult(BaseModel):
+    """Read-only, explainable portfolio risk score. Partial-aware: the overall
+    ``score`` is the weighted mean of the AVAILABLE components only, and
+    ``None`` when nothing can be computed (e.g. no positions). Never fabricated.
+    """
+
+    score: float | None = None  # 0..100, None when no component is available
+    band: str = "unavailable"  # low | moderate | elevated | high | unavailable
+    components: list[RiskComponent] = Field(default_factory=list)
+    available_count: int = 0
+    total_count: int = 0
+    as_of: str | None = None
+    disclaimer: str = "Research only — not financial advice. No orders placed."
+

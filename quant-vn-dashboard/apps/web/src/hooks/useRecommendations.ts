@@ -96,6 +96,13 @@ export type RecommendationResult = {
   chart_context: ChartContext | null;
   chart_url: string;
   disclaimer: string;
+  // Feature 7 portfolio-aware fields (held_weight_pct is weight within holdings).
+  is_held: boolean;
+  held_weight_pct: number | null;
+  held_quantity: number | null;
+  held_avg_cost: number | null;
+  held_unrealized_pct: number | null;
+  portfolio_note: string | null;
 };
 
 export const SHORT_HORIZONS: RecommendationHorizon[] = [
@@ -180,6 +187,155 @@ export function useSymbolRecommendation(
   });
 
   return { result: data, loading, error, refresh };
+}
+
+export type RecommendationStrength = "Weak" | "Neutral" | "Strong";
+export type RecommendationSignal =
+  | "Watch"
+  | "Actionable"
+  | "Accumulate"
+  | "Wait"
+  | "Avoid"
+  | "Risky"
+  | "Take Profit";
+
+export type ScoreContribution = {
+  component: string;
+  label: string;
+  score: number | null;
+  weight: number;
+  contribution: number;
+};
+
+export type RecommendationExplanation = {
+  symbol: string;
+  profile: RecommendationProfile;
+  horizon: RecommendationHorizon;
+  action: RecommendationAction;
+  strength: RecommendationStrength;
+  signal: RecommendationSignal;
+  final_score: number;
+  confidence: number;
+  action_threshold_used: number;
+  contributions: ScoreContribution[];
+  summary: string;
+  reasons: string[];
+  risks: string[];
+  data_status: DataStatus;
+  as_of: string;
+  disclaimer: string;
+};
+
+/**
+ * GET /recommendations/explain/{symbol} — weighted contribution breakdown for
+ * one symbol. Read-only "why" view (no snapshot written). Pass null to idle.
+ */
+export function useRecommendationExplanation(
+  symbol: string | null,
+  profile: RecommendationProfile,
+  horizon: RecommendationHorizon,
+) {
+  const api = useApi();
+  const fetcher = useCallback(async () => {
+    if (!symbol) return null as RecommendationExplanation | null;
+    return api<RecommendationExplanation>(
+      `/recommendations/explain/${symbol}?profile=${profile}&horizon=${horizon}`,
+    );
+  }, [api, symbol, profile, horizon]);
+
+  const { data, loading, error, refresh } =
+    usePollingResource<RecommendationExplanation | null>({
+      fetcher,
+      intervalMs: 60_000,
+      enabled: !!symbol,
+      deps: [symbol, profile, horizon],
+    });
+
+  return { explanation: data, loading, error, refresh };
+}
+
+export type RecommendationHistoryItem = {
+  id: string | null;
+  symbol: string;
+  profile: string | null;
+  horizon: string;
+  action: string;
+  signal: RecommendationSignal;
+  strength: RecommendationStrength;
+  final_score: number;
+  confidence: number | null;
+  status: string;
+  reference_price: number | null;
+  reasons: string[];
+  warnings: string[];
+  created_at: string | null;
+  as_of: string | null;
+};
+
+export type RecommendationHistory = {
+  items: RecommendationHistoryItem[];
+  count: number;
+  range: string;
+  as_of: string | null;
+  disclaimer: string;
+};
+
+export type RecommendationPerformanceItem = {
+  id: string | null;
+  symbol: string;
+  horizon: string;
+  action: string;
+  signal: RecommendationSignal;
+  reference_price: number;
+  current_price: number;
+  return_pct: number;
+  stale: boolean;
+  created_at: string | null;
+  priced_as_of: string | null;
+};
+
+export type RecommendationPerformance = {
+  items: RecommendationPerformanceItem[];
+  total: number;
+  evaluated: number;
+  skipped_no_reference: number;
+  skipped_no_quote: number;
+  win_rate: number | null;
+  avg_return_pct: number | null;
+  best: RecommendationPerformanceItem | null;
+  worst: RecommendationPerformanceItem | null;
+  range: string;
+  as_of: string | null;
+  basis: string;
+  disclaimer: string;
+};
+
+/** GET /recommendations/history — past snapshots, ascending by date. */
+export function useRecommendationHistory(range: string, symbol?: string | null) {
+  const api = useApi();
+  const params = new URLSearchParams({ range });
+  if (symbol) params.set("symbol", symbol);
+  const qs = params.toString();
+  const { data, loading, error, refresh } = usePollingResource<RecommendationHistory>({
+    fetcher: () => api<RecommendationHistory>(`/recommendations/history?${qs}`),
+    intervalMs: 60_000,
+    deps: [qs],
+  });
+  return { data, loading, error, refresh };
+}
+
+/** GET /recommendations/performance — hypothetical mark-to-market (not trades). */
+export function useRecommendationPerformance(range: string, symbol?: string | null) {
+  const api = useApi();
+  const params = new URLSearchParams({ range });
+  if (symbol) params.set("symbol", symbol);
+  const qs = params.toString();
+  const { data, loading, error, refresh } = usePollingResource<RecommendationPerformance>({
+    fetcher: () => api<RecommendationPerformance>(`/recommendations/performance?${qs}`),
+    intervalMs: 60_000,
+    deps: [qs],
+  });
+  return { data, loading, error, refresh };
 }
 
 export function useRecommendationPreview() {

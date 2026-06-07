@@ -36,6 +36,25 @@ const DATA_STATUS_META: Record<DataStatus, { label: string; cls: string; title: 
   },
 };
 
+// Feature 7: flags a symbol you already hold, with its weight within holdings.
+// A high weight (engine flags it via the portfolio_concentration warning) turns
+// the badge amber to surface concentration risk inline.
+function HeldBadge({ rec }: { rec: RecommendationResult }) {
+  const concentrated = rec.warnings.includes("portfolio_concentration");
+  const pct = rec.held_weight_pct;
+  const cls = concentrated
+    ? "bg-amber-500/15 text-amber-400 border-amber-500/40"
+    : "bg-accent/15 text-accent border-accent/40";
+  return (
+    <span
+      title={rec.portfolio_note ?? "Currently held"}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-tight ${cls}`}
+    >
+      Held{pct != null ? ` ${pct.toFixed(0)}%` : ""}
+    </span>
+  );
+}
+
 function DataStatusBadge({ status }: { status: DataStatus }) {
   const meta = DATA_STATUS_META[status];
   return (
@@ -215,6 +234,7 @@ export function RecoTable({
                   <div className="flex items-center gap-1">
                     <span>{r.symbol}</span>
                     <DataStatusBadge status={r.data_status} />
+                    {r.is_held ? <HeldBadge rec={r} /> : null}
                   </div>
                 </td>
                 <td className="px-2 py-2">

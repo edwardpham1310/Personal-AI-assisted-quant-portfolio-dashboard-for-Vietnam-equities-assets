@@ -157,6 +157,39 @@ class Settings(BaseSettings):
     quote_cache_ttl_seconds: int = 30
     index_cache_ttl_seconds: int = 30
     top_movers_cache_ttl_seconds: int = 60
+
+    # ── Full-market breadth/top-movers scan (OFF by default) ───────────────
+    # When enabled (and the poller is running), a slow periodic scan fetches
+    # quotes for the listed securities and computes WHOLE-MARKET breadth +
+    # top movers — vs the default "tracked universe" (core symbols only).
+    # Safeguards against SSI cost/rate-limits: capped symbol count + chunked
+    # sequential fetches on the slow ``full_market_poll_interval`` cadence.
+    # TODO(ssi-sandbox): real SSI batch size / rate limits for many-symbol
+    # quote fetches are unvalidated — keep the cap conservative until proven.
+    enable_full_market_scan: bool = False
+    full_market_scan_max_symbols: int = 500
+    full_market_scan_chunk_size: int = 50
+
+    # ── Portfolio risk score (read-only analytics — NOT trading risk) ──────
+    # TUNABLE model parameters, not market truths. The score uses only real
+    # data (positions, cash, market regime, NAV snapshots). Liquidity needs an
+    # ADV baseline that does not exist yet → TODO(adv-baseline). Other VN
+    # assumptions: fees/tax already modelled in
+    # ``portfolio_valuation.cost_breakdown``; trading calendar in
+    # ``services/vn_holidays``. STILL MISSING (do not hardcode — add a source):
+    #   * slippage model               TODO(ssi/source)
+    #   * corporate-actions adjustment TODO(source)
+    #   * lot-size / order constraints TODO(source)
+    risk_weight_concentration: float = 0.30
+    risk_weight_cash_buffer: float = 0.15
+    risk_weight_regime: float = 0.20
+    risk_weight_drawdown: float = 0.20
+    risk_weight_volatility: float = 0.15
+    risk_target_cash_ratio: float = 0.10   # TODO(config): desired cash buffer fraction
+    risk_drawdown_cap: float = 0.30        # TODO(config): drawdown treated as max risk
+    risk_volatility_cap: float = 0.40      # TODO(config): annualized vol treated as max risk
+    risk_min_history_points: int = 5
+    risk_trading_days_per_year: int = 250  # TODO(calendar): VN trading days per year
     market_core_symbols: list[str] = Field(
         default_factory=lambda: ["FPT", "MWG", "HPG", "VNM", "VCB", "VRE"]
     )

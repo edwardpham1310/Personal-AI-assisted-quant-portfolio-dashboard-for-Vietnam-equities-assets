@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.routes import (
+    alerts,
     assets,
     auth,
     auto_trade,
@@ -73,6 +74,9 @@ async def lifespan(app: FastAPI):
             index_ttl=settings.index_cache_ttl_seconds,
             core_symbols=settings.market_core_symbols,
             core_indices=settings.market_core_indices,
+            enable_full_market_scan=settings.enable_full_market_scan,
+            full_market_scan_max_symbols=settings.full_market_scan_max_symbols,
+            full_market_scan_chunk_size=settings.full_market_scan_chunk_size,
         )
         set_poller(poller)
         await poller.start()
@@ -139,6 +143,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
     app.include_router(watchlist.router, prefix="/watchlists", tags=["watchlist"])
+    app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(market.router, prefix="/market", tags=["market"])
     app.include_router(stream.router, prefix="/stream", tags=["stream"])
     app.include_router(portfolio.router, prefix="/portfolio", tags=["portfolio"])

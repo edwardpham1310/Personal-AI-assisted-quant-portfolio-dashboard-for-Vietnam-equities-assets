@@ -25,16 +25,26 @@ export function KpiGrid({
   loading,
   todayPnl = null,
   regime = null,
+  riskScore = null,
+  riskBand = null,
 }: {
   summary: PortfolioSummary | null;
   assets: AssetsSummary | null;
   loading: boolean;
   todayPnl?: number | null;
   regime?: string | null;
+  riskScore?: number | null;
+  riskBand?: string | null;
 }) {
   const unrealizedPnl = summary?.total_unrealized_pnl ?? null;
   const unrealizedPnlPct = summary?.total_unrealized_pnl_pct ?? null;
   const regimeTone = regime === "UPTREND" ? "up" : regime === "DOWNTREND" ? "down" : "neutral";
+  const riskTone =
+    riskBand === "high" || riskBand === "elevated"
+      ? "down"
+      : riskBand === "low"
+        ? "up"
+        : "neutral";
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
@@ -81,7 +91,13 @@ export function KpiGrid({
         hint="intraday MtM vs reference"
         loading={loading}
       />
-      <KpiCard label="Risk Score" value={PLACEHOLDER} hint="TODO: no backend endpoint yet" />
+      <KpiCard
+        label="Risk Score"
+        value={riskScore != null ? Math.round(riskScore).toString() : PLACEHOLDER}
+        tone={riskScore != null ? riskTone : "neutral"}
+        hint={riskScore != null ? `${riskBand} (0–100)` : "Insufficient data yet"}
+        loading={loading}
+      />
       <KpiCard
         label="Market Regime"
         value={regime ?? PLACEHOLDER}

@@ -44,6 +44,14 @@ export function MarketBreadthCard({
   const total = advancers + decliners + unchanged || 1;
   const advRatio = advancers / total;
 
+  // Honest coverage: only say "full market" when the backend confirms the
+  // whole-universe scan; otherwise this is the polled "tracked universe".
+  const isFull = breadth?.coverage === "full_market";
+  const size = breadth?.universe_size;
+  const hint = isFull
+    ? `Full market${size ? ` · ${size} symbols` : ""}`
+    : `Tracked universe${size ? ` · ${size} symbols` : ""} — large caps polled live, not the whole market`;
+
   return (
     <Card
       title={
@@ -56,7 +64,7 @@ export function MarketBreadthCard({
           ) : null}
         </>
       }
-      hint="Counts across HOSE / HNX / UPCoM"
+      hint={hint}
     >
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
         <Cell label="Advancers" value={advancers} tone="up" />

@@ -142,3 +142,41 @@ async def test_start_stop_lifecycle() -> None:
     assert poller.is_running is True
     await poller.stop()
     assert poller.is_running is False
+
+
+@pytest.mark.asyncio
+async def test_refresh_full_market_disabled_by_default() -> None:
+    cache = InMemoryCache()
+    poller = _poller(MockMarketDataProvider(), cache)  # enable_full_market_scan defaults False
+    result = await poller.refresh_full_market_once()
+    assert result == {"full_market": "disabled"}
+    # Nothing written to the full-scan key.
+    assert await market_cache.get_full_scan(cache) is None
+
+
+@pytest.mark.asyncio
+async def test_refresh_full_market_writes_cache_when_enabled() -> None:
+    cache = InMemoryCache()
+    poller = MarketPoller(
+        provider=MockMarketDataProvider(),
+        cache=cache,
+        poll_interval=1.0,
+        full_market_interval=60.0,
+        quote_ttl=30,
+        index_ttl=30,
+        core_symbols=["FPT", "MWG"],
+        core_indices=["VNINDEX"],
+        enable_full_market_scan=True,
+        full_market_scan_max_symbols=100,
+        full_market_scan_chunk_size=2,
+    )
+    result = await poller.refresh_full_market_once()
+    assert result["ok"] is True
+    assert result["universe_size"] > 0
+
+    full = await market_cache.get_full_scan(cache)
+    assert isinstance(full, dict)
+    assert set(full["breadth"]) == {"advancers", "decliners", "unchanged", "ceiling", "floor"}
+    assert set(full["top_movers"]) == {"gainers", "losers", "by_value", "by_volume"}
+    # The tracked-universe keys are NOT overwritten by the full scan.
+    assert await market_cache.get_breadth(cache) is None

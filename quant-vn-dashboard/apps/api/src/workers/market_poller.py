@@ -27,7 +27,7 @@ from typing import Any
 from uuid import uuid4
 
 from providers.market_data.base import MarketDataProvider
-from services import market_breadth, market_cache
+from services import market_breadth, market_cache, market_full_scan
 from services.cache import Cache
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,9 @@ class MarketPoller:
         index_ttl: int,
         core_symbols: list[str],
         core_indices: list[str],
+        enable_full_market_scan: bool = False,
+        full_market_scan_max_symbols: int = 500,
+        full_market_scan_chunk_size: int = 50,
     ) -> None:
         self._provider = provider
         self._cache = cache
@@ -58,6 +61,9 @@ class MarketPoller:
         self._index_ttl = index_ttl
         self._core_symbols = {s.upper() for s in core_symbols}
         self._core_indices = [c.upper() for c in core_indices]
+        self._enable_full_market_scan = enable_full_market_scan
+        self._full_scan_max = full_market_scan_max_symbols
+        self._full_scan_chunk = full_market_scan_chunk_size
 
         self._subscriptions: Counter[str] = Counter()
         self._subscription_tokens: dict[str, list[str]] = {}
@@ -190,6 +196,34 @@ class MarketPoller:
             wrote += 1
         return {"indices_written": wrote}
 
+    async def refresh_full_market_once(self) -> dict[str, Any]:
+        """Whole-market breadth + top movers (OFF by default). Runs on the slow
+        ``full_market_interval`` cadence with capped, chunked fetches so SSI is
+        not hammered. Cached under a separate key; never overwrites the
+        tracked-universe payloads."""
+        if not self._enable_full_market_scan:
+            return {"full_market": "disabled"}
+        try:
+            result = await market_full_scan.run_full_market_scan(
+                self._provider,
+                max_symbols=self._full_scan_max,
+                chunk_size=self._full_scan_chunk,
+            )
+        except Exception as exc:
+            logger.warning("market_poller.full_scan_failed err=%s", type(exc).__name__)
+            return {"ok": False, "error": type(exc).__name__}
+        await market_cache.set_full_scan(
+            self._cache,
+            {
+                "breadth": result["breadth"],
+                "top_movers": result["top_movers"],
+                "universe_size": result["universe_size"],
+            },
+            # Lives longer than a hot quote — it refreshes on the slow cadence.
+            ttl_seconds=int(self._full_market_interval * 2),
+        )
+        return {"ok": True, "universe_size": result["universe_size"]}
+
     # ── Loop ───────────────────────────────────────────────────────────────
     async def _loop(self) -> None:
         loop = asyncio.get_running_loop()
@@ -204,6 +238,7 @@ class MarketPoller:
             now = loop.time()
             if now - self._last_full_market_at >= self._full_market_interval:
                 await self.refresh_indices_once()
+                await self.refresh_full_market_once()
                 self._last_full_market_at = loop.time()
 
             try:

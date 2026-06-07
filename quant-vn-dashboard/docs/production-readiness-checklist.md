@@ -93,6 +93,20 @@ Cross-references:
 | ☐ | Score breakdown component renders for every candidate (no `null`s in the chart) | 🟢 | |
 | ☐ | ML-probability badge appears only when `ml_probability` is non-null (Phase 2 readiness) | 🟢 | |
 
+### 6.1 Recommendations module (Features 2–7)
+
+| | Item | Phase | Verified |
+|---|---|---|---|
+| ☐ | Migration `0012_reco_reference_price.sql` applied (`reference_price` column on `recommendation_snapshots`) | 🟢 | |
+| ☐ | Migration `0013_alerts.sql` applied (`alerts` table + `alerts_owner` RLS + `updated_at` trigger) | 🟢 | |
+| ☐ | Top Picks (`/recommendations/top`) + watchlist picks (`/recommendations/watchlist/{id}/picks`) render real data with honest-empty on cold cache (no mock picks) | 🟢 | |
+| ☐ | Explain (`/recommendations/explain/{symbol}`) shows weighted contributions; summary uses research-signal language (forbidden-wording scan green) | 🟢 | |
+| ☐ | History (`/recommendations/history`) is RLS-scoped, ascending by date, range-filtered | 🟢 | |
+| ☐ | Performance (`/recommendations/performance`) is labelled hypothetical ("not an executed trade"); rows without `reference_price`/quote are skipped, not faked | 🟢 | |
+| ☐ | Alerts CRUD (`/alerts`, `/watchlists/{id}/alerts`) RLS-scoped; evaluation is read-only and never places an order | 🟢 | |
+| ☐ | Portfolio-aware held facts (`is_held`, `held_weight_pct`, concentration warning) surface on `/recommendations/symbol` when a holding exists | 🟢 | |
+| ☐ | Safe label vocabulary only (Watch/Actionable/Accumulate/Wait/Avoid/Risky/Take Profit) — no "buy"/"guaranteed"/"sure profit" wording anywhere in the module | 🟢 | |
+
 ## 7. Portfolio
 
 | | Item | Phase | Verified |

@@ -44,12 +44,18 @@ export const MOCK_INDICES: IndexSnapshot[] = [
   },
 ];
 
+/** Honest coverage of breadth/top-movers: the whole market vs only the polled
+ *  core "tracked universe". Set by the backend route. */
+export type Coverage = "full_market" | "tracked_universe";
+
 export type MarketBreadth = {
   advancers: number;
   decliners: number;
   unchanged: number;
   ceiling: number;
   floor: number;
+  coverage?: Coverage;
+  universe_size?: number;
 };
 
 export const MOCK_BREADTH: MarketBreadth = {
@@ -75,6 +81,8 @@ export type TopMovers = {
   // Ranked by raw session volume (ordinal). Replaces the former, never-real
   // ``by_volume_spike`` (which needed an ADV-20d baseline the live feed lacks).
   by_volume: Mover[];
+  coverage?: Coverage;
+  universe_size?: number;
 };
 
 export const MOCK_TOP_MOVERS: TopMovers = {

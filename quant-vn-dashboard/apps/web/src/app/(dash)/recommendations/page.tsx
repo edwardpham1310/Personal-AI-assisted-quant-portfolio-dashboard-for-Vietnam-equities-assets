@@ -10,6 +10,9 @@ import {
   type RecommendationResult,
 } from "@/hooks/useRecommendations";
 import { RecoTable } from "@/components/recommendations/RecoTable";
+import { TopPicksTable } from "@/components/recommendations/TopPicksTable";
+import { RecommendationHistorySection } from "@/components/recommendations/RecommendationHistorySection";
+import { AlertsPanel } from "@/components/recommendations/AlertsPanel";
 import { ExplainabilityPanel } from "@/components/recommendations/ExplainabilityPanel";
 import { RejectedRecsSection } from "@/components/recommendations/RejectedRecsSection";
 import { ProfileHorizonSwitcher } from "@/components/recommendations/ProfileHorizonSwitcher";
@@ -27,6 +30,7 @@ export default function RecommendationsPage() {
   const [horizon, setHorizon] = useState<RecommendationHorizon>("SHORT_2W");
   const [selected, setSelected] = useState<RecommendationResult | null>(null);
   const [watchlistsError, setWatchlistsError] = useState<string | null>(null);
+  const [addStatus, setAddStatus] = useState<string | null>(null);
 
   const loadWatchlists = useCallback(async () => {
     setWatchlistsError(null);
@@ -51,6 +55,28 @@ export default function RecommendationsPage() {
     horizon,
   );
 
+  const addToWatchlist = useCallback(
+    async (symbol: string) => {
+      if (!watchlistId) {
+        setAddStatus("Select a watchlist below first, then add.");
+        return;
+      }
+      setAddStatus(null);
+      try {
+        await api(`/watchlists/${watchlistId}/symbols`, {
+          method: "POST",
+          body: JSON.stringify({ symbol }),
+        });
+        setAddStatus(`Added ${symbol} to the selected watchlist.`);
+        await refresh();
+      } catch (e) {
+        // A 409 means it's already there — surface honestly, don't pretend.
+        setAddStatus(e instanceof Error ? e.message : `Could not add ${symbol}.`);
+      }
+    },
+    [api, watchlistId, refresh],
+  );
+
   const validResults = useMemo(() => results.filter((r) => r.status !== "REJECTED"), [results]);
 
   const profileLabel = profile === "short_aggressive" ? "Short-term" : "Long-term";
@@ -63,6 +89,13 @@ export default function RecommendationsPage() {
           Research signals · Rule-based · Not financial advice · No orders placed.
         </p>
       </header>
+
+      <TopPicksTable onAddToWatchlist={addToWatchlist} />
+      {addStatus ? (
+        <p className="text-xs text-ink-dim" role="status">
+          {addStatus}
+        </p>
+      ) : null}
 
       <Card title="Controls">
         <div className="flex flex-wrap items-center gap-3">
@@ -133,6 +166,9 @@ export default function RecommendationsPage() {
           </div>
         </div>
       )}
+
+      <RecommendationHistorySection />
+      <AlertsPanel />
     </div>
   );
 }

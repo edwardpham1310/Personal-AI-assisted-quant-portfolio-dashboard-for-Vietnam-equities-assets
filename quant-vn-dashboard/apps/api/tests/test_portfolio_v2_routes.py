@@ -227,15 +227,20 @@ def test_assets_costs_all_period_empty(
 # ── SSI sync placeholder ─────────────────────────────────────────────────────
 
 
-def test_sync_ssi_returns_501_placeholder(
+def test_sync_ssi_readonly_mock_is_honest_not_connected(
     client: TestClient, auth_headers
 ) -> None:
+    # Phase 2.1: /sync/ssi is now a READ-ONLY aggregation. Default provider is
+    # the mock, so it reports connected=false / mock=true with no fabricated
+    # balances — never a 501 placeholder, never fake data.
     headers, _ = auth_headers()
     r = client.post("/portfolio/sync/ssi", headers=headers)
-    assert r.status_code == 501
+    assert r.status_code == 200
     body = r.json()
-    assert body["status"] == "placeholder"
-    assert "Phase 2" in body["detail"]
+    assert body["connected"] is False
+    assert body["mock"] is True
+    assert body["cash"] is None
+    assert body["positions"] == []
 
 
 def test_pending_cash_is_NOT_counted_as_available_buying_power(

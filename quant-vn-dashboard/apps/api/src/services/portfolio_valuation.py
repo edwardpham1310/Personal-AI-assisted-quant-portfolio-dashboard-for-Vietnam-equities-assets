@@ -12,7 +12,15 @@ from datetime import UTC, date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from schemas.assets import CostBreakdown, CostPeriod, PnlBucket, PnlBySymbol, PnlWaterfall
+from schemas.assets import (
+    CashMovement,
+    CostBreakdown,
+    CostPeriod,
+    PnlBucket,
+    PnlBySymbol,
+    PnlWaterfall,
+    SettlementAlert,
+)
 from schemas.market import Quote
 from schemas.portfolio import EnrichedPosition, PortfolioSummary
 
@@ -355,3 +363,99 @@ def build_pnl_waterfall(
         ],
         as_of=as_of,
     )
+
+
+# ── Cash movements + settlement (for /assets/cash-movements, /settlement) ────
+
+
+def _trade_fees_total(trade: dict[str, Any]) -> float:
+    return sum(
+        float(trade.get(k) or 0.0)
+        for k in ("brokerage_fee", "vat", "sell_tax", "cash_advance_fee", "slippage_estimate")
+    )
+
+
+def build_cash_movements(
+    trades: list[dict[str, Any]],
+    *,
+    start: str | None = None,
+    end: str | None = None,
+) -> list[CashMovement]:
+    """Signed, trade-driven cash flows, ascending by trade date.
+
+    BUY → cash out: ``-(gross + fees)``. SELL → cash in: ``+(gross - fees)``.
+    Fees/tax are the values STORED on each trade (no hardcoded VN constants).
+    ``start``/``end`` are inclusive ISO dates compared against ``trade_date``.
+    Deposits/withdrawals are not represented (no external cash ledger)."""
+    rows: list[CashMovement] = []
+    for t in trades:
+        td = str(t.get("trade_date") or "")[:10]
+        if not td:
+            continue
+        if start is not None and td < start:
+            continue
+        if end is not None and td > end:
+            continue
+        side = str(t.get("side") or "").upper()
+        qty = float(t.get("quantity") or 0)
+        price = float(t.get("price") or 0.0)
+        gross = price * qty
+        fees = _trade_fees_total(t)
+        amount = (gross - fees) if side == "SELL" else -(gross + fees)
+        rows.append(
+            CashMovement(
+                date=td,
+                settlement_date=(str(t["settlement_date"])[:10] if t.get("settlement_date") else None),
+                symbol=str(t.get("symbol", "")).upper(),
+                side="SELL" if side == "SELL" else "BUY",
+                gross=gross,
+                fees=fees,
+                amount=amount,
+            )
+        )
+    rows.sort(key=lambda r: r.date)
+    return rows
+
+
+def build_settlement_alerts(
+    trades: list[dict[str, Any]],
+    *,
+    today: date | None = None,
+) -> list[SettlementAlert]:
+    """Pending T+2 settlements (``settlement_date`` today or later), ascending.
+
+    SELL → ``CASH_IN`` (proceeds settle); BUY → ``SHARES_IN`` (shares settle).
+    Uses the trade's stored ``settlement_date`` (already VN T+2-aware as
+    entered) — no synthetic calendar math."""
+    today = today or datetime.now(_ICT).date()
+    out: list[SettlementAlert] = []
+    for t in trades:
+        raw = t.get("settlement_date")
+        if not raw:
+            continue
+        try:
+            sd = date.fromisoformat(str(raw)[:10])
+        except ValueError:
+            continue
+        if sd < today:
+            continue
+        side = str(t.get("side") or "").upper()
+        qty = int(float(t.get("quantity") or 0))
+        price = float(t.get("price") or 0.0)
+        if side == "SELL":
+            kind, amount = "CASH_IN", price * qty - _trade_fees_total(t)
+        else:
+            kind, amount = "SHARES_IN", None
+        out.append(
+            SettlementAlert(
+                settlement_date=sd.isoformat(),
+                symbol=str(t.get("symbol", "")).upper(),
+                side="SELL" if side == "SELL" else "BUY",
+                kind=kind,
+                quantity=qty,
+                amount=amount,
+                days_until=(sd - today).days,
+            )
+        )
+    out.sort(key=lambda a: a.settlement_date)
+    return out

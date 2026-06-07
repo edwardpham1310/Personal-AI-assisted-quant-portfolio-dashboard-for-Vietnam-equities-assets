@@ -15,10 +15,11 @@ from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
 
-from core.deps import get_cache, get_db
+from core.config import Settings, get_settings
+from core.deps import get_cache, get_db, get_trading_provider
 from core.security import AuthContext, get_current_user
+from providers.trading.base import TradingProvider, TradingProviderError
 from schemas.portfolio import (
     AllocationResponse,
     AllocationSlice,
@@ -36,10 +37,18 @@ from schemas.portfolio import (
     PositionCreate,
     PositionDayPnl,
     PositionUpdate,
+    RiskScoreResult,
     TodayPnlResponse,
 )
-from services import market_cache, portfolio_snapshots, portfolio_valuation
+from schemas.trading import SsiAccountSnapshot
+from services import (
+    market_cache,
+    portfolio_risk,
+    portfolio_snapshots,
+    portfolio_valuation,
+)
 from services.cache import Cache
+from services.portfolio_risk import RiskParams
 from services.supabase_db import SupabaseDB
 
 router = APIRouter()
@@ -437,10 +446,104 @@ async def run_equity_snapshot(
     except PermissionError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     return EquitySnapshotRunResult(
-        recorded=True,
+        recorded=result["recorded"],
+        reason=result["reason"],
         snapshot_date=result["snapshot_date"],
         total_equity=result["total_equity"],
         warnings=result["warnings"],
+    )
+
+
+# Mirrors api/routes/market.py — the regime is cached there for 60s.
+_REGIME_CACHE_KEY = "market:regime"
+
+
+@router.get(
+    "/risk-score",
+    response_model=RiskScoreResult,
+    summary="Explainable, read-only portfolio risk score (partial-aware)",
+)
+async def get_risk_score(
+    user: AuthContext = Depends(get_current_user),
+    db: SupabaseDB = Depends(get_db),
+    cache: Cache = Depends(get_cache),
+    settings: Settings = Depends(get_settings),
+) -> RiskScoreResult:
+    """Read-only analytics — NOT trading risk and no order path. Blends only the
+    real-data components that are available (concentration, cash buffer, regime
+    exposure, drawdown, volatility); liquidity is unavailable until an ADV
+    baseline exists. Never fabricates a number."""
+    account = await _get_default_account(db, user)
+    params = RiskParams(
+        w_concentration=settings.risk_weight_concentration,
+        w_cash_buffer=settings.risk_weight_cash_buffer,
+        w_regime=settings.risk_weight_regime,
+        w_drawdown=settings.risk_weight_drawdown,
+        w_volatility=settings.risk_weight_volatility,
+        target_cash_ratio=settings.risk_target_cash_ratio,
+        drawdown_cap=settings.risk_drawdown_cap,
+        volatility_cap=settings.risk_volatility_cap,
+        min_history_points=settings.risk_min_history_points,
+        trading_days_per_year=settings.risk_trading_days_per_year,
+    )
+    if account is None:
+        return portfolio_risk.compute_risk_score(
+            position_weights=[], total_market_value=0.0, cash=0.0, total_equity=0.0,
+            regime_label=None, nav_history=[], as_of=None, params=params,
+        )
+
+    # Valuation (positions × live quotes) → weights + market value.
+    total_mv = 0.0
+    weights: list[float] = []
+    as_of: str | None = None
+    positions = await _load_positions_for_user(db, user, account["id"])
+    if positions:
+        symbols = [str(p["symbol"]).upper() for p in positions]
+        quotes = await market_cache.get_quotes(cache, symbols)
+        summary, enriched = portfolio_valuation.compute_summary(positions, quotes)
+        total_mv = summary.total_market_value
+        weights = [ep.weight for ep in enriched if ep.weight is not None]
+        as_of = summary.last_marked_at
+
+    # Cash component of NAV (same definition as /assets/summary.total_equity).
+    cash_rows = await db.select(
+        "cash_balances", where={"account_id": account["id"]}, user_jwt=user.raw_token
+    )
+    if cash_rows:
+        r = cash_rows[0]
+        cash = (
+            float(r.get("settled_cash") or 0.0)
+            + float(r.get("pending_cash") or 0.0)
+            + float(r.get("advanced_cash") or 0.0)
+            - float(r.get("cash_advance_liability") or 0.0)
+        )
+    else:
+        cash = 0.0
+    total_equity = cash + total_mv
+
+    # Market regime — read the cheap cached value (no SSI call here).
+    cached_regime = await cache.get_json(_REGIME_CACHE_KEY)
+    regime_label = (
+        cached_regime.get("label") if isinstance(cached_regime, dict) else None
+    )
+    if regime_label == "NO_DATA":
+        regime_label = None
+
+    # NAV history for drawdown / volatility (forward-only snapshots).
+    curve = await portfolio_snapshots.load_curve(db, user, account["id"])
+    nav_history = [p.equity for p in curve]
+    if as_of is None and curve:
+        as_of = curve[-1].ts
+
+    return portfolio_risk.compute_risk_score(
+        position_weights=weights,
+        total_market_value=total_mv,
+        cash=cash,
+        total_equity=total_equity,
+        regime_label=regime_label,
+        nav_history=nav_history,
+        as_of=as_of,
+        params=params,
     )
 
 
@@ -555,16 +658,62 @@ async def delete_position_default(
         )
 
 
+def _mask_account(account_no: str) -> str:
+    """Show only the last 4 chars of the broker account number."""
+    tail = account_no[-4:] if account_no else ""
+    return f"••••{tail}" if tail else "••••"
+
+
 @router.post(
     "/sync/ssi",
-    status_code=status.HTTP_501_NOT_IMPLEMENTED,
-    summary="SSI sync placeholder — Phase 2",
+    response_model=SsiAccountSnapshot,
+    summary="Read-only SSI account snapshot (status + cash + positions). No orders.",
 )
-async def sync_ssi_placeholder(
-    _user: AuthContext = Depends(get_current_user),
-) -> JSONResponse:
-    # Body shape is fixed per PM brief — do not nest under "detail".
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content={"detail": "SSI sync coming in Phase 2", "status": "placeholder"},
+async def sync_ssi_readonly(
+    user: AuthContext = Depends(get_current_user),
+    provider: TradingProvider = Depends(get_trading_provider),
+    settings: Settings = Depends(get_settings),
+) -> SsiAccountSnapshot:
+    """Aggregate the user's READ-ONLY SSI account state in one call.
+
+    Read-only by construction: it never writes to the DB and never touches an
+    order path (``submit_order`` stays 501). The SSI account is resolved
+    SERVER-SIDE from ``ssi_trading_account_no`` — never from client input — so
+    there is no account-id injection / RLS surface. Real cash + positions appear
+    only when the provider is a genuinely configured read-only SSI connection;
+    in mock/dev or when unconfigured, ``connected=False`` and no fabricated
+    balances are returned. Always 200 (auth-gated) so the panel renders a calm
+    state rather than throwing.
+    """
+    snap = await provider.status()
+    live = (not snap.mock) and snap.status_code == "READ_ONLY"
+    if not live:
+        return SsiAccountSnapshot(
+            connected=False,
+            status_code=snap.status_code,
+            mock=snap.mock,
+            note=snap.note,
+        )
+
+    account_ref = settings.ssi_trading_account_no
+    try:
+        cash = await provider.get_cash_balance(account_ref)
+        positions = await provider.get_stock_positions(account_ref)
+    except TradingProviderError as exc:
+        # Honest failure — never fabricate. Surface a sanitized status.
+        return SsiAccountSnapshot(
+            connected=False,
+            status_code="ERROR",
+            mock=False,
+            note=exc.client_safe_message,
+        )
+
+    return SsiAccountSnapshot(
+        connected=True,
+        status_code="READ_ONLY",
+        mock=False,
+        account_masked=_mask_account(account_ref),
+        cash=cash,
+        positions=positions,
+        note=snap.note,
     )

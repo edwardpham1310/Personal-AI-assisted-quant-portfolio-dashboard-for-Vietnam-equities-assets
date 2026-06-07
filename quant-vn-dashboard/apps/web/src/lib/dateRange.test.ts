@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { rangeStartDate, rangeToDays, sortByTimeAsc, isoDate } from "./dateRange";
+import {
+  rangeStartDate,
+  rangeToDays,
+  sortByTimeAsc,
+  isoDate,
+  OHLCV_RANGE_OPTIONS,
+  EQUITY_RANGE_OPTIONS,
+} from "./dateRange";
 
 describe("sortByTimeAsc", () => {
   it("turns descending date-only input into ascending output", () => {
@@ -55,6 +62,29 @@ describe("rangeStartDate", () => {
   it("subtracts whole years for 1Y", () => {
     const now = new Date("2026-06-15T00:00:00Z");
     expect(isoDate(rangeStartDate("1Y", now)!)).toBe("2025-06-15");
+  });
+
+  it("subtracts one day for 1D", () => {
+    const now = new Date("2026-06-15T00:00:00Z");
+    expect(isoDate(rangeStartDate("1D", now)!)).toBe("2026-06-14");
+  });
+});
+
+describe("standard range option sets", () => {
+  const standard = ["1D", "1W", "1M", "3M", "6M", "YTD", "1Y"];
+
+  it("OHLCV options are the standard set without All (365-day cap)", () => {
+    expect(OHLCV_RANGE_OPTIONS.map((o) => o.key)).toEqual(standard);
+    expect(OHLCV_RANGE_OPTIONS.some((o) => o.key === "ALL")).toBe(false);
+  });
+
+  it("equity options are the standard set plus All", () => {
+    expect(EQUITY_RANGE_OPTIONS.map((o) => o.key)).toEqual([...standard, "ALL"]);
+  });
+
+  it("neither list offers the non-standard 5D/2W/2Y/5Y options", () => {
+    const offered = [...OHLCV_RANGE_OPTIONS, ...EQUITY_RANGE_OPTIONS].map((o) => o.key);
+    for (const k of ["5D", "2W", "2Y", "5Y"]) expect(offered).not.toContain(k);
   });
 });
 

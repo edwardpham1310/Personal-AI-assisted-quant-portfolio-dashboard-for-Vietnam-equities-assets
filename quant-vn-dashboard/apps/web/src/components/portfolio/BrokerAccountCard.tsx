@@ -15,7 +15,9 @@ import { formatVnd, formatNumber } from "@/lib/format";
  * fabricated balances — the dashboard's own data stays the manual portfolio.
  */
 export function BrokerAccountCard() {
-  const { status, cash, positions, loading, error } = useBrokerAccount();
+  const { snapshot, loading, error } = useBrokerAccount();
+  const cash = snapshot?.cash ?? null;
+  const positions = snapshot?.positions ?? [];
 
   const hint = "Read-only SSI sync — no orders are ever placed from here.";
 
@@ -38,8 +40,8 @@ export function BrokerAccountCard() {
     );
   }
 
-  const isMock = status?.mock || status?.ssi_trading_use_mock;
-  const isLive = status?.status_code === "READ_ONLY" && !status?.mock;
+  const isMock = !!snapshot?.mock;
+  const isLive = snapshot?.connected === true;
 
   // Mock/dev: do NOT render the provider's fabricated numbers as real.
   if (isMock) {
