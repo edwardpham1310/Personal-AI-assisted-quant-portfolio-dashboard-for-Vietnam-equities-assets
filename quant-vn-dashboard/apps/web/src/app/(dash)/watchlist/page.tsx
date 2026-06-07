@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { EmptyState, ErrorState } from "@/components/ui/AsyncStates";
 import { useApi } from "@/lib/api";
 import { useWatchlistScanner } from "@/hooks/useScanner";
 import { useWatchlistStream } from "@/hooks/useWatchlistStream";
+import { useWatchlistPicks } from "@/hooks/useWatchlistPicks";
+import type { TopPick } from "@/hooks/useTopPicks";
 import { ScannerTable, type ScannerRow } from "@/components/scanner/ScannerTable";
 import { VN_EXCHANGES, type VnExchange } from "@quant-shared/constants/markets";
 
@@ -164,9 +167,12 @@ function WatchlistCard({
   const [symbol, setSymbol] = useState("");
   const [exchange, setExchange] = useState<VnExchange>("HOSE");
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState(watchlist.name);
 
   const scanner = useWatchlistScanner(watchlist.id);
   const stream = useWatchlistStream(watchlist.id);
+  const picks = useWatchlistPicks(watchlist.id);
 
   const rows: ScannerRow[] = useMemo(() => {
     const liveBySymbol = new Map(stream.quotes.map((q) => [q.symbol.toUpperCase(), q]));
@@ -211,8 +217,76 @@ function WatchlistCard({
     await removeItem(match.id);
   }
 
+  async function saveRename() {
+    const name = draftName.trim();
+    if (!name || name === watchlist.name) {
+      setRenaming(false);
+      return;
+    }
+    await api(`/watchlists/${watchlist.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    setRenaming(false);
+    await reload();
+  }
+
+  async function deleteList() {
+    if (!window.confirm(`Delete watchlist "${watchlist.name}"? This cannot be undone.`)) return;
+    await api(`/watchlists/${watchlist.id}`, { method: "DELETE" });
+    await reload();
+  }
+
+  const cardAction = renaming ? (
+    <span className="inline-flex items-center gap-2">
+      <input
+        value={draftName}
+        onChange={(e) => setDraftName(e.target.value)}
+        aria-label="Watchlist name"
+        className="rounded border border-border bg-bg px-2 py-1 text-xs text-ink"
+      />
+      <button
+        type="button"
+        onClick={() => void saveRename()}
+        className="rounded border border-border bg-bg-subtle px-2 py-1 text-xs text-ink hover:border-accent"
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setDraftName(watchlist.name);
+          setRenaming(false);
+        }}
+        className="text-xs text-ink-muted hover:text-ink"
+      >
+        Cancel
+      </button>
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-3 text-xs">
+      <button
+        type="button"
+        onClick={() => {
+          setDraftName(watchlist.name);
+          setRenaming(true);
+        }}
+        className="text-ink-muted hover:text-accent"
+      >
+        Rename
+      </button>
+      <button
+        type="button"
+        onClick={() => void deleteList()}
+        className="text-ink-muted hover:text-accent-down"
+      >
+        Delete
+      </button>
+    </span>
+  );
+
   return (
-    <Card title={watchlist.name} hint={watchlist.description ?? undefined}>
+    <Card title={watchlist.name} hint={watchlist.description ?? undefined} action={cardAction}>
       <form onSubmit={addItem} className="mb-4 flex gap-2">
         <input
           value={symbol}
@@ -271,6 +345,51 @@ function WatchlistCard({
           <div className="mt-2 border-t border-border pt-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
+                <h3 className="text-sm font-medium text-ink">Quant strength</h3>
+                <p className="text-[11px] text-ink-dim">
+                  Same scoring as Top Picks · research signals, not advice.
+                </p>
+              </div>
+              {picks.loading ? <span className="text-[11px] text-ink-dim">Scoring…</span> : null}
+            </div>
+            {picks.error ? (
+              <ErrorState
+                message={`Could not score watchlist: ${picks.error}`}
+                onRetry={() => void picks.refresh()}
+              />
+            ) : (picks.data?.picks.length ?? 0) === 0 ? (
+              <EmptyState>No quant scores yet (quote cache may be cold).</EmptyState>
+            ) : (
+              <table className="mb-4 w-full text-xs">
+                <thead>
+                  <tr className="text-left text-ink-dim">
+                    <th className="py-1">Symbol</th>
+                    <th className="py-1 text-right">Score</th>
+                    <th className="py-1">Strength</th>
+                    <th className="py-1">Signal</th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono text-ink-muted">
+                  {picks.data?.picks.map((p) => (
+                    <tr key={p.symbol} className="border-t border-border">
+                      <td className="py-1 text-ink">{p.symbol}</td>
+                      <td className="py-1 text-right text-ink">{p.quant_score}</td>
+                      <td className="py-1">
+                        <Badge tone={strengthTone(p.strength)}>{p.strength}</Badge>
+                      </td>
+                      <td className="py-1">
+                        <Badge tone={signalTone(p.signal)}>{p.signal}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="mt-2 border-t border-border pt-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
                 <h3 className="text-sm font-medium text-ink">Signal scanner</h3>
                 <p className="text-[11px] text-ink-dim">
                   Research signals · not financial advice · no orders placed.
@@ -309,4 +428,15 @@ function WatchlistCard({
       )}
     </Card>
   );
+}
+
+function strengthTone(s: TopPick["strength"]): "up" | "down" | "neutral" {
+  return s === "Strong" ? "up" : s === "Weak" ? "down" : "neutral";
+}
+
+function signalTone(s: TopPick["signal"]): "up" | "down" | "neutral" | "info" {
+  if (s === "Actionable" || s === "Accumulate") return "up";
+  if (s === "Avoid" || s === "Risky") return "down";
+  if (s === "Take Profit") return "info";
+  return "neutral";
 }
