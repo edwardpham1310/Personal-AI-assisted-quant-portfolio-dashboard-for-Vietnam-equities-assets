@@ -305,6 +305,7 @@ async def _run_one(
     cash_row: dict | None,
     persist: bool,
     vnindex_bars: Any = _UNSET,
+    quote: Any = _UNSET,
 ) -> RecommendationResult | None:
     cache_key = CACHE_KEY.format(symbol=symbol, profile=profile, horizon=horizon)
     cached = await cache.get_json(cache_key)
@@ -335,16 +336,22 @@ async def _run_one(
         )
     bars_sorted = sorted(bars, key=lambda b: b.ts)
 
-    # Quote + VNINDEX are independent network calls. When VNINDEX wasn't
-    # prefetched by the caller (single-symbol routes), fetch both concurrently;
-    # _run_many prefetches VNINDEX once per request so we only fetch the quote.
-    if vnindex_bars is _UNSET:
+    # Quote + VNINDEX are independent network calls. _run_many prefetches both
+    # once per request (VNINDEX once; quotes batched from the warm cache) and
+    # passes them in. Single-symbol routes leave them _UNSET → fetch here,
+    # concurrently when both are needed. A cache-miss quote arrives as _UNSET so
+    # we fall back to the provider for that symbol.
+    need_quote = quote is _UNSET
+    need_vni = vnindex_bars is _UNSET
+    if need_quote and need_vni:
         quote, vnindex_bars = await asyncio.gather(
             _fetch_quote(symbol, provider=provider),
             _fetch_vnindex(provider),
         )
-    else:
+    elif need_quote:
         quote = await _fetch_quote(symbol, provider=provider)
+    elif need_vni:
+        vnindex_bars = await _fetch_vnindex(provider)
 
     rec = engine.generate_recommendation(
         symbol=symbol,
@@ -479,13 +486,19 @@ async def _run_many(
     db: SupabaseDB,
     user: AuthContext,
 ) -> list[RecommendationResult]:
-    # VNINDEX is identical for every symbol in this scan — fetch it once here
-    # instead of once per symbol inside _run_one (was N redundant 430-day pulls).
-    portfolio_ctx, vnindex_bars = await asyncio.gather(
+    # Fetch the three per-request shared inputs concurrently:
+    #  - portfolio context (held weights),
+    #  - VNINDEX history (identical for every symbol — was re-pulled per symbol),
+    #  - latest quotes batched from the warm cache (the poller fills it), so we
+    #    skip N per-symbol provider quote calls. A cache miss → _UNSET → the
+    #    engine path falls back to the provider for just that symbol.
+    portfolio_ctx, vnindex_bars, quotes = await asyncio.gather(
         _load_portfolio_context(db, user.raw_token, cache=cache),
         _fetch_vnindex(provider),
+        market_cache.get_quotes(cache, symbols),
     )
     portfolio_positions, total_equity, cash_row = portfolio_ctx
+    qmap = {q.symbol.upper(): q for q in quotes if q is not None}
     sem = asyncio.Semaphore(SCAN_CONCURRENCY)
 
     async def _bounded(sym: str) -> RecommendationResult | None:
@@ -503,6 +516,7 @@ async def _run_many(
                 cash_row=cash_row,
                 persist=True,
                 vnindex_bars=vnindex_bars,
+                quote=qmap.get(sym.upper(), _UNSET),
             )
 
     results = await asyncio.gather(*[_bounded(s) for s in symbols])

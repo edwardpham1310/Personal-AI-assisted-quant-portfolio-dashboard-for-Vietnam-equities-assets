@@ -34,7 +34,7 @@ from core.config import get_settings
 from core.deps import get_market_provider, set_cache, set_poller
 from core.logging import configure_logging, get_logger
 from services.cache import build_cache
-from services.supabase_db import PostgrestError
+from services.supabase_db import PostgrestError, aclose_shared_client
 from workers.market_poller import MarketPoller
 
 logger = get_logger(__name__)
@@ -92,6 +92,7 @@ async def lifespan(app: FastAPI):
         set_poller(None)
     await cache.close()
     set_cache(None)
+    await aclose_shared_client()
     logger.info("api.shutdown")
 
 

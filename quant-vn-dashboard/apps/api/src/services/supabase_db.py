@@ -57,6 +57,34 @@ class PostgrestError(Exception):
         self.detail = detail
 
 
+# ── Shared HTTP client ───────────────────────────────────────────────────────
+#
+# One process-wide httpx.AsyncClient reused across every PostgREST call so we
+# pool connections / reuse TLS instead of paying a fresh handshake per DB call
+# (a single recommendation scan makes 3-4 selects + one insert per symbol).
+# The client is transport-only — all auth/headers are per-call — so a single
+# instance safely serves all users. Created lazily on first use (inside a
+# running event loop) and closed by the FastAPI lifespan on shutdown.
+
+_shared_client: httpx.AsyncClient | None = None
+_DEFAULT_LIMITS = httpx.Limits(max_keepalive_connections=20, max_connections=100)
+
+
+def _get_shared_client(timeout: float) -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(timeout=timeout, limits=_DEFAULT_LIMITS)
+    return _shared_client
+
+
+async def aclose_shared_client() -> None:
+    """Close the shared PostgREST client. Call from the app lifespan shutdown."""
+    global _shared_client
+    if _shared_client is not None and not _shared_client.is_closed:
+        await _shared_client.aclose()
+    _shared_client = None
+
+
 class PostgrestDB:
     """httpx-based implementation that talks to Supabase PostgREST.
 
@@ -96,10 +124,10 @@ class PostgrestDB:
         params: dict[str, str] | None = None,
         json: Any = None,
     ) -> Any:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            response = await client.request(
-                method, f"{self._base}/{path}", headers=headers, params=params, json=json
-            )
+        client = _get_shared_client(self._timeout)
+        response = await client.request(
+            method, f"{self._base}/{path}", headers=headers, params=params, json=json
+        )
         if response.status_code >= 400:
             raise PostgrestError(response.status_code, response.text)
         if not response.content:
