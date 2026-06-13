@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useAsyncResource } from "./useAsyncResource";
@@ -46,5 +46,33 @@ describe("useAsyncResource", () => {
     expect(result.current.data).toEqual(FALLBACK);
     expect(result.current.isMock).toBe(true);
     expect(result.current.error).toBe("boom");
+  });
+
+  it("first-load error is never 'stale' (no real data shown yet)", async () => {
+    const fetcher = vi.fn().mockRejectedValue(new Error("down"));
+    const { result } = renderHook(() =>
+      useAsyncResource({ fetcher, mockFallback: FALLBACK, disableMockOnError: true }),
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasLoadedReal).toBe(false);
+    expect(result.current.stale).toBe(false); // never loaded real → not stale
+    expect(result.current.lastUpdatedAt).toBeNull();
+  });
+
+  it("keeps last good data + flags stale when a later refetch fails", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ kind: "live" })
+      .mockRejectedValueOnce(new Error("down"));
+    const { result } = renderHook(() =>
+      useAsyncResource({ fetcher, mockFallback: FALLBACK, disableMockOnError: true }),
+    );
+    await waitFor(() => expect(result.current.hasLoadedReal).toBe(true));
+    expect(result.current.lastUpdatedAt).not.toBeNull();
+
+    act(() => result.current.refetch());
+    await waitFor(() => expect(result.current.error).toBe("down"));
+    expect(result.current.data).toEqual({ kind: "live" }); // last good kept
+    expect(result.current.stale).toBe(true);
   });
 });
