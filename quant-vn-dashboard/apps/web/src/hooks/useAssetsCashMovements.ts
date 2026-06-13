@@ -37,6 +37,8 @@ export function useAssetsCashMovements(range: RangeKey) {
     fetcher: async () => {
       const r = await api<CashMovements>(`/assets/cash-movements${qs}`);
       // Defensive ascending guard (backend already sorts).
+      // Event series: multiple trades can share a date — sort ascending but do
+      // NOT de-dupe (that would drop same-day movements).
       return { ...r, movements: sortByTimeAsc(r.movements ?? [], (m) => m.date) };
     },
     intervalMs: POLL_MS,
@@ -46,6 +48,8 @@ export function useAssetsCashMovements(range: RangeKey) {
     data: resource.data,
     loading: resource.loading,
     error: resource.error,
+    lastUpdatedAt: resource.lastUpdatedAt,
+    stale: resource.stale,
     refresh: resource.refresh,
   };
 }

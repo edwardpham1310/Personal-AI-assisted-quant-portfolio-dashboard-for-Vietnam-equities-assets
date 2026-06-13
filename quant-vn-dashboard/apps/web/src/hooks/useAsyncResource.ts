@@ -10,6 +10,12 @@ export type AsyncState<T> = {
   error: string | null;
   /** True when ``data`` comes from the mock fallback rather than the live API. */
   isMock: boolean;
+  /** ISO timestamp of the last successful live fetch, or null if none yet. */
+  lastUpdatedAt: string | null;
+  /** True when an error is surfaced but we're still showing the last good (real) data. */
+  stale: boolean;
+  /** True once at least one real fetch has succeeded (data is real, not the seed mock). */
+  hasLoadedReal: boolean;
   refetch: () => void;
 };
 
@@ -47,6 +53,8 @@ export function useAsyncResource<T>({
   const [isLoading, setIsLoading] = useState<boolean>(!alwaysMock);
   const [error, setError] = useState<string | null>(null);
   const [isMock, setIsMock] = useState<boolean>(alwaysMock);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [hasLoadedReal, setHasLoadedReal] = useState<boolean>(false);
   const [reload, setReload] = useState<number>(0);
 
   useEffect(() => {
@@ -65,6 +73,8 @@ export function useAsyncResource<T>({
         if (cancelled) return;
         setData(next);
         setIsMock(false);
+        setHasLoadedReal(true);
+        setLastUpdatedAt(new Date().toISOString());
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -94,6 +104,10 @@ export function useAsyncResource<T>({
     isLoading,
     error,
     isMock,
+    lastUpdatedAt,
+    // Stale only makes sense once we've shown real data at least once.
+    stale: error != null && hasLoadedReal,
+    hasLoadedReal,
     refetch: () => setReload((r) => r + 1),
   };
 }

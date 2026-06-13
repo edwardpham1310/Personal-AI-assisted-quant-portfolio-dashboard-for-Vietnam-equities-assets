@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useApi } from "@/lib/api";
-import { isoDate, rangeStartDate, sortByTimeAsc, type RangeKey } from "@/lib/dateRange";
+import { isoDate, rangeStartDate, type RangeKey } from "@/lib/dateRange";
+import { normalizeSeries } from "@/lib/chart";
 import type { EquityPoint } from "@/lib/mock/portfolio";
 import { usePollingResource } from "./usePollingResource";
 
@@ -37,8 +38,9 @@ export function useEquityCurve(range: RangeKey = "3M") {
   const resource = usePollingResource<EquityPoint[]>({
     fetcher: async () => {
       const rows = await api<EquityPoint[]>(`/portfolio/equity-curve${qs}`);
-      // Backend already returns ascending; sort defensively in case the source changes.
-      return sortByTimeAsc(rows, (r) => r.ts);
+      // Backend already returns ascending; normalize defensively (ascending +
+      // de-dupe by date) in case the source changes.
+      return normalizeSeries(rows, (r) => r.ts);
     },
     intervalMs: POLL_MS,
     deps: [qs],
@@ -47,6 +49,8 @@ export function useEquityCurve(range: RangeKey = "3M") {
     data: resource.data ?? [],
     loading: resource.loading,
     error: resource.error,
+    lastUpdatedAt: resource.lastUpdatedAt,
+    stale: resource.stale,
     refresh: resource.refresh,
   };
 }

@@ -90,6 +90,8 @@ export default function DashboardHomePage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <EquityCurveChart
           data={liveOrEmpty(equityCurve.data)}
+          asOf={equityCurve.lastUpdatedAt}
+          stale={equityCurve.stale}
           action={
             <RangeSelect
               value={equityRange}
@@ -103,7 +105,11 @@ export default function DashboardHomePage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <AllocationDonut data={allocation.data} />
-        <PnlWaterfall data={liveOrEmpty(pnlWaterfall.data)} />
+        <PnlWaterfall
+          data={liveOrEmpty(pnlWaterfall.data)}
+          asOf={pnlWaterfall.asOf}
+          stale={pnlWaterfall.stale}
+        />
       </div>
 
       <RiskScoreCard />

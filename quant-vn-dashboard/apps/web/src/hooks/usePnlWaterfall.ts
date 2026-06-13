@@ -25,9 +25,10 @@ export function usePnlWaterfall() {
   const buckets: PnlBucket[] = resource.data?.buckets ?? [];
   return {
     data: buckets,
-    asOf: resource.data?.as_of ?? null,
+    asOf: resource.data?.as_of ?? resource.lastUpdatedAt,
     loading: resource.loading,
     error: resource.error,
+    stale: resource.stale,
     refresh: resource.refresh,
   };
 }

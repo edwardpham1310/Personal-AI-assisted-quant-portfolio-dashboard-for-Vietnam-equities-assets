@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/AsyncStates";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RangeSelect } from "@/components/ui/RangeSelect";
+import { StaleNote } from "@/components/ui/StaleNote";
 import { useDailyOhlcv } from "@/hooks/useDailyOhlcv";
 import { OHLCV_RANGE_OPTIONS, rangeToDays, type RangeKey } from "@/lib/dateRange";
 import type { OHLCV } from "@/lib/mock/market";
@@ -65,24 +66,36 @@ type CandleProps = {
   payload?: Enriched;
 };
 
-function Candle(props: CandleProps) {
+export function Candle(props: CandleProps) {
   const { x = 0, y = 0, width = 0, height = 0, payload } = props;
-  if (!payload || payload.high === payload.low) return null;
+  if (!payload) return null;
   const { open, high, low, close } = payload;
+  const isUp = close >= open;
+  const color = isUp ? UP_COLOR : DOWN_COLOR;
+  const cx = x + width / 2;
+  const bodyX = x + width * 0.15;
+  const bodyW = Math.max(1, width * 0.7);
+
+  // Flat / limit-locked day (high === low → zero range): recharts gives a
+  // zero-height bar, so a normal candle would vanish. Draw a doji tick at the
+  // price level instead of dropping the bar — common for VN ceiling/floor days.
+  if (high === low) {
+    return (
+      <line x1={bodyX} y1={y} x2={bodyX + bodyW} y2={y} stroke={color} strokeWidth={1.5} />
+    );
+  }
+
   const yHighPx = y;
   const yLowPx = y + height;
   const scale = (v: number) => yHighPx + ((high - v) / (high - low)) * (yLowPx - yHighPx);
-  const isUp = close >= open;
-  const color = isUp ? UP_COLOR : DOWN_COLOR;
   const bodyTop = scale(Math.max(open, close));
   const bodyBottom = scale(Math.min(open, close));
-  const cx = x + width / 2;
   return (
     <g>
       <line x1={cx} y1={yHighPx} x2={cx} y2={yLowPx} stroke={color} strokeWidth={1} />
       <rect
-        x={x + width * 0.15}
-        width={Math.max(1, width * 0.7)}
+        x={bodyX}
+        width={bodyW}
         y={bodyTop}
         height={Math.max(1, bodyBottom - bodyTop)}
         fill={color}
@@ -96,8 +109,10 @@ export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: st
   const [symbol, setSymbol] = useState(initialSymbol);
   const [range, setRange] = useState<RangeKey>("3M");
   const days = useMemo(() => rangeToDays(range), [range]);
-  const { data, isLoading, error, isMock, refetch } = useDailyOhlcv(symbol, days);
+  const { data, isLoading, error, isMock, stale, lastUpdatedAt, hasLoadedReal, refetch } =
+    useDailyOhlcv(symbol, days);
   const enriched = useMemo(() => enrich(data), [data]);
+  const showChart = enriched.length > 0 && hasLoadedReal;
 
   return (
     <Card
@@ -127,11 +142,11 @@ export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: st
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && !hasLoadedReal ? (
         <Skeleton height={240} />
-      ) : error ? (
+      ) : !showChart && error ? (
         <p className="text-xs text-accent-down">{error}</p>
-      ) : enriched.length === 0 ? (
+      ) : !showChart ? (
         <EmptyState>No bars for {symbol}.</EmptyState>
       ) : (
         <>
@@ -225,6 +240,7 @@ export function CandlestickChart({ initialSymbol = "FPT" }: { initialSymbol?: st
               </ComposedChart>
             </ResponsiveContainer>
           </div>
+          <StaleNote asOf={lastUpdatedAt} stale={stale} />
         </>
       )}
     </Card>

@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RangeSelect } from "@/components/ui/RangeSelect";
+import { StaleNote } from "@/components/ui/StaleNote";
 import { useAssetsCashMovements } from "@/hooks/useAssetsCashMovements";
 import { EQUITY_RANGE_OPTIONS, type RangeKey } from "@/lib/dateRange";
 import { formatVnd } from "@/lib/format";
@@ -26,8 +27,9 @@ import { formatVnd } from "@/lib/format";
  */
 export function CashMovementChart() {
   const [range, setRange] = useState<RangeKey>("3M");
-  const { data, loading, error } = useAssetsCashMovements(range);
+  const { data, loading, error, stale, lastUpdatedAt } = useAssetsCashMovements(range);
   const movements = data?.movements ?? [];
+  const showChart = movements.length > 0;
 
   return (
     <Card
@@ -37,9 +39,9 @@ export function CashMovementChart() {
     >
       {loading && !data ? (
         <Skeleton height={224} />
-      ) : error ? (
+      ) : !showChart && error ? (
         <p className="text-xs text-accent-down">{error}</p>
-      ) : movements.length === 0 ? (
+      ) : !showChart ? (
         <EmptyState>No cash movements in this range.</EmptyState>
       ) : (
         <>
@@ -71,6 +73,7 @@ export function CashMovementChart() {
               {formatVnd(data?.net_cash_flow ?? 0)}
             </span>
           </p>
+          <StaleNote asOf={lastUpdatedAt} stale={stale} />
         </>
       )}
     </Card>

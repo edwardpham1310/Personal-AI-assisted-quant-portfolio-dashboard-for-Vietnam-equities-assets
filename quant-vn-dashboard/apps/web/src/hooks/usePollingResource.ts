@@ -13,6 +13,10 @@ export type PollingResource<T> = {
   data: T | null;
   loading: boolean;
   error: string | null;
+  /** ISO timestamp of the last successful fetch, or null if none yet. */
+  lastUpdatedAt: string | null;
+  /** True when an error is surfaced but we're still showing the last good data. */
+  stale: boolean;
   refresh: () => Promise<void>;
 };
 
@@ -35,6 +39,7 @@ export function usePollingResource<T>({
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(enabled);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const cancelledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -44,9 +49,14 @@ export function usePollingResource<T>({
     setError(null);
     try {
       const result = await fetcher();
-      if (!cancelledRef.current) setData(result);
+      if (!cancelledRef.current) {
+        setData(result);
+        setLastUpdatedAt(new Date().toISOString());
+      }
     } catch (e) {
       if (!cancelledRef.current) {
+        // Keep the last good `data` on screen (no flicker to empty); just
+        // surface the error so callers can show a "stale" badge over it.
         setError(e instanceof Error ? e.message : "Request failed");
       }
     } finally {
@@ -108,5 +118,12 @@ export function usePollingResource<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, intervalMs, fetchOnce]);
 
-  return { data, loading, error, refresh: fetchOnce };
+  return {
+    data,
+    loading,
+    error,
+    lastUpdatedAt,
+    stale: error != null && data != null,
+    refresh: fetchOnce,
+  };
 }

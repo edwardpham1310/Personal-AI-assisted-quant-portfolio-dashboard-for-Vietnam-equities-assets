@@ -3,12 +3,13 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
-import { MOCK_ALLOCATION, type AllocationSlice } from "@/lib/mock/portfolio";
+import type { AllocationSlice } from "@/lib/mock/portfolio";
 import { formatVnd } from "@/lib/format";
+import { CHART_COLORS, TOOLTIP_STYLE } from "@/lib/chart";
 
-const COLORS = ["#4f8bf0", "#22c55e", "#a855f7", "#f59e0b", "#64748b"];
+const COLORS = CHART_COLORS.series;
 
-export function AllocationDonut({ data = MOCK_ALLOCATION }: { data?: AllocationSlice[] }) {
+export function AllocationDonut({ data = [] }: { data?: AllocationSlice[] }) {
   return (
     <Card title="Allocation" hint="By strategy tag (market value)">
       {data.length === 0 ? (
@@ -31,7 +32,7 @@ export function AllocationDonut({ data = MOCK_ALLOCATION }: { data?: AllocationS
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ background: "#0b0d10", border: "1px solid #21262d", fontSize: 12 }}
+                contentStyle={TOOLTIP_STYLE}
                 formatter={(v: number) => formatVnd(v)}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />

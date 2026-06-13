@@ -1,7 +1,7 @@
 "use client";
 
 import { useApi } from "@/lib/api";
-import { sortByTimeAsc } from "@/lib/dateRange";
+import { normalizeSeries } from "@/lib/chart";
 import { makeMockOhlcv, type OHLCV } from "@/lib/mock/market";
 import { useAsyncResource } from "./useAsyncResource";
 
@@ -40,8 +40,9 @@ export function useDailyOhlcv(symbol: string, days = 180) {
         volume: r.volume,
       }));
       // Defensive: rolling-MA enrichment + candlestick rendering require strict
-      // oldest→newest order even if a provider returns bars out of order.
-      return sortByTimeAsc(mapped, (r) => r.ts);
+      // oldest→newest order + one bar per day even if a provider returns bars
+      // out of order or duplicated.
+      return normalizeSeries(mapped, (r) => r.ts);
     },
     mockFallback: makeMockOhlcv(upper, lookback),
     deps: [upper, lookback],

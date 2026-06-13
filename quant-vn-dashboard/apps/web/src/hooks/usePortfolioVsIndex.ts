@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useApi } from "@/lib/api";
-import { isoDate, rangeStartDate, sortByTimeAsc, type RangeKey } from "@/lib/dateRange";
+import { isoDate, rangeStartDate, type RangeKey } from "@/lib/dateRange";
+import { normalizeSeries } from "@/lib/chart";
 import { usePollingResource } from "./usePollingResource";
 
 /** One aligned, rebased-to-100 comparison point. */
@@ -67,8 +68,8 @@ export function usePortfolioVsIndex(range: RangeKey) {
         vnindex: ((vniMap.get(ts) ?? baseVni) / baseVni) * 100,
       }));
       // Defensive ascending sort (common is already sorted; keep the guarantee
-      // explicit so the chart always renders oldest→newest).
-      return sortByTimeAsc(points, (p) => p.ts);
+      // explicit so the chart always renders oldest→newest, one point per day).
+      return normalizeSeries(points, (p) => p.ts);
     },
     intervalMs: POLL_MS,
     deps: [key],
@@ -78,5 +79,7 @@ export function usePortfolioVsIndex(range: RangeKey) {
     data: resource.data ?? [],
     loading: resource.loading,
     error: resource.error,
+    lastUpdatedAt: resource.lastUpdatedAt,
+    stale: resource.stale,
   };
 }

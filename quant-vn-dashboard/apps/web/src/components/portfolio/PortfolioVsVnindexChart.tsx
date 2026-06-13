@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/AsyncStates";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { RangeSelect } from "@/components/ui/RangeSelect";
+import { StaleNote } from "@/components/ui/StaleNote";
 import { usePortfolioVsIndex } from "@/hooks/usePortfolioVsIndex";
 import { OHLCV_RANGE_OPTIONS, type RangeKey } from "@/lib/dateRange";
 
@@ -26,7 +27,8 @@ import { OHLCV_RANGE_OPTIONS, type RangeKey } from "@/lib/dateRange";
  */
 export function PortfolioVsVnindexChart() {
   const [range, setRange] = useState<RangeKey>("3M");
-  const { data, loading, error } = usePortfolioVsIndex(range);
+  const { data, loading, error, stale, lastUpdatedAt } = usePortfolioVsIndex(range);
+  const showChart = data.length > 0;
 
   return (
     <Card
@@ -38,13 +40,14 @@ export function PortfolioVsVnindexChart() {
     >
       {loading && data.length === 0 ? (
         <Skeleton height={224} />
-      ) : error ? (
+      ) : !showChart && error ? (
         <p className="text-xs text-accent-down">{error}</p>
-      ) : data.length === 0 ? (
+      ) : !showChart ? (
         <EmptyState>
           No portfolio history yet — the equity curve seeds as you use the dashboard.
         </EmptyState>
       ) : (
+        <>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -76,6 +79,8 @@ export function PortfolioVsVnindexChart() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+        <StaleNote asOf={lastUpdatedAt} stale={stale} />
+        </>
       )}
     </Card>
   );
