@@ -263,11 +263,10 @@ async def _load_portfolio_context(
         return None, None, None
     account_id = accounts[0]["id"]
 
-    positions = await db.select(
-        "manual_positions", where={"account_id": account_id}, user_jwt=user_jwt
-    )
-    cash_rows = await db.select(
-        "cash_balances", where={"account_id": account_id}, user_jwt=user_jwt
+    # Independent reads on the same account — run concurrently.
+    positions, cash_rows = await asyncio.gather(
+        db.select("manual_positions", where={"account_id": account_id}, user_jwt=user_jwt),
+        db.select("cash_balances", where={"account_id": account_id}, user_jwt=user_jwt),
     )
     cash_row = cash_rows[0] if cash_rows else None
 
@@ -287,6 +286,10 @@ async def _load_portfolio_context(
 
 # ── Core run ────────────────────────────────────────────────────────────────
 
+# Sentinel: lets callers pass a prefetched VNINDEX series (which may legitimately
+# be None) so _run_many fetches it once per request instead of once per symbol.
+_UNSET: Any = object()
+
 
 async def _run_one(
     *,
@@ -301,6 +304,7 @@ async def _run_one(
     total_equity: float | None,
     cash_row: dict | None,
     persist: bool,
+    vnindex_bars: Any = _UNSET,
 ) -> RecommendationResult | None:
     cache_key = CACHE_KEY.format(symbol=symbol, profile=profile, horizon=horizon)
     cached = await cache.get_json(cache_key)
@@ -331,8 +335,16 @@ async def _run_one(
         )
     bars_sorted = sorted(bars, key=lambda b: b.ts)
 
-    quote = await _fetch_quote(symbol, provider=provider)
-    vnindex_bars = await _fetch_vnindex(provider)
+    # Quote + VNINDEX are independent network calls. When VNINDEX wasn't
+    # prefetched by the caller (single-symbol routes), fetch both concurrently;
+    # _run_many prefetches VNINDEX once per request so we only fetch the quote.
+    if vnindex_bars is _UNSET:
+        quote, vnindex_bars = await asyncio.gather(
+            _fetch_quote(symbol, provider=provider),
+            _fetch_vnindex(provider),
+        )
+    else:
+        quote = await _fetch_quote(symbol, provider=provider)
 
     rec = engine.generate_recommendation(
         symbol=symbol,
@@ -467,9 +479,13 @@ async def _run_many(
     db: SupabaseDB,
     user: AuthContext,
 ) -> list[RecommendationResult]:
-    portfolio_positions, total_equity, cash_row = await _load_portfolio_context(
-        db, user.raw_token, cache=cache
+    # VNINDEX is identical for every symbol in this scan — fetch it once here
+    # instead of once per symbol inside _run_one (was N redundant 430-day pulls).
+    portfolio_ctx, vnindex_bars = await asyncio.gather(
+        _load_portfolio_context(db, user.raw_token, cache=cache),
+        _fetch_vnindex(provider),
     )
+    portfolio_positions, total_equity, cash_row = portfolio_ctx
     sem = asyncio.Semaphore(SCAN_CONCURRENCY)
 
     async def _bounded(sym: str) -> RecommendationResult | None:
@@ -486,6 +502,7 @@ async def _run_many(
                 total_equity=total_equity,
                 cash_row=cash_row,
                 persist=True,
+                vnindex_bars=vnindex_bars,
             )
 
     results = await asyncio.gather(*[_bounded(s) for s in symbols])
@@ -733,7 +750,7 @@ async def reco_for_watchlist(
 ) -> list[RecommendationResult]:
     resolved_horizon = _resolve_horizon(profile, horizon)
     parent = await db.select(
-        "watchlists", where={"id": watchlist_id}, user_jwt=user.raw_token
+        "watchlists", where={"id": watchlist_id, "user_id": user.user_id}, user_jwt=user.raw_token
     )
     if not parent:
         raise HTTPException(
@@ -934,7 +951,7 @@ async def reco_watchlist_picks(
     """Top-picks scoring (strength/signal) over a user's watchlist symbols.
     Auth + ownership gated; honest-empty for an empty watchlist."""
     parent = await db.select(
-        "watchlists", where={"id": watchlist_id}, user_jwt=user.raw_token
+        "watchlists", where={"id": watchlist_id, "user_id": user.user_id}, user_jwt=user.raw_token
     )
     if not parent:
         raise HTTPException(

@@ -223,7 +223,11 @@ class Settings(BaseSettings):
             # "Not authorized." even though JWT verification succeeded.
             "supabase_anon_key",
             "supabase_jwt_secret",
-            "supabase_service_role_key",
+            # NOTE: ``supabase_service_role_key`` is intentionally NOT required.
+            # The API never uses it — every PostgREST call forwards the user JWT
+            # under RLS, so there is no service-role / RLS-bypass code path. Not
+            # demanding this high-privilege secret in prod shrinks blast radius
+            # if the API environment is ever leaked.
             "database_url",
             "ssi_consumer_id",
             "ssi_consumer_secret",

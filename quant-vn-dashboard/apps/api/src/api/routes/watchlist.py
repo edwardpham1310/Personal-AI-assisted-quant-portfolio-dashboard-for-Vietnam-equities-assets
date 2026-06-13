@@ -196,7 +196,7 @@ async def add_watchlist_symbol(
     db: SupabaseDB = Depends(get_db),
 ) -> WatchlistItem:
     parent = await db.select(
-        "watchlists", where={"id": watchlist_id}, user_jwt=user.raw_token
+        "watchlists", where={"id": watchlist_id, "user_id": user.user_id}, user_jwt=user.raw_token
     )
     if not parent:
         raise HTTPException(
@@ -265,7 +265,7 @@ async def add_watchlist_item(
     # Confirm the watchlist exists *and* belongs to this user. RLS would
     # block the insert anyway; returning 404 here makes intent explicit.
     parent = await db.select(
-        "watchlists", where={"id": watchlist_id}, user_jwt=user.raw_token
+        "watchlists", where={"id": watchlist_id, "user_id": user.user_id}, user_jwt=user.raw_token
     )
     if not parent:
         raise HTTPException(
