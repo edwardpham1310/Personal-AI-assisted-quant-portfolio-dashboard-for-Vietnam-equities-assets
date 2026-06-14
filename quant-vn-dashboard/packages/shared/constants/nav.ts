@@ -20,4 +20,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/trading/manual-confirm", label: "Manual Confirm", order: 10 },
   { href: "/data-quality", label: "Data Quality", order: 11 },
   { href: "/settings", label: "Settings", order: 12 },
+  { href: "/settings/system", label: "System", order: 13 },
 ] as const;

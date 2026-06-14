@@ -49,20 +49,71 @@ export function useDataQualityStatus() {
 }
 
 // Risk/settlement alert endpoints are not wired yet. In production resolve to
-// an EMPTY list (the panels render an honest empty state) — never synthetic
-// alerts. In development keep the mock for UI work (shown with a "Mock" badge).
-// TODO: point these fetchers at real endpoints once they exist.
+// Dev shows mock (badged); production resolves to real data — never synthetic
+// alerts. Honest-empty when the portfolio is calm / nothing settles.
+type RiskComponent = { label: string; available: boolean; score?: number | null; detail?: string | null };
+type RiskScorePayload = { score: number | null; band: string; components: RiskComponent[] };
+
+const RISK_COMPONENT_ALERT_MIN = 70; // 0..100 subscore at/above which we surface it
+
+/**
+ * Risk alerts derived from the real, explainable risk score
+ * (`GET /portfolio/risk-score`): an elevated/high band plus any available
+ * component scoring >= 70. Empty when risk is low/moderate or unavailable.
+ */
 export function useRiskAlerts() {
+  const api = useApi();
   return useAsyncResource<RiskAlert[]>({
-    fetcher: () => Promise.resolve([]),
+    fetcher: async () => {
+      const r = await api<RiskScorePayload>("/portfolio/risk-score");
+      const alerts: RiskAlert[] = [];
+      const band = (r.band ?? "").toLowerCase();
+      const scoreTxt = r.score != null ? ` (${Math.round(r.score)}/100)` : "";
+      if (band === "high") {
+        alerts.push({ severity: "error", message: `Portfolio risk is high${scoreTxt}` });
+      } else if (band === "elevated") {
+        alerts.push({ severity: "warning", message: `Portfolio risk is elevated${scoreTxt}` });
+      }
+      for (const c of r.components ?? []) {
+        if (c.available && c.score != null && c.score >= RISK_COMPONENT_ALERT_MIN) {
+          alerts.push({ severity: "warning", message: c.detail ?? c.label });
+        }
+      }
+      return alerts;
+    },
     mockFallback: MOCK_RISK_ALERTS,
     alwaysMock: !isProductionBuild,
   });
 }
 
+type BackendSettlement = {
+  settlement_date: string;
+  symbol: string;
+  kind: string; // CASH_IN | SHARES_IN
+  quantity: number;
+  amount: number | null;
+  days_until: number;
+};
+type SettlementResponse = { alerts: BackendSettlement[] };
+
+/**
+ * Pending T+2 settlements from the real endpoint (`GET /assets/settlement`).
+ * Honest-empty when nothing is settling.
+ */
 export function useSettlementAlerts() {
+  const api = useApi();
   return useAsyncResource<SettlementAlert[]>({
-    fetcher: () => Promise.resolve([]),
+    fetcher: async () => {
+      const r = await api<SettlementResponse>("/assets/settlement");
+      return (r.alerts ?? []).map((a) => {
+        const when = a.days_until > 0 ? `in ${a.days_until}d` : "today";
+        const what =
+          a.kind === "CASH_IN"
+            ? `cash settles ${when}`
+            : `${a.quantity.toLocaleString()} shares settle ${when}`;
+        return { ts: a.settlement_date, message: `${a.symbol}: ${what}` };
+      });
+    },
     mockFallback: MOCK_SETTLEMENT_ALERTS,
     alwaysMock: !isProductionBuild,
   });

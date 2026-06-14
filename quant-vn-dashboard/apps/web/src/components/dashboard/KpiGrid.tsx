@@ -10,10 +10,10 @@ const PLACEHOLDER = "—";
  * Dashboard Home KPI grid, backed by the real ``GET /portfolio/summary`` and
  * ``GET /assets/summary`` endpoints.
  *
- * Today PnL (intraday MtM) and Market Regime are backed by real endpoints
- * (``GET /portfolio/today-pnl`` and ``GET /market/regime``). Risk Score has no
- * portfolio-level backend source yet and renders ``—`` with a TODO hint rather
- * than a fabricated number.
+ * Today PnL (intraday MtM), Market Regime, and Risk Score are all backed by
+ * real endpoints (``GET /portfolio/today-pnl``, ``GET /market/regime``,
+ * ``GET /portfolio/risk-score``); each renders ``—`` when its source has no
+ * data rather than a fabricated number.
  *
  * NOTE: ``total_unrealized_pnl_pct`` is already in *percent units* (e.g. -3.42
  * means -3.42%), so it is rendered directly — do NOT pass it through

@@ -25,14 +25,3 @@ export function Card({
     </section>
   );
 }
-
-export function PlaceholderCard({ title, module }: { title: string; module: string }) {
-  return (
-    <Card title={title} hint={`Module: ${module} (scaffold)`}>
-      <p className="text-ink-muted">
-        This view is scaffolded. Real data wiring is planned in the {module} milestone — see
-        <code className="ml-1 font-mono text-ink">docs/api.md</code>.
-      </p>
-    </Card>
-  );
-}
