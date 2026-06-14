@@ -91,7 +91,25 @@ class FakeSupabaseDB:
 
     @staticmethod
     def _matches(row: dict[str, Any], where: dict[str, Any]) -> bool:
-        return all(row.get(k) == v for k, v in where.items())
+        for key, cond in where.items():
+            value = row.get(key)
+            if isinstance(cond, tuple) and len(cond) == 2:
+                op, target = cond
+                if value is None:
+                    return False
+                if op == "eq" and value != target:
+                    return False
+                if op == "gte" and not (value >= target):
+                    return False
+                if op == "lte" and not (value <= target):
+                    return False
+                if op == "gt" and not (value > target):
+                    return False
+                if op == "lt" and not (value < target):
+                    return False
+            elif value != cond:
+                return False
+        return True
 
     @staticmethod
     def _now_iso() -> str:
@@ -103,12 +121,21 @@ class FakeSupabaseDB:
         table: str,
         *,
         where: dict[str, Any] | None = None,
+        order: str | None = None,
+        limit: int | None = None,
         user_jwt: str,
     ) -> list[dict[str, Any]]:
         user_id = self._extract_user_id(user_jwt)
         rows = [r for r in self._tables[table] if self._owned_by(table, r, user_id)]
         if where:
             rows = [r for r in rows if self._matches(r, where)]
+        if order:
+            col, _, direction = order.partition(".")
+            rows = sorted(
+                rows, key=lambda r: (r.get(col) is None, r.get(col)), reverse=direction == "desc"
+            )
+        if limit is not None:
+            rows = rows[:limit]
         # Return shallow copies so callers can't mutate the fake's storage.
         return [dict(r) for r in rows]
 

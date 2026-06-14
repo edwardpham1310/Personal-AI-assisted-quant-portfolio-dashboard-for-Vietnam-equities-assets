@@ -210,6 +210,24 @@ def _history_item(row: dict) -> RecommendationHistoryItem:
     )
 
 
+# Safety cap so /performance never scans the whole snapshot table.
+PERF_SCAN_LIMIT = 2000
+
+
+def _snapshot_where(user_id: str, range_: str, symbol: str | None) -> dict[str, Any]:
+    """Server-side filter for ``recommendation_snapshots``: owner + optional
+    symbol (eq) + optional ``created_at >= range cutoff`` (gte). Pushes the
+    filter to PostgREST instead of fetching the whole table and filtering in
+    Python."""
+    where: dict[str, Any] = {"user_id": user_id}
+    if symbol:
+        where["symbol"] = symbol.strip().upper()
+    cutoff = _range_cutoff(range_)
+    if cutoff is not None:
+        where["created_at"] = ("gte", cutoff.isoformat())
+    return where
+
+
 # ── Data plumbing ───────────────────────────────────────────────────────────
 
 
@@ -290,8 +308,77 @@ async def _load_portfolio_context(
 # be None) so _run_many fetches it once per request instead of once per symbol.
 _UNSET: Any = object()
 
+# Single-flight registry: concurrent identical (symbol, profile, horizon, user)
+# computations share one in-flight result instead of all missing the cache and
+# recomputing + persisting duplicate snapshots (cold-cache stampede). Keyed by
+# user too so different users never share user-specific (held-weight) results.
+_inflight: dict[str, asyncio.Future] = {}
+
 
 async def _run_one(
+    *,
+    symbol: str,
+    profile: RecommendationProfile,
+    horizon: RecommendationHorizon,
+    provider: MarketDataProvider,
+    cache: Cache,
+    db: SupabaseDB | None,
+    user: AuthContext | None,
+    portfolio_positions: list[dict] | None,
+    total_equity: float | None,
+    cash_row: dict | None,
+    persist: bool,
+    vnindex_bars: Any = _UNSET,
+    quote: Any = _UNSET,
+) -> RecommendationResult | None:
+    """Single-flight wrapper around _run_one_inner.
+
+    Cache hit returns immediately. On a miss, the first caller computes while
+    concurrent callers with the same key await its result — one provider
+    fan-out, one snapshot write, instead of N."""
+    cache_key = CACHE_KEY.format(symbol=symbol, profile=profile, horizon=horizon)
+    cached = await cache.get_json(cache_key)
+    if cached is not None:
+        try:
+            return RecommendationResult.model_validate(cached)
+        except Exception:
+            await cache.delete(cache_key)
+
+    key = f"{cache_key}:{user.user_id if user else 'anon'}"
+    existing = _inflight.get(key)
+    if existing is not None:
+        return await existing
+
+    fut: asyncio.Future = asyncio.get_event_loop().create_future()
+    _inflight[key] = fut
+    try:
+        result = await _run_one_inner(
+            symbol=symbol,
+            profile=profile,
+            horizon=horizon,
+            provider=provider,
+            cache=cache,
+            db=db,
+            user=user,
+            portfolio_positions=portfolio_positions,
+            total_equity=total_equity,
+            cash_row=cash_row,
+            persist=persist,
+            vnindex_bars=vnindex_bars,
+            quote=quote,
+        )
+        if not fut.done():
+            fut.set_result(result)
+        return result
+    except BaseException as exc:
+        if not fut.done():
+            fut.set_exception(exc)
+        raise
+    finally:
+        _inflight.pop(key, None)
+
+
+async def _run_one_inner(
     *,
     symbol: str,
     profile: RecommendationProfile,
@@ -627,25 +714,20 @@ async def reco_history(
     user: AuthContext = Depends(get_current_user),
     db: SupabaseDB = Depends(get_db),
 ) -> RecommendationHistoryResponse:
-    """RLS-scoped snapshot history. Filtered by an optional compact range
-    (1D/1W/1M/3M/6M/YTD/1Y/ALL) and optional symbol, sorted ascending by
-    timestamp (time-series rule). Honest-empty when there are no snapshots."""
-    rows = await db.select("recommendation_snapshots", user_jwt=user.raw_token)
-    cutoff = _range_cutoff(range_)
-    want_symbol = symbol.strip().upper() if symbol else None
-
-    items: list[RecommendationHistoryItem] = []
-    for row in rows:
-        if want_symbol and str(row.get("symbol", "")).upper() != want_symbol:
-            continue
-        ts = _parse_ts(row.get("created_at") or row.get("as_of"))
-        if cutoff is not None and (ts is None or ts < cutoff):
-            continue
-        items.append(_history_item(row))
-
-    items.sort(key=lambda it: it.created_at or it.as_of or "")
-    if len(items) > limit:
-        items = items[-limit:]  # keep the most recent, still ascending
+    """RLS-scoped snapshot history. Filtered server-side by an optional compact
+    range (1D/1W/1M/3M/6M/YTD/1Y/ALL) and optional symbol, newest-``limit`` rows
+    fetched (PostgREST order+limit) then returned ascending (time-series rule).
+    Honest-empty when there are no snapshots."""
+    where = _snapshot_where(user.user_id, range_, symbol)
+    rows = await db.select(
+        "recommendation_snapshots",
+        where=where,
+        order="created_at.desc",
+        limit=limit,
+        user_jwt=user.raw_token,
+    )
+    items = [_history_item(row) for row in rows]
+    items.sort(key=lambda it: it.created_at or it.as_of or "")  # ascending L→R
     return RecommendationHistoryResponse(
         items=items,
         count=len(items),
@@ -670,18 +752,17 @@ async def reco_performance(
     hypothetical return to the latest cached quote. Clearly NOT an executed
     trade — research review only. Honest-empty when no prices are available."""
     now_iso = datetime.now(UTC).isoformat()
-    rows = await db.select("recommendation_snapshots", user_jwt=user.raw_token)
-    cutoff = _range_cutoff(range_)
-    want_symbol = symbol.strip().upper() if symbol else None
-
-    in_range: list[dict] = []
-    for row in rows:
-        if want_symbol and str(row.get("symbol", "")).upper() != want_symbol:
-            continue
-        ts = _parse_ts(row.get("created_at") or row.get("as_of"))
-        if cutoff is not None and (ts is None or ts < cutoff):
-            continue
-        in_range.append(row)
+    # Server-side filter (range + symbol) + a safety cap so this never scans the
+    # whole snapshot table. PERF_SCAN_LIMIT bounds memory; aggregates are over
+    # the most recent in-range rows.
+    where = _snapshot_where(user.user_id, range_, symbol)
+    in_range = await db.select(
+        "recommendation_snapshots",
+        where=where,
+        order="created_at.desc",
+        limit=PERF_SCAN_LIMIT,
+        user_jwt=user.raw_token,
+    )
 
     symbols = sorted({str(r.get("symbol", "")).upper() for r in in_range if r.get("symbol")})
     quotes = await market_cache.get_quotes(cache, symbols) if symbols else []

@@ -19,6 +19,8 @@ class SupabaseDB(Protocol):
         table: str,
         *,
         where: dict[str, Any] | None = None,
+        order: str | None = None,
+        limit: int | None = None,
         user_jwt: str,
     ) -> list[dict[str, Any]]: ...
 
@@ -112,8 +114,17 @@ class PostgrestDB:
     def _where_params(where: dict[str, Any] | None) -> dict[str, str]:
         if not where:
             return {}
-        # PostgREST filter syntax: ?col=eq.value
-        return {key: f"eq.{value}" for key, value in where.items()}
+        # PostgREST filter syntax: ?col=eq.value. A value may also be an
+        # ``(op, value)`` tuple for range/comparison operators, e.g.
+        # ``{"created_at": ("gte", iso)}`` → ``created_at=gte.<iso>``.
+        params: dict[str, str] = {}
+        for key, value in where.items():
+            if isinstance(value, tuple) and len(value) == 2:
+                op, val = value
+                params[key] = f"{op}.{val}"
+            else:
+                params[key] = f"eq.{value}"
+        return params
 
     async def _request(
         self,
@@ -134,9 +145,14 @@ class PostgrestDB:
             return None
         return response.json()
 
-    async def select(self, table, *, where=None, user_jwt):
+    async def select(self, table, *, where=None, order=None, limit=None, user_jwt):
+        params = self._where_params(where)
+        if order:
+            params["order"] = order  # e.g. "created_at.desc"
+        if limit is not None:
+            params["limit"] = str(limit)
         data = await self._request(
-            "GET", table, headers=self._headers(user_jwt), params=self._where_params(where)
+            "GET", table, headers=self._headers(user_jwt), params=params
         )
         return data or []
 
